@@ -44,8 +44,8 @@ export default function SettingsPage() {
           <KV k="Price tick" v={TICK.toFixed(3)} />
           <KV k="Lot size" v={LOT.toFixed(0)} />
           <KV k="Slippage tolerance" v="1.00%" />
-          <KV k="Batch standard" v="EIP-7702" tone="accent" />
-          <KV k="Auto claim" v="On, every 10 minutes" tone="up" />
+          <KV k="Batch standard" v="EIP-7702 (planned)" tone="muted" />
+          <KV k="Auto claim" v="Not implemented" tone="muted" />
         </section>
       </div>
 

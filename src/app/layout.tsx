@@ -24,7 +24,7 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "PRISM — Structured Derivatives Terminal",
   description:
-    "PRISM turns DreamDEX Event Contracts into structured payoffs. State a view; PRISM decomposes it into Up and Down legs, executes them atomically, rolls them across window succession, and settles them into one net payout.",
+    "PRISM composes DreamDEX Event Contracts into structured payoffs. State a view once; PRISM decomposes it across the venue's live binary markets and carries it through window succession.",
 };
 
 export const viewport: Viewport = {

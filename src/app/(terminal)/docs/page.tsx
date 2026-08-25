@@ -53,12 +53,12 @@ const SECTIONS = [
     id: "execution",
     title: "Execution and lifecycle",
     body: [
-      "Legs are submitted as a single EIP-7702 batch, so a structure opens whole or not at all. Orders carry a mandatory expiry scaled to a fraction of the series interval, which means a crashed process leaves no orphaned resting size behind.",
+      "The intended execution path submits legs as a single EIP-7702 batch, so a structure opens whole or not at all, with a mandatory expiry scaled to a fraction of the series interval so a crashed process leaves no orphaned resting size. Neither is implemented in this build — execution is not yet wired to the venue.",
       "Settled markets pay only when asked, and a finalised binary leaves the live registry entirely. PRISM sweeps the finalised set, redeems every leg of a structure, and nets the result into one payout.",
     ],
     facts: [
-      ["Batching", "EIP-7702"],
-      ["Signer", "Session key, no withdrawal"],
+      ["Batching", "EIP-7702 (planned)"],
+      ["Signer", "Session key (planned)"],
       ["Order expiry", "Scaled to interval"],
       ["Claim", "Swept from Finalized status"],
     ],

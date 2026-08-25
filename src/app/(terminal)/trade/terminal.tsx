@@ -531,10 +531,17 @@ export function TradeTerminal({
           </div>
 
           <div className="mt-5 flex flex-col gap-3">
-            <Note icon={<IconBolt size={14} />} tone="accent">
-              All {rep.legs.length} legs land in one EIP-7702 batch, so the
-              structure either opens whole or not at all. No leg risk between
-              fills.
+            {/* Was: "All N legs land in one EIP-7702 batch, so the structure
+                either opens whole or not at all." There is no batching code in
+                this repo. Claiming an atomicity guarantee the implementation
+                does not provide is the same failure as a fabricated tx hash. */}
+            <Note tone="neutral" icon={<IconLayers size={14} />}>
+              Atomic multi-leg execution is the intended design: one batch, so a
+              structure opens whole or not at all.{" "}
+              <span className="text-ink-3">
+                Not yet implemented — no batching path exists in this build, so
+                nothing here should be read as an atomicity guarantee.
+              </span>
             </Note>
 
             {thin ? (

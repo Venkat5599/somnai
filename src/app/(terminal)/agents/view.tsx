@@ -27,7 +27,7 @@ const ENDPOINTS = [
     items: [
       { verb: "POST", path: "/v1/replicate", note: "intent to leg set, depth aware" },
       { verb: "POST", path: "/v1/quote", note: "priced legs, tick quantised" },
-      { verb: "POST", path: "/v1/execute", note: "EIP-7702 batch, session signed" },
+      { verb: "POST", path: "/v1/execute", note: "planned: batched, session signed" },
     ],
   },
   {
@@ -214,8 +214,8 @@ export function AgentsView() {
             b: "Every quote is solved against resting size at each rung. A leg set that the book cannot fill comes back scaled, with the fill ratio stated, never silently.",
           },
           {
-            t: "One batch, one outcome",
-            b: "Legs are submitted as a single EIP-7702 batch. There is no window in which an agent holds half a structure while the second leg is still landing.",
+            t: "One batch, one outcome (planned)",
+            b: "The intent is that legs are submitted as a single batch, leaving no window in which an agent holds half a structure. This is design, not shipped behaviour — no batching path exists in this build.",
           },
         ].map((c) => (
           <article key={c.t} className="bg-surface p-5 flex flex-col min-h-[168px]">

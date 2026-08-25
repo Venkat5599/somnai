@@ -44,11 +44,11 @@ export default function HomePage() {
             <div className="mt-8 lg:mt-10 grid gap-x-12 gap-y-8 lg:grid-cols-[minmax(0,24rem)_minmax(0,1fr)] lg:items-start">
               <div className="min-w-0">
                 <p className="text-[15px] leading-[24px] text-ink-2">
-                  A DreamDEX Event Contract is a digital option. A strip of them
-                  is a basis. PRISM states your view once, decomposes it into Up
-                  and Down legs across the strike ladder, fills them in a single
-                  atomic transaction, rolls them across window succession, and
-                  settles the whole structure into one net payout.
+                  A DreamDEX Event Contract is a digital option that expires
+                  every few minutes. PRISM states your view once and carries it
+                  across window succession, so a stream of five-minute binaries
+                  becomes a position with a real tenor. Live markets are read
+                  from Somnia; execution and settlement are being integrated.
                 </p>
 
                 <div className="mt-7 flex flex-wrap items-center gap-x-7 gap-y-4">
