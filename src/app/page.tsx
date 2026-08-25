@@ -202,8 +202,8 @@ const MECHANISM = [
   {
     n: "03",
     title: "Fill and roll",
-    body: "Legs land in one batched transaction, so no leg risk. When the window expires, the roll engine re-strikes into the successor market and the position keeps its tenor.",
-    foot: "EIP-7702 batch, session key signed",
+    body: "Legs are intended to land in one batched transaction, so no leg risk. When the window expires, the roll engine re-strikes into the successor market and the position keeps its tenor.",
+    foot: "Batched execution — planned",
   },
 ] as const;
 
