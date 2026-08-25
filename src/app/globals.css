@@ -1,0 +1,241 @@
+@import "tailwindcss";
+
+/* ============================================================
+   PRISM — design tokens
+   Source of truth: DESIGN.md (Professional Minimalist Glassmorphism)
+   Total-dark foundation, 1px structural borders, single accent.
+   ============================================================ */
+
+@theme {
+  /* --- surfaces --- */
+  --color-base: #050505;
+  --color-surface: #121212;
+  --color-surface-2: #1a1a1a;
+  --color-surface-3: #202020;
+
+  /* --- structural borders (the defining element) --- */
+  --color-line: #222222;
+  --color-line-strong: #333333;
+  --color-line-soft: #191919;
+
+  /* --- type --- */
+  --color-ink: #ffffff;
+  --color-ink-2: #b8bcbd;
+  --color-ink-3: #888888;
+  --color-ink-4: #6f7678;
+
+  /* --- accent: sole primary --- */
+  --color-accent: #00f0ff;
+  --color-accent-dim: #00dbe9;
+  --color-accent-deep: #006970;
+  --color-accent-ink: #050505;
+
+  /* --- semantic --- */
+  --color-up: #00ff88;
+  --color-down: #ff3b3b;
+  --color-warn: #ffb454;
+
+  /* --- type scale (DESIGN.md) --- */
+  --text-display-lg: 32px;
+  --text-display-lg--line-height: 40px;
+  --text-display-lg--letter-spacing: -0.02em;
+  --text-display-lg--font-weight: 600;
+
+  --text-headline-md: 20px;
+  --text-headline-md--line-height: 28px;
+  --text-headline-md--letter-spacing: -0.01em;
+  --text-headline-md--font-weight: 600;
+
+  --text-title-sm: 16px;
+  --text-title-sm--line-height: 24px;
+  --text-title-sm--font-weight: 500;
+
+  --text-body-md: 14px;
+  --text-body-md--line-height: 20px;
+
+  --text-body-sm: 13px;
+  --text-body-sm--line-height: 18px;
+
+  --text-mono-data: 13px;
+  --text-mono-data--line-height: 16px;
+
+  --text-label-xs: 11px;
+  --text-label-xs--line-height: 14px;
+  --text-label-xs--letter-spacing: 0.05em;
+  --text-label-xs--font-weight: 600;
+
+  /* --- shape: strictly geometric --- */
+  --radius-none: 0px;
+  --radius-pip: 1px;
+
+  /* --- spacing --- */
+  --spacing-gutter: 12px;
+  --spacing-panel: 16px;
+  --spacing-page: 24px;
+
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains), ui-monospace, "SFMono-Regular", monospace;
+}
+
+/* ============================================================
+   Base
+   ============================================================ */
+
+* {
+  border-color: var(--color-line);
+}
+
+html {
+  color-scheme: dark;
+  background-color: var(--color-base);
+}
+
+body {
+  background-color: var(--color-base);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 20px;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  font-feature-settings: "cv11", "ss01";
+  overflow-x: hidden;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--color-accent) 28%, transparent);
+  color: #ffffff;
+}
+
+/* Tabular figures everywhere numbers live, so columns never jitter. */
+.num {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1, "zero" 1;
+}
+
+/* ============================================================
+   Scrollbars — part of the instrument, not the OS
+   ============================================================ */
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-line-strong) transparent;
+}
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+*::-webkit-scrollbar-thumb {
+  background: var(--color-line-strong);
+  border: 3px solid var(--color-base);
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: #444;
+}
+*::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* ============================================================
+   Focus — visible, sharp, accent. Never a rounded glow.
+   ============================================================ */
+
+:focus-visible {
+  outline: 1px solid var(--color-accent);
+  outline-offset: 1px;
+}
+
+/* ============================================================
+   Premium noise — a substrate, never over the content.
+   Sits at z -1 behind everything, felt not seen.
+   ============================================================ */
+
+.substrate::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0.028;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* ============================================================
+   Ruler ticks — the instrument's edge marking.
+   Sparing and specific, never a full-bleed graph-paper sheet.
+   ============================================================ */
+
+.rule-ticks {
+  background-image: repeating-linear-gradient(
+    to right,
+    var(--color-line) 0 1px,
+    transparent 1px 100%
+  );
+  background-size: 8px 100%;
+}
+
+/* ============================================================
+   Motion — authored, and never gating content visibility.
+   Every animated element is fully readable at its initial frame.
+   ============================================================ */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+/* Travels a real distance, set per-instance via --carry (in px). A percentage
+   here would resolve against the element's own 8px box and barely move. */
+@keyframes prism-carry {
+  0% {
+    transform: translateX(0);
+    opacity: 0;
+  }
+  8%,
+  92% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(var(--carry, 0px));
+    opacity: 0;
+  }
+}
+
+@keyframes prism-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+@keyframes prism-dash {
+  to {
+    stroke-dashoffset: -24;
+  }
+}
+
+@keyframes prism-trace {
+  0% {
+    stroke-dashoffset: var(--len);
+  }
+  55%,
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+
+.pip-live {
+  animation: prism-pulse 2.4s ease-in-out infinite;
+}
