@@ -1,11 +1,24 @@
 "use client";
 
+/**
+ * Live Event Contract markets.
+ *
+ * Every row is a real market read off the Somnia indexer. Two states are shown
+ * that a fixture would have hidden, and both matter to PRISM's thesis:
+ *
+ *   ROUTABLE — struck, Trading, and far enough from expiry to send an order.
+ *   UNSTRUCK — listed by the venue with strike 0, i.e. the window exists but
+ *              has not been struck yet. Most longer windows sit here.
+ *
+ * The venue lists ONE strike per (asset, window), and the routable ones are
+ * five-minute windows. That is not a limitation to hide — it is the reason
+ * PRISM composes positions across successive windows rather than across a
+ * strike ladder.
+ */
+
 import Link from "next/link";
-import { useMemo, useState } from "react";
-import { Page } from "@/components/shell";
-import { DepthBar } from "@/components/charts";
+import { useEffect, useMemo, useState } from "react";
 import {
-  Button,
   Chip,
   PageHead,
   Segmented,
@@ -15,58 +28,108 @@ import {
   Tr,
   cx,
 } from "@/components/ui";
-import {
-  IconArrowOut,
-  IconChevronLeft,
-  IconChevronRight,
-  IconSearch,
-} from "@/components/icons";
-import { EXPIRY_OPTIONS, MARKETS, SPOT, type ExpiryLabel } from "@/lib/data";
-import { fmtCompact, fmtProb, fmtUsd } from "@/lib/quant";
+import { IconArrowOut, IconSearch } from "@/components/icons";
+import type { EventMarket } from "@/lib/venue/types";
+import { headroomSec } from "@/lib/venue/types";
 
-const PER_PAGE = 12;
+type AssetFilter = "ALL" | "BTC" | "ETH";
+type StateFilter = "ROUTABLE" | "ACTIVE" | "ALL";
 
-export function MarketsView() {
-  const [asset, setAsset] = useState<"ALL" | "BTC" | "ETH">("ALL");
-  const [expiry, setExpiry] = useState<"ALL" | ExpiryLabel>("4h");
+/** mm:ss, or a plain marker once the window has closed. */
+function countdown(seconds: number): string {
+  if (seconds <= 0) return "expired";
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = seconds % 60;
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${pad(m)}:${pad(s)}`;
+}
+
+export function MarketsView({
+  markets,
+  activeCount,
+  routableCount,
+  venueCount,
+  network,
+  fetchedAt,
+}: {
+  markets: EventMarket[];
+  activeCount: number;
+  routableCount: number;
+  venueCount: number;
+  network: string;
+  fetchedAt: number;
+}) {
+  const [asset, setAsset] = useState<AssetFilter>("ALL");
+  const [state, setState] = useState<StateFilter>("ACTIVE");
   const [q, setQ] = useState("");
-  const [page, setPage] = useState(0);
+
+  // Windows are short enough that a static countdown would be wrong within
+  // seconds. The first frame is already correct, so nothing depends on this
+  // interval firing.
+  const [now, setNow] = useState(() => Math.floor(fetchedAt / 1000));
+  useEffect(() => {
+    const id = setInterval(() => setNow(Math.floor(Date.now() / 1000)), 1000);
+    return () => clearInterval(id);
+  }, []);
 
   const rows = useMemo(() => {
-    const interval =
-      expiry === "ALL"
-        ? null
-        : EXPIRY_OPTIONS.find((e) => e.label === expiry)!.intervalSec;
-    return MARKETS.filter(
-      (m) =>
-        (asset === "ALL" || m.asset === asset) &&
-        (interval === null || m.intervalSec === interval) &&
-        (q.trim() === "" ||
-          m.symbol.toLowerCase().includes(q.trim().toLowerCase()) ||
-          String(m.strike).includes(q.trim())),
-    );
-  }, [asset, expiry, q]);
+    const needle = q.trim().toLowerCase();
+    return markets
+      .filter((m) => {
+        if (asset !== "ALL" && m.asset !== asset) return false;
 
-  const pages = Math.max(1, Math.ceil(rows.length / PER_PAGE));
-  const safePage = Math.min(page, pages - 1);
-  const slice = rows.slice(safePage * PER_PAGE, safePage * PER_PAGE + PER_PAGE);
-  const maxDepth = Math.max(...rows.map((r) => r.depth), 1);
+        const left = m.expiry - now;
+        const routable =
+          m.active &&
+          m.status === "Trading" &&
+          m.strike !== null &&
+          left > headroomSec(m.intervalSec);
 
-  const reset = (fn: () => void) => {
-    fn();
-    setPage(0);
-  };
+        if (state === "ROUTABLE" && !routable) return false;
+        if (state === "ACTIVE" && !m.active) return false;
+
+        if (needle) {
+          const hay = `${m.asset} ${m.symbol} ${m.interval} ${m.strike ?? ""} ${m.marketId}`;
+          if (!hay.toLowerCase().includes(needle)) return false;
+        }
+        return true;
+      })
+      .sort((a, b) => {
+        if (a.asset !== b.asset) return a.asset.localeCompare(b.asset);
+        return a.intervalSec - b.intervalSec;
+      });
+  }, [markets, asset, state, q, now]);
 
   return (
-    <Page>
+    <>
       <PageHead
         title="Event Contract markets"
-        lede="Every live binary on the DreamDEX venue, priced as a risk-neutral probability. Depth is resting size within two percent of mid, which is what the router can actually fill against."
+        lede="Live binary markets read from the Somnia indexer. The venue lists one strike per window, and a window that has not been struck yet carries strike 0 — both states are shown exactly as the venue reports them."
       >
-        <Chip tone="accent" live>
-          {rows.length} live
+        <Chip tone={routableCount > 0 ? "up" : "warn"} live={routableCount > 0}>
+          {routableCount} routable
         </Chip>
       </PageHead>
+
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-px bg-line border border-line mb-5">
+        {[
+          { label: "Binary markets", value: String(markets.length), sub: "in registry" },
+          { label: "Active", value: String(activeCount), sub: "window open" },
+          {
+            label: "Routable",
+            value: String(routableCount),
+            sub: "struck + outside headroom",
+          },
+          { label: "Venues", value: String(venueCount), sub: `on ${network}` },
+        ].map((s) => (
+          <div key={s.label} className="bg-surface p-4">
+            <span className="text-label-xs uppercase text-ink-3">{s.label}</span>
+            <p className="num text-[17px] leading-[20px] text-ink mt-1.5">{s.value}</p>
+            <p className="text-[12px] text-ink-3 mt-1">{s.sub}</p>
+          </div>
+        ))}
+      </div>
 
       <div className="flex flex-wrap items-center gap-3 mb-5">
         <label className="flex items-center border border-line h-9 focus-within:border-accent transition-colors min-w-[190px] flex-1 sm:flex-none sm:w-[240px]">
@@ -75,8 +138,8 @@ export function MarketsView() {
           </span>
           <input
             value={q}
-            onChange={(e) => reset(() => setQ(e.target.value))}
-            placeholder="Symbol or strike"
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Asset, window, strike"
             aria-label="Search markets"
             className="flex-1 min-w-0 h-full bg-transparent px-2.5 text-[13px] text-ink placeholder:text-ink-4 outline-none"
           />
@@ -90,17 +153,18 @@ export function MarketsView() {
             { value: "ETH" as const, label: "ETH" },
           ]}
           value={asset}
-          onChange={(v) => reset(() => setAsset(v))}
+          onChange={setAsset}
         />
 
         <Segmented
-          label="Expiry filter"
+          label="State filter"
           options={[
+            { value: "ROUTABLE" as const, label: "Routable" },
+            { value: "ACTIVE" as const, label: "Active" },
             { value: "ALL" as const, label: "All" },
-            ...EXPIRY_OPTIONS.map((e) => ({ value: e.label, label: e.label })),
           ]}
-          value={expiry}
-          onChange={(v) => reset(() => setExpiry(v))}
+          value={state}
+          onChange={setState}
         />
       </div>
 
@@ -108,22 +172,27 @@ export function MarketsView() {
         <TableWrap>
           <thead>
             <tr>
-              <Th>Market</Th>
-              <Th align="right">Strike</Th>
-              <Th align="right">Spot</Th>
+              <Th>Asset</Th>
               <Th align="center">Window</Th>
-              <Th align="right">Up</Th>
-              <Th align="right">Down</Th>
-              <Th align="right">24h volume</Th>
-              <Th align="right">Depth</Th>
+              <Th align="right">Strike</Th>
               <Th align="center">Status</Th>
+              <Th align="right">Closes in</Th>
+              <Th align="right">Trades</Th>
+              <Th>Venue</Th>
+              <Th>Market id</Th>
               <Th align="right">Build</Th>
             </tr>
           </thead>
           <tbody>
-            {slice.map((m) => {
-              const spot = SPOT[m.asset].price;
-              const itm = spot > m.strike;
+            {rows.map((m) => {
+              const left = m.expiry - now;
+              const struck = m.strike !== null;
+              const routable =
+                m.active &&
+                m.status === "Trading" &&
+                struck &&
+                left > headroomSec(m.intervalSec);
+
               return (
                 <Tr key={m.marketId}>
                   <Td>
@@ -132,53 +201,77 @@ export function MarketsView() {
                         aria-hidden
                         className={cx(
                           "w-[3px] h-[13px] shrink-0",
-                          itm ? "bg-up" : "bg-line-strong",
+                          routable ? "bg-up" : struck ? "bg-warn" : "bg-line-strong",
                         )}
                       />
-                      <span className="text-ink">{m.symbol}</span>
+                      <span className="text-ink">{m.asset}</span>
                     </span>
                   </Td>
-                  <Td align="right" mono>
-                    {m.strike.toLocaleString("en-US")}
-                  </Td>
-                  <Td align="right" mono tone="muted">
-                    {fmtUsd(spot, 0)}
-                  </Td>
                   <Td align="center" mono tone="muted">
-                    {m.expiresAt}
+                    {m.interval}
                   </Td>
-                  <Td align="right" mono tone={m.up >= 0.5 ? "up" : undefined}>
-                    {fmtProb(m.up)}
-                  </Td>
-                  <Td align="right" mono tone={m.down >= 0.5 ? "down" : undefined}>
-                    {fmtProb(m.down)}
-                  </Td>
-                  <Td align="right" mono tone="muted">
-                    {fmtCompact(m.vol24h)}
-                  </Td>
-                  <Td align="right" className="w-[120px]">
-                    <DepthBar value={m.depth} max={maxDepth} side={itm ? "up" : "down"} />
+                  <Td align="right" mono tone={struck ? undefined : "muted"}>
+                    {struck
+                      ? m.strike!.toLocaleString("en-US", {
+                          minimumFractionDigits: 2,
+                        })
+                      : "—"}
                   </Td>
                   <Td align="center">
-                    <Chip tone={m.status === "Trading" ? "up" : "neutral"} live={m.status === "Trading"}>
-                      {m.status}
-                    </Chip>
+                    {routable ? (
+                      <Chip tone="up" live>
+                        Routable
+                      </Chip>
+                    ) : struck ? (
+                      <Chip tone="warn">{left <= 0 ? "Expired" : m.status}</Chip>
+                    ) : (
+                      <Chip tone="neutral">Unstruck</Chip>
+                    )}
+                  </Td>
+                  <Td
+                    align="right"
+                    mono
+                    tone={left <= 0 ? "muted" : left < 60 ? "down" : undefined}
+                  >
+                    {countdown(left)}
+                  </Td>
+                  <Td align="right" mono tone="muted">
+                    {m.tradeCount}
+                  </Td>
+                  <Td mono tone="muted">
+                    {m.venueId ? `${m.venueId.slice(0, 8)}…` : "—"}
+                  </Td>
+                  <Td mono tone="muted">
+                    {m.marketId.slice(0, 10)}…{m.marketId.slice(-4)}
                   </Td>
                   <Td align="right">
-                    <Link
-                      href="/trade"
-                      className="inline-flex items-center gap-1.5 text-[12px] uppercase tracking-[0.05em] text-ink-3 hover:text-accent transition-colors"
-                    >
-                      Route
-                      <IconArrowOut size={13} />
-                    </Link>
+                    {routable ? (
+                      <Link
+                        href={`/trade?market=${encodeURIComponent(m.marketId)}`}
+                        className="inline-flex items-center gap-1.5 text-[12px] uppercase tracking-[0.05em] text-ink-3 hover:text-accent transition-colors"
+                      >
+                        Route
+                        <IconArrowOut size={13} />
+                      </Link>
+                    ) : (
+                      <span
+                        className="text-[12px] uppercase tracking-[0.05em] text-ink-4 cursor-not-allowed"
+                        title={
+                          struck
+                            ? "Window is inside expiry headroom"
+                            : "Venue has not struck this window yet"
+                        }
+                      >
+                        {struck ? "Too late" : "Unstruck"}
+                      </span>
+                    )}
                   </Td>
                 </Tr>
               );
             })}
-            {slice.length === 0 ? (
+            {rows.length === 0 ? (
               <tr>
-                <td colSpan={10} className="h-24 text-center text-[13px] text-ink-3">
+                <td colSpan={9} className="h-24 text-center text-[13px] text-ink-3">
                   No markets match this filter.
                 </td>
               </tr>
@@ -186,40 +279,16 @@ export function MarketsView() {
           </tbody>
         </TableWrap>
 
-        <div className="flex items-center justify-between gap-4 px-3 h-11 border-t border-line">
+        <div className="flex flex-wrap items-center justify-between gap-3 px-3 h-11 border-t border-line">
           <span className="text-[12px] text-ink-3">
-            {rows.length === 0
-              ? "0 markets"
-              : `${safePage * PER_PAGE + 1}–${Math.min(
-                  (safePage + 1) * PER_PAGE,
-                  rows.length,
-                )} of ${rows.length} markets`}
+            {rows.length} of {markets.length} binary markets
           </span>
-          <span className="flex items-center gap-1">
-            <Button
-              size="sm"
-              variant="quiet"
-              onClick={() => setPage((p) => Math.max(0, p - 1))}
-              disabled={safePage === 0}
-              leading={<IconChevronLeft size={14} />}
-            >
-              Prev
-            </Button>
-            <span className="num text-[12px] text-ink-3 px-2">
-              {safePage + 1} / {pages}
-            </span>
-            <Button
-              size="sm"
-              variant="quiet"
-              onClick={() => setPage((p) => Math.min(pages - 1, p + 1))}
-              disabled={safePage >= pages - 1}
-              trailing={<IconChevronRight size={14} />}
-            >
-              Next
-            </Button>
+          <span className="num text-[12px] text-ink-4">
+            read from Somnia {network} ·{" "}
+            {new Date(fetchedAt).toISOString().slice(11, 19)} UTC
           </span>
         </div>
       </div>
-    </Page>
+    </>
   );
 }

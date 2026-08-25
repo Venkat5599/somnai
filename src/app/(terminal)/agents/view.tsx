@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import {
+  DemoData,
   Button,
   Chip,
   Note,
@@ -105,10 +106,12 @@ export function AgentsView() {
         title="PRISM for agents"
         lede="The density engine and the replication router are the interesting half, so they are exposed directly. An agent can read the risk-neutral density, ask for a leg set, and get back a batch that is ready to sign."
       >
-        <Chip tone="up" live>
-          Operational
+        <Chip tone="neutral">
+          Specification
         </Chip>
       </PageHead>
+
+      <DemoData>The request and response payloads are illustrative. The PRISM agent API is not yet serving live quotes.</DemoData>
 
       <div className="grid gap-px bg-line border border-line lg:grid-cols-[300px_minmax(0,1fr)]">
         {/* reference */}

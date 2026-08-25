@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Page } from "@/components/shell";
 import {
+  DemoData,
   Button,
   Chip,
   PageHead,
@@ -36,6 +37,8 @@ export default function PositionsPage() {
           </Button>
         </Link>
       </PageHead>
+
+      <DemoData>These structures are sample data. No position shown here is held on-chain.</DemoData>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-px bg-line border border-line mb-6">
         <div className="bg-surface p-4">

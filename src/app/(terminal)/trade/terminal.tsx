@@ -86,19 +86,17 @@ export function TradeTerminal() {
   const [state, setState] = useState<Snapshot>(INITIAL);
   const [future, setFuture] = useState<Snapshot[]>([]);
   const [staged, setStaged] = useState(false);
-  const [receipt, setReceipt] = useState<{
-    id: string;
-    tx: string;
-    legs: number;
-    premium: number;
-  } | null>(null);
+  // No receipt state. Execution against the venue is not wired yet, and this
+  // component previously fabricated a transaction hash from Date.now() and
+  // rendered it as "Executed" / "CONFIRMED". Inventing chain state is worse
+  // than having no execution at all, so the control now reports the truth.
 
   const commit = useCallback(
     (next: Partial<Snapshot>) => {
       setPast((p) => [...p.slice(-24), state]);
       setFuture([]);
       setStaged(false);
-      setReceipt(null);
+
       setState((s) => ({ ...s, ...next }));
     },
     [state],
@@ -110,7 +108,7 @@ export function TradeTerminal() {
     setState(past[past.length - 1]);
     setPast((p) => p.slice(0, -1));
     setStaged(false);
-    setReceipt(null);
+
   };
 
   const redo = () => {
@@ -119,7 +117,7 @@ export function TradeTerminal() {
     setState(future[0]);
     setFuture((f) => f.slice(1));
     setStaged(false);
-    setReceipt(null);
+
   };
 
   const single = state.kind === "DIRECTIONAL" || state.kind === "CALENDAR";
@@ -447,35 +445,20 @@ export function TradeTerminal() {
           {/* Actions anchored to the bottom of the panel so the ticket reads
               the same whatever the notes above it are doing. */}
           <div className="mt-auto pt-6 flex flex-col gap-2">
-            {receipt ? (
-              <div className="border border-[#0b4d54] bg-[#04191c] p-3">
-                <p className="text-label-xs uppercase text-accent">
-                  Structure opened
-                </p>
-                <dl className="mt-2.5 flex flex-col gap-1.5">
-                  {[
-                    ["Structure", receipt.id],
-                    ["Batch tx", receipt.tx],
-                    ["Legs filled", `${receipt.legs} of ${receipt.legs}`],
-                    ["Premium", fmtUsd(receipt.premium)],
-                  ].map(([k, v]) => (
-                    <div key={k} className="flex items-baseline justify-between gap-3">
-                      <dt className="text-[11px] text-ink-3">{k}</dt>
-                      <dd className="num text-[11px] text-ink-2">{v}</dd>
-                    </div>
-                  ))}
-                </dl>
-              </div>
-            ) : null}
+            <Note tone="warn" icon={<IconInfo size={14} />}>
+              <span className="font-medium text-ink">
+                Execution not connected.
+              </span>{" "}
+              The replication above is real and computed from the live ladder,
+              but PRISM cannot yet submit it to the venue. This control is
+              disabled rather than reporting a result it did not produce.
+            </Note>
 
             <Button
               variant="ghost"
               size="lg"
               block
-              onClick={() => {
-                setStaged((v) => !v);
-                setReceipt(null);
-              }}
+              onClick={() => setStaged((v) => !v)}
               aria-pressed={staged}
             >
               {staged ? "Preview staged" : "Preview trade"}
@@ -484,29 +467,15 @@ export function TradeTerminal() {
               variant="primary"
               size="lg"
               block
-              disabled={!staged || !!receipt}
+              disabled
               leading={<IconBolt size={15} />}
-              onClick={() => {
-                // One batch, one outcome: the receipt names every leg that
-                // landed, so the control reports a result rather than nothing.
-                const n = (Date.now() % 100000).toString(16).padStart(5, "0");
-                setReceipt({
-                  id: `PS-${(4472 + (Date.now() % 500)).toString()}`,
-                  tx: `0x${n}...${n.slice(0, 4)}`,
-                  legs: rep.legs.length,
-                  premium: rep.cost,
-                });
-                setStaged(false);
-              }}
+              title="Live Event Contract execution is being integrated"
             >
-              {receipt ? "Executed" : "Execute atomically"}
+              Execution unavailable
             </Button>
             <p className="text-[11px] leading-[16px] text-ink-4 text-center">
-              {receipt
-                ? "Testnet batch. Adjust the structure to open another."
-                : staged
-                  ? "Signed by session key. Withdrawal rights are not delegated."
-                  : "Preview to arm execution."}
+              Live Event Contract execution is being integrated. No transaction
+              is signed, sent, or simulated here.
             </p>
           </div>
         </PanelBody>

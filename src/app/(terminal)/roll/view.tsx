@@ -11,6 +11,7 @@
 
 import { useEffect, useState } from "react";
 import {
+  DemoData,
   Button,
   Chip,
   KV,
@@ -81,6 +82,8 @@ export function RollView() {
           </span>
         </button>
       </PageHead>
+
+      <DemoData>The roll queue, counters and success rate are sample data. The Roll Engine is not yet executing against live succession chains.</DemoData>
 
       <div className="grid gap-px bg-line border border-line lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)] mb-6">
         {/* succession diagram */}
@@ -182,13 +185,13 @@ export function RollView() {
           <Stat label="Queued rolls" value={String(ROLL_QUEUE.length)} sub="across 2 assets" />
         </div>
         <div className="bg-surface p-4">
-          <Stat label="Rolls completed" value="1,284" sub="last 30 days" />
+          <Stat label="Rolls completed" value="—" sub="no live roll history" mono={false} />
         </div>
         <div className="bg-surface p-4">
-          <Stat label="Success rate" value="99.4%" sub="8 retries, 0 orphans" tone="up" />
+          <Stat label="Success rate" value="—" sub="engine not yet executing" mono={false} />
         </div>
         <div className="bg-surface p-4">
-          <Stat label="Median roll cost" value="0.021 SOMI" sub="per succession" />
+          <Stat label="Median roll cost" value="—" sub="no completed rolls" mono={false} />
         </div>
       </div>
 

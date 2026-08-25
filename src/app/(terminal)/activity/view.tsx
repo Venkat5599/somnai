@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import {
+  DemoData,
   Chip,
   PageHead,
   Segmented,
@@ -52,6 +53,8 @@ export function ActivityView() {
           Streaming
         </Chip>
       </PageHead>
+
+      <DemoData>This audit log is sample data. The transaction hashes shown are not real and do not resolve on the Shannon explorer.</DemoData>
 
       <div className="flex flex-wrap items-center gap-3 mb-5">
         <Segmented
@@ -131,15 +134,15 @@ export function ActivityView() {
                   </Chip>
                 </Td>
                 <Td align="right">
-                  <a
-                    href={`https://shannon-explorer.somnia.network/tx/${r.tx}`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="num inline-flex items-center gap-1.5 text-[12px] text-ink-3 hover:text-accent transition-colors"
+                  {/* Deliberately NOT a link. These hashes are fixtures and
+                      would 404 on the explorer; an anchor here would imply
+                      chain state that does not exist. */}
+                  <span
+                    className="num text-[12px] text-ink-4"
+                    title="Sample hash — not a real transaction"
                   >
                     {r.tx}
-                    <IconArrowOut size={12} />
-                  </a>
+                  </span>
                 </Td>
               </Tr>
             ))}

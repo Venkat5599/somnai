@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { Page } from "@/components/shell";
 import { SettlementList } from "./list";
-import { Chip, Note, PageHead, Stat } from "@/components/ui";
+import {
+  DemoData, Chip, Note, PageHead, Stat } from "@/components/ui";
 import { IconInfo } from "@/components/icons";
 import { SETTLEMENTS } from "@/lib/data";
 import { fmtUsd } from "@/lib/quant";
@@ -20,6 +21,8 @@ export default function SettlementPage() {
       >
         <Chip tone="accent">{claimable.length} ready</Chip>
       </PageHead>
+
+      <DemoData>Settlement claims below are sample data. PRISM reads live markets from Somnia Shannon, but redeeming a settled Event Contract is not wired to the chain yet — the claim control does not submit a transaction.</DemoData>
 
       <div className="grid sm:grid-cols-3 gap-px bg-line border border-line mb-6">
         <div className="bg-surface p-4">
