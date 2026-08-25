@@ -15,6 +15,8 @@ import { StrikeBand } from "@/components/strike-band";
 import { useReplication } from "@/components/use-replication";
 import { TICK, LOT } from "@/lib/venue";
 import type { EventMarket } from "@/lib/venue/types";
+import type { PriceSnapshot } from "@/lib/venue/prices";
+import { PriceChart } from "@/components/price-chart";
 import {
   Button,
   Chip,
@@ -88,12 +90,15 @@ export function TradeTerminal({
   routable,
   requestedId,
   venueError,
+  prices,
 }: {
   /** The live venue market this ticket is bound to, if one resolved. */
   market: EventMarket | null;
   routable: EventMarket[];
   requestedId: string | null;
   venueError: string | null;
+  /** Oracle candles for the bound asset. Null when the feed was unreachable. */
+  prices: PriceSnapshot | null;
 }) {
   const [past, setPast] = useState<Snapshot[]>([]);
   const [state, setState] = useState<Snapshot>(INITIAL);
@@ -374,6 +379,17 @@ export function TradeTerminal({
         </PanelHeader>
 
         <PanelBody className="flex flex-col gap-7 min-w-0">
+          {prices && market ? (
+            <PriceChart
+              candles={prices.candles}
+              live={prices.live}
+              asset={market.asset}
+              timeframe={prices.timeframe}
+              strike={market.strike}
+              height={300}
+            />
+          ) : null}
+
           <DemoData>
             The strike ladder, probabilities and depth below are generated, not
             venue state. The live venue lists a single strike per window, so

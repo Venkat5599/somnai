@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { getMarketSnapshot } from "@/lib/venue/markets";
+import { getPriceSnapshot, type PriceSnapshot } from "@/lib/venue/prices";
 import type { EventMarket } from "@/lib/venue/types";
 import { TradeTerminal } from "./terminal";
 
@@ -19,6 +20,7 @@ export default async function TradePage({
   let selected: EventMarket | null = null;
   let routable: EventMarket[] = [];
   let venueError: string | null = null;
+  let prices: PriceSnapshot | null = null;
 
   try {
     const snap = await getMarketSnapshot();
@@ -33,12 +35,19 @@ export default async function TradePage({
     venueError = e instanceof Error ? e.message : String(e);
   }
 
+  // Oracle candles for whichever asset the ticket ended up on. Failure here is
+  // not fatal to the page — the chart renders its own empty state.
+  if (selected) {
+    prices = await getPriceSnapshot(selected.asset, "1m", 240).catch(() => null);
+  }
+
   return (
     <TradeTerminal
       market={selected}
       routable={routable}
       requestedId={wanted ?? null}
       venueError={venueError}
+      prices={prices}
     />
   );
 }

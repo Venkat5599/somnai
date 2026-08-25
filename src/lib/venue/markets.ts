@@ -13,7 +13,7 @@ import "server-only";
  * has no business in a browser bundle.
  */
 
-import { SomniaMarkets } from "@somnia-chain/markets-sdk";
+import { SomniaMarkets, SOMNIA_TESTNET_PRICE_FEED } from "@somnia-chain/markets-sdk";
 import { somniaShannon, somniaMainnet } from "@somnia-chain/markets-sdk/chains";
 import {
   STRIKE_SCALE,
@@ -57,6 +57,10 @@ export function exchange(config: VenueConfig = resolveVenueConfig()): SomniaMark
     chain,
     indexerUrl: config.indexer,
     wsRpcUrl: config.wsRpc,
+    // The oracle price feed is a separate endpoint from the market indexer.
+    // Without it fetchPrice/fetchPriceOHLCV reject rather than returning null,
+    // which reads like an outage instead of a missing config line.
+    priceFeed: SOMNIA_TESTNET_PRICE_FEED,
   });
 
   cached = { key, ex };
