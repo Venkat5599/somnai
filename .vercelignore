@@ -1,0 +1,7 @@
+# Never upload local secrets to the build environment.
+.env
+.env.*
+!.env.example
+scripts/
+probe.mjs
+.scratch/
