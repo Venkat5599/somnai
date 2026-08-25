@@ -9,14 +9,16 @@
  * never disagree.
  */
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { PayoffChart } from "@/components/charts";
 import { StrikeBand } from "@/components/strike-band";
 import { useReplication } from "@/components/use-replication";
 import { TICK, LOT } from "@/lib/venue";
+import type { EventMarket } from "@/lib/venue/types";
 import {
   Button,
   Chip,
+  DemoData,
   KV,
   Note,
   PanelBody,
@@ -81,7 +83,18 @@ const INITIAL: Snapshot = {
   size: 100,
 };
 
-export function TradeTerminal() {
+export function TradeTerminal({
+  market,
+  routable,
+  requestedId,
+  venueError,
+}: {
+  /** The live venue market this ticket is bound to, if one resolved. */
+  market: EventMarket | null;
+  routable: EventMarket[];
+  requestedId: string | null;
+  venueError: string | null;
+}) {
   const [past, setPast] = useState<Snapshot[]>([]);
   const [state, setState] = useState<Snapshot>(INITIAL);
   const [future, setFuture] = useState<Snapshot[]>([]);
@@ -145,6 +158,28 @@ export function TradeTerminal() {
   const intervalSec =
     EXPIRY_OPTIONS.find((e) => e.label === state.expiry)?.intervalSec ?? 3600;
 
+  // Windows are minutes long, so a static countdown is wrong almost at once.
+  // The first frame is already correct; nothing depends on the interval firing.
+  const [nowSec, setNowSec] = useState(() => Math.floor(Date.now() / 1000));
+  useEffect(() => {
+    const id = setInterval(() => setNowSec(Math.floor(Date.now() / 1000)), 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  const secondsLeft = market ? market.expiry - nowSec : 0;
+  const liveNow =
+    !!market &&
+    market.active &&
+    market.status === "Trading" &&
+    market.strike !== null &&
+    secondsLeft > headroomSec(market.intervalSec);
+
+  // The venue lists ONE strike per window. Range, Spread and Ladder each need
+  // two or more strikes on the same expiry, so they cannot be routed against
+  // real markets — only Directional and Calendar can.
+  const MULTI_STRIKE: StructureKind[] = ["RANGE", "SPREAD", "LADDER"];
+  const needsLadder = MULTI_STRIKE.includes(state.kind);
+
   const thin = rep.fillRatio < 0.995;
 
   return (
@@ -154,34 +189,86 @@ export function TradeTerminal() {
       {/* ---------------------------------------------------------- */}
       <section aria-label="Market" className="flex flex-col min-h-0 xl:border-r border-b xl:border-b-0 border-line overflow-y-auto">
         <PanelHeader title="Market">
-          <Chip tone="up" live>
-            Trading
+          {/* Reflects the bound market, not a constant. This chip previously
+              read "Trading" unconditionally, including when nothing was live. */}
+          <Chip
+            tone={liveNow ? "up" : market ? "warn" : "neutral"}
+            live={liveNow}
+          >
+            {liveNow ? "Live" : market ? market.status : "No market"}
           </Chip>
         </PanelHeader>
 
         <PanelBody className="flex flex-col gap-6">
-          <div>
-            <div className="flex items-baseline justify-between gap-3">
-              <span className="text-title-sm text-ink">{state.asset} / USD</span>
-              <span
-                className={cx(
-                  "num text-[13px]",
-                  spot.change >= 0 ? "text-up" : "text-down",
-                )}
-              >
-                {fmtSignedPct(spot.change)}
-              </span>
+          {/* Real venue market. Previously this block rendered SPOT.price,
+              SPOT.change and SPOT.vol from lib/data.ts — generated numbers
+              presented as a live quote. Replaced with the market actually
+              selected on /markets, or an explicit empty state. */}
+          {market ? (
+            <div>
+              <div className="flex items-baseline justify-between gap-3">
+                <span className="text-title-sm text-ink">
+                  {market.asset} · {market.interval}
+                </span>
+                <Chip tone={liveNow ? "up" : "warn"} live={liveNow}>
+                  {liveNow ? "Routable" : market.status}
+                </Chip>
+              </div>
+              <p className="num text-[30px] leading-[36px] text-accent mt-2 tracking-tight">
+                {market.strike !== null
+                  ? market.strike.toLocaleString("en-US", {
+                      minimumFractionDigits: 2,
+                    })
+                  : "unstruck"}
+              </p>
+              <p className="text-[12px] text-ink-3 mt-1.5">
+                Strike · settles{" "}
+                <span className="num text-ink-2">
+                  {new Date(market.expiry * 1000).toISOString().slice(11, 19)} UTC
+                </span>
+              </p>
+              <div className="mt-3 flex flex-col gap-1.5">
+                <div className="flex items-baseline justify-between gap-3">
+                  <span className="text-[11px] text-ink-3">Closes in</span>
+                  <span
+                    className={cx(
+                      "num text-[11px]",
+                      secondsLeft <= 0
+                        ? "text-ink-4"
+                        : secondsLeft < 60
+                          ? "text-down"
+                          : "text-ink-2",
+                    )}
+                  >
+                    {secondsLeft > 0
+                      ? `${String(Math.floor(secondsLeft / 60)).padStart(2, "0")}:${String(secondsLeft % 60).padStart(2, "0")}`
+                      : "expired"}
+                  </span>
+                </div>
+                <div className="flex items-baseline justify-between gap-3">
+                  <span className="text-[11px] text-ink-3">Market id</span>
+                  <span className="num text-[11px] text-ink-4">
+                    {market.marketId.slice(0, 10)}…{market.marketId.slice(-4)}
+                  </span>
+                </div>
+              </div>
             </div>
-            <p className="num text-[30px] leading-[36px] text-accent mt-2 tracking-tight">
-              {fmtUsd(spot.price)}
-            </p>
-            <p className="text-[12px] text-ink-3 mt-1.5">
-              24h volume{" "}
-              <span className="num text-ink-2">
-                ${(spot.vol / 1e9).toFixed(2)}B
-              </span>
-            </p>
-          </div>
+          ) : (
+            <Note tone="warn" icon={<IconInfo size={14} />}>
+              <span className="font-medium text-ink">
+                {venueError
+                  ? "Venue unreachable."
+                  : requestedId
+                    ? "Market not found."
+                    : "No routable market."}
+              </span>{" "}
+              {venueError
+                ? "The indexer did not answer, so no live market is bound to this ticket."
+                : requestedId
+                  ? "That market id is not in the current registry — windows expire and are replaced continuously."
+                  : `The venue has no routable Event Contract right now. ${routable.length} were live at last read.`}
+            </Note>
+          )}
 
           <div>
             <p className="text-label-xs uppercase text-ink-3 mb-2.5">Underlying</p>
@@ -287,6 +374,23 @@ export function TradeTerminal() {
         </PanelHeader>
 
         <PanelBody className="flex flex-col gap-7 min-w-0">
+          <DemoData>
+            The strike ladder, probabilities and depth below are generated, not
+            venue state. The live venue lists a single strike per window, so
+            there is no ladder to price against yet — the replication maths is
+            real, its inputs are not.
+          </DemoData>
+
+          {needsLadder ? (
+            <Note tone="warn" icon={<IconInfo size={14} />}>
+              <span className="font-medium text-ink">
+                {state.kind} needs multiple strikes on one expiry.
+              </span>{" "}
+              The venue lists one strike per window, so this structure cannot be
+              routed against a real market. Directional and Calendar can.
+            </Note>
+          ) : null}
+
           <StrikeBand
             strikes={strikes}
             depth={depth}
