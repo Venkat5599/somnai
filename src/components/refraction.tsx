@@ -159,7 +159,7 @@ export function Refraction({
                 fontSize="10.5"
                 fontWeight="600"
                 letterSpacing="0.08em"
-                fontFamily="var(--font-inter), sans-serif"
+                fontFamily="system-ui, -apple-system, sans-serif"
               >
                 {leg.label}
               </text>
@@ -171,7 +171,7 @@ export function Refraction({
                   fill="#6f7677"
                   fontSize="9.5"
                   letterSpacing="0.02em"
-                  fontFamily="var(--font-jetbrains), monospace"
+                  fontFamily="var(--font-geist-mono), ui-monospace, monospace"
                 >
                   {leg.detail}
                 </text>
@@ -188,7 +188,7 @@ export function Refraction({
           fontSize="9.5"
           fontWeight="600"
           letterSpacing="0.1em"
-          fontFamily="var(--font-inter), sans-serif"
+          fontFamily="system-ui, -apple-system, sans-serif"
         >
           MARKET VIEW
         </text>
@@ -200,7 +200,7 @@ export function Refraction({
           fontWeight="600"
           letterSpacing="0.14em"
           textAnchor="middle"
-          fontFamily="var(--font-inter), sans-serif"
+          fontFamily="system-ui, -apple-system, sans-serif"
         >
           PRISM ROUTER
         </text>

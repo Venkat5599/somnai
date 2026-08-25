@@ -35,7 +35,7 @@ export default function HomePage() {
 
         <div className="relative z-10 flex-1 flex flex-col [justify-content:safe_center]">
           <div className="w-full max-w-[1560px] mx-auto px-5 sm:px-8 lg:px-12 py-8">
-            <h1 className="text-[clamp(38px,6.6vw,92px)] leading-[0.94] tracking-[-0.04em] font-semibold text-ink">
+            <h1 className="num text-[clamp(34px,6vw,84px)] leading-[0.96] tracking-[-0.055em] font-medium text-ink">
               Event Contracts,
               <br />
               <span className="text-accent">refracted.</span>

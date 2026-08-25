@@ -214,7 +214,7 @@ export function PayoffChart({
         ) : null}
 
         {/* x axis */}
-        <g fill="#888888" fontSize="10" textAnchor="middle" fontFamily="var(--font-jetbrains), monospace">
+        <g fill="#888888" fontSize="10" textAnchor="middle" fontFamily="var(--font-geist-mono), ui-monospace, monospace">
           {xTicks.map((t, i) => (
             <text key={i} x={X(t)} y={H - 10}>
               {fmtK(Math.round(t))}
@@ -352,7 +352,7 @@ export function DensityChart({
         fill="#888888"
         fontSize="9.5"
         textAnchor="middle"
-        fontFamily="var(--font-jetbrains), monospace"
+        fontFamily="var(--font-geist-mono), ui-monospace, monospace"
       >
         {[0, 0.25, 0.5, 0.75, 1].map((f, i) => {
           const s = x0 + (x1 - x0) * f;
@@ -466,7 +466,7 @@ export function IVSurface({
         />
       </g>
 
-      <g fill="#888888" fontSize="9.5" fontFamily="var(--font-jetbrains), monospace">
+      <g fill="#888888" fontSize="9.5" fontFamily="var(--font-geist-mono), ui-monospace, monospace">
         {columns.map((label, c) =>
           c % 2 === 0 ? (
             <text key={c} x={ox + c * cellX} y={oy + 26} textAnchor="middle">
@@ -491,7 +491,7 @@ export function IVSurface({
         fontSize="9"
         fontWeight="600"
         letterSpacing="0.1em"
-        fontFamily="var(--font-inter), sans-serif"
+        fontFamily="system-ui, -apple-system, sans-serif"
       >
         <text x={ox + ((cols - 1) * cellX) / 2} y={H - 8} textAnchor="middle">
           {columnAxisLabel}

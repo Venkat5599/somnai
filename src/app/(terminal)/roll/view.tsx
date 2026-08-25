@@ -347,7 +347,7 @@ function Succession({ active }: { active: boolean }) {
               fill={live ? "#00f0ff" : done ? "#888888" : "#5a5f60"}
               fontSize="12"
               fontWeight="600"
-              fontFamily="var(--font-jetbrains), monospace"
+              fontFamily="var(--font-geist-mono), ui-monospace, monospace"
             >
               {w.label}
             </text>
@@ -359,7 +359,7 @@ function Succession({ active }: { active: boolean }) {
               fill="#5a5f60"
               fontSize="9"
               letterSpacing="0.09em"
-              fontFamily="var(--font-inter), sans-serif"
+              fontFamily="system-ui, -apple-system, sans-serif"
             >
               {done ? "ROLLED" : live ? "TRADING" : "SUCCESSOR"}
             </text>
@@ -424,7 +424,7 @@ function Succession({ active }: { active: boolean }) {
         fontSize="9.5"
         fontWeight="600"
         letterSpacing="0.09em"
-        fontFamily="var(--font-inter), sans-serif"
+        fontFamily="system-ui, -apple-system, sans-serif"
       >
         CARRIED POSITION
       </text>
@@ -433,7 +433,7 @@ function Succession({ active }: { active: boolean }) {
         y={142}
         fill="#5a5f60"
         fontSize="10"
-        fontFamily="var(--font-inter), sans-serif"
+        fontFamily="system-ui, -apple-system, sans-serif"
       >
         Four 5m windows held as one 20m tenor. Legs re-struck each succession.
       </text>

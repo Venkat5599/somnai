@@ -13,6 +13,7 @@
     "@designcodeio/threeui": "^1.0.0",
     "@somnia-chain/markets-sdk": "^0.28.1",
     "clsx": "^2.1.1",
+    "geist": "^1.7.2",
     "motion": "12.23.12",
     "next": "15.5.24",
     "react": "19.1.1",

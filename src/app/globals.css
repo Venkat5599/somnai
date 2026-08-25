@@ -73,8 +73,11 @@
   --spacing-panel: 16px;
   --spacing-page: 24px;
 
-  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
-  --font-mono: var(--font-jetbrains), ui-monospace, "SFMono-Regular", monospace;
+  /* Chrome: the native stack. Neutral by construction, sharp at 11px, 0 bytes. */
+  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue",
+    Arial, sans-serif;
+  /* Signature: the numerals ARE the brand on an instrument. Self-hosted OFL. */
+  --font-mono: var(--font-geist-mono), ui-monospace, "SFMono-Regular", monospace;
 }
 
 /* ============================================================
