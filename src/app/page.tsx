@@ -4,10 +4,10 @@ import { HeroField } from "@/components/hero-field";
 import { PrismMark, PrismWordmark } from "@/components/logo";
 import { Button, cx } from "@/components/ui";
 import { IconArrowOut, IconArrowRight } from "@/components/icons";
-import { NETWORK } from "@/lib/venue/config";
-import { cachedMarketSnapshot } from "@/lib/venue/cache";
-import { getLivePrice } from "@/lib/venue/prices";
-import { headroomSec } from "@/lib/venue/types";
+import { NETWORK } from "@sdk/venue/config";
+import { cachedMarketSnapshot } from "@sdk/venue/cache";
+import { getLivePrice } from "@sdk/venue/prices";
+import { headroomSec } from "@sdk/venue/types";
 
 /** Live venue state; nothing here can be prerendered. */
 export const dynamic = "force-dynamic";

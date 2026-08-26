@@ -13,7 +13,7 @@ import "server-only";
  * API is the one that answers reliably, so it is the primary here.
  */
 
-import { COLLATERAL, resolveVenueConfig, type VenueConfig } from "@/lib/venue/config";
+import { COLLATERAL, resolveVenueConfig, type VenueConfig } from "@sdk/venue/config";
 
 export interface HistoryRow {
   hash: string;

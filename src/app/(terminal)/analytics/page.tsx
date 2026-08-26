@@ -14,9 +14,9 @@ import {
   cx,
 } from "@/components/ui";
 import { IconArrowOut, IconInfo } from "@/components/icons";
-import { cachedMarketSnapshot } from "@/lib/venue/cache";
-import { cachedPriceSnapshot } from "@/lib/venue/cache";
-import { headroomSec, type Asset, type EventMarket } from "@/lib/venue/types";
+import { cachedMarketSnapshot } from "@sdk/venue/cache";
+import { cachedPriceSnapshot } from "@sdk/venue/cache";
+import { headroomSec, type Asset, type EventMarket } from "@sdk/venue/types";
 
 export const metadata: Metadata = { title: "Analytics — PRISM" };
 

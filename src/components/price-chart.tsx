@@ -22,7 +22,7 @@ import {
   type ISeriesApi,
   type Time,
 } from "lightweight-charts";
-import type { Candle, LivePrice, Timeframe } from "@/lib/venue/prices";
+import type { Candle, LivePrice, Timeframe } from "@sdk/venue/prices";
 import { cx } from "./ui";
 
 const ACCENT = "#00f0ff";

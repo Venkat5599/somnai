@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import { Page } from "@/components/shell";
 import { Chip, KV, Note, PageHead } from "@/components/ui";
 import { IconInfo } from "@/components/icons";
-import { NETWORK } from "@/lib/venue/config";
-import { TICK, LOT } from "@/lib/venue";
+import { NETWORK } from "@sdk/venue/config";
+import { TICK, LOT } from "@sdk/constants";
 
 export const metadata: Metadata = { title: "Settings — PRISM" };
 

@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import { Page } from "@/components/shell";
 import { Chip, Note, PageHead, cx } from "@/components/ui";
 import { IconArrowOut, IconInfo } from "@/components/icons";
-import { LIFECYCLE } from "@/lib/dreamdex/proof";
-import { VENUE_CONFIG } from "@/lib/venue/config";
+import { LIFECYCLE } from "@sdk/dreamdex/proof";
+import { VENUE_CONFIG } from "@sdk/venue/config";
 
 export const metadata: Metadata = { title: "Integration — PRISM" };
 

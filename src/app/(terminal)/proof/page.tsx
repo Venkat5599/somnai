@@ -3,8 +3,8 @@ import Link from "next/link";
 import { Page } from "@/components/shell";
 import { Chip, Note, PageHead, cx } from "@/components/ui";
 import { IconArrowOut, IconCheck, IconCross, IconInfo } from "@/components/icons";
-import { COLLATERAL } from "@/lib/venue/config";
-import { verifyLifecycle } from "@/lib/dreamdex/proof";
+import { COLLATERAL } from "@sdk/venue/config";
+import { verifyLifecycle } from "@sdk/dreamdex/proof";
 
 export const metadata: Metadata = { title: "Proof — PRISM" };
 

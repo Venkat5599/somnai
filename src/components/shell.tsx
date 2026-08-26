@@ -14,7 +14,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { PrismMark, PrismWordmark } from "./logo";
 import { cx } from "./ui";
-import { NETWORK } from "@/lib/venue/config";
+import { NETWORK } from "@sdk/venue/config";
 import {
   IconActivity,
   IconAgents,

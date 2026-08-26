@@ -10,8 +10,8 @@
 import { useState, useTransition } from "react";
 import { Button, Chip, Note, cx } from "@/components/ui";
 import { IconArrowOut, IconCheck, IconCross, IconDownload, IconInfo } from "@/components/icons";
-import { COLLATERAL, VENUE_CONFIG } from "@/lib/venue/config";
-import type { ClaimableRow, ClaimResult } from "@/lib/dreamdex/settlement";
+import { COLLATERAL, VENUE_CONFIG } from "@sdk/venue/config";
+import type { ClaimableRow, ClaimResult } from "@sdk/dreamdex/settlement";
 import { claimOne } from "./actions";
 
 export function ClaimList({

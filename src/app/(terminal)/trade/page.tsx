@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
-import { exchange, successionChain } from "@/lib/venue/markets";
-import { cachedMarketSnapshot } from "@/lib/venue/cache";
-import type { PriceSnapshot } from "@/lib/venue/prices";
-import { cachedPriceSnapshot } from "@/lib/venue/cache";
-import type { EventMarket, Outcome } from "@/lib/venue/types";
+import { exchange, successionChain } from "@sdk/venue/markets";
+import { cachedMarketSnapshot } from "@sdk/venue/cache";
+import type { PriceSnapshot } from "@sdk/venue/prices";
+import { cachedPriceSnapshot } from "@sdk/venue/cache";
+import type { EventMarket, Outcome } from "@sdk/venue/types";
 import { TradeTerminal } from "./terminal";
 
 export const metadata: Metadata = { title: "Trade — PRISM" };

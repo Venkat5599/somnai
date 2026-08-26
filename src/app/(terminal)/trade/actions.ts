@@ -13,10 +13,10 @@
  * that verdict may be UNKNOWN.
  */
 
-import { getMarketSnapshot, exchange } from "@/lib/venue/markets";
-import { resolveVenueConfig } from "@/lib/venue/config";
-import type { Outcome } from "@/lib/venue/types";
-import { callerKey, checkRate, checkSpend } from "@/lib/dreamdex/guard";
+import { getMarketSnapshot, exchange } from "@sdk/venue/markets";
+import { resolveVenueConfig } from "@sdk/venue/config";
+import type { Outcome } from "@sdk/venue/types";
+import { callerKey, checkRate, checkSpend } from "@sdk/dreamdex/guard";
 import {
   explorerTx,
   preflightSnapshot,
@@ -25,7 +25,7 @@ import {
   verifyExecution,
   type OrderSide,
   type VerificationResult,
-} from "@/lib/dreamdex/execution";
+} from "@sdk/dreamdex/execution";
 
 export interface ExecutionReport {
   phase: "VALIDATION_FAILED" | "SUBMITTED" | "NO_SIGNER";

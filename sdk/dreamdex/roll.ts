@@ -18,9 +18,9 @@ import "server-only";
  * refuses to run inside the venue's own expiry headroom.
  */
 
-import { getMarketSnapshot, successionChain, exchange } from "@/lib/venue/markets";
-import { resolveVenueConfig, type VenueConfig } from "@/lib/venue/config";
-import { headroomSec, type EventMarket, type Outcome } from "@/lib/venue/types";
+import { getMarketSnapshot, successionChain, exchange } from "@sdk/venue/markets";
+import { resolveVenueConfig, type VenueConfig } from "@sdk/venue/config";
+import { headroomSec, type EventMarket, type Outcome } from "@sdk/venue/types";
 import { placeLimit } from "./place-limit";
 import { rpc } from "./execution";
 import type { Hex } from "viem";

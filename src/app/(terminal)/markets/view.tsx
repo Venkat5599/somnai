@@ -29,8 +29,8 @@ import {
   cx,
 } from "@/components/ui";
 import { IconArrowOut, IconSearch } from "@/components/icons";
-import type { EventMarket } from "@/lib/venue/types";
-import { headroomSec } from "@/lib/venue/types";
+import type { EventMarket } from "@sdk/venue/types";
+import { headroomSec } from "@sdk/venue/types";
 
 type AssetFilter = "ALL" | "BTC" | "ETH";
 type StateFilter = "ROUTABLE" | "ACTIVE" | "ALL";

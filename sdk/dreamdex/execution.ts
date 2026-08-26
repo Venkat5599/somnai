@@ -24,9 +24,9 @@ import {
   SOMNIA_TESTNET_ADDRESSES,
 } from "@somnia-chain/markets-sdk";
 import { somniaShannon, somniaMainnet } from "@somnia-chain/markets-sdk/chains";
-import { COLLATERAL, resolveVenueConfig, type VenueConfig } from "@/lib/venue/config";
-import type { EventMarket, Outcome } from "@/lib/venue/types";
-import { headroomSec } from "@/lib/venue/types";
+import { COLLATERAL, resolveVenueConfig, type VenueConfig } from "@sdk/venue/config";
+import type { EventMarket, Outcome } from "@sdk/venue/types";
+import { headroomSec } from "@sdk/venue/types";
 import { placeLimit } from "./place-limit";
 
 /* ------------------------------------------------------------------ */

@@ -18,7 +18,7 @@ import "server-only";
 
 import type { Hex } from "viem";
 import { decodeEventLog, parseAbi } from "viem";
-import { COLLATERAL, resolveVenueConfig, type VenueConfig } from "@/lib/venue/config";
+import { COLLATERAL, resolveVenueConfig, type VenueConfig } from "@sdk/venue/config";
 import { rpc } from "./execution";
 
 /** PRISM's own verified round trip. Hashes only — everything else is read. */

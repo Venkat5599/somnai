@@ -22,8 +22,8 @@ import "server-only";
 
 import type { Hex } from "viem";
 import { signingExchange } from "./execution";
-import { resolveVenueConfig, type VenueConfig } from "@/lib/venue/config";
-import type { Outcome } from "@/lib/venue/types";
+import { resolveVenueConfig, type VenueConfig } from "@sdk/venue/config";
+import type { Outcome } from "@sdk/venue/types";
 import { gridFor, toSteps } from "./grid";
 
 export { gridFor, toSteps };

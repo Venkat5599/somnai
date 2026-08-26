@@ -10,7 +10,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "runner": "bun runner/index.ts"
+    "runner": "bun backend/index.ts"
   },
   "dependencies": {
     "@designcodeio/threeui": "^1.0.0",

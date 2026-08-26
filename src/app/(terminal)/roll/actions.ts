@@ -1,8 +1,8 @@
 "use server";
 
-import { executeRoll, planRoll, type RollPlan, type RollResult } from "@/lib/dreamdex/roll";
-import type { Outcome } from "@/lib/venue/types";
-import { callerKey, checkRate } from "@/lib/dreamdex/guard";
+import { executeRoll, planRoll, type RollPlan, type RollResult } from "@sdk/dreamdex/roll";
+import type { Outcome } from "@sdk/venue/types";
+import { callerKey, checkRate } from "@sdk/dreamdex/guard";
 
 export async function previewRoll(
   marketId: string,

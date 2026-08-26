@@ -16,8 +16,8 @@
 import { useMemo, useState, useTransition } from "react";
 import { Button, Chip, Note, cx } from "@/components/ui";
 import { IconArrowOut, IconBolt, IconCheck, IconCross, IconInfo } from "@/components/icons";
-import type { EventMarket, Outcome } from "@/lib/venue/types";
-import { COLLATERAL } from "@/lib/venue/config";
+import type { EventMarket, Outcome } from "@sdk/venue/types";
+import { COLLATERAL } from "@sdk/venue/config";
 import type { BookSide } from "./page";
 import type { ExpiryPhase } from "./use-countdown";
 import { executeOrder, type ExecutionReport } from "./actions";

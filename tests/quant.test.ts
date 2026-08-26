@@ -16,7 +16,7 @@ import {
   replicate,
   riskNeutralDensity,
   type Leg,
-} from "@/lib/quant";
+} from "@sdk/quant";
 
 describe("normCdf / normInv", () => {
   it("is symmetric about zero", () => {

@@ -2,10 +2,10 @@ import type { Metadata } from "next";
 import { Page } from "@/components/shell";
 import { Note, PageHead } from "@/components/ui";
 import { IconInfo } from "@/components/icons";
-import { successionChain } from "@/lib/venue/markets";
-import { cachedMarketSnapshot } from "@/lib/venue/cache";
-import { INTERVALS } from "@/lib/venue/config";
-import type { Asset, EventMarket } from "@/lib/venue/types";
+import { successionChain } from "@sdk/venue/markets";
+import { cachedMarketSnapshot } from "@sdk/venue/cache";
+import { INTERVALS } from "@sdk/venue/config";
+import type { Asset, EventMarket } from "@sdk/venue/types";
 import { RollView } from "./view";
 
 export const metadata: Metadata = { title: "Roll Engine — PRISM" };

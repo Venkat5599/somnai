@@ -3,10 +3,10 @@ import Link from "next/link";
 import { Page } from "@/components/shell";
 import { Button, Chip, Note, PageHead, cx } from "@/components/ui";
 import { IconArrowRight, IconInfo, IconLayers, IconRoll } from "@/components/icons";
-import { successionChain } from "@/lib/venue/markets";
-import { cachedMarketSnapshot } from "@/lib/venue/cache";
-import { INTERVALS } from "@/lib/venue/config";
-import { headroomSec, type Asset, type EventMarket } from "@/lib/venue/types";
+import { successionChain } from "@sdk/venue/markets";
+import { cachedMarketSnapshot } from "@sdk/venue/cache";
+import { INTERVALS } from "@sdk/venue/config";
+import { headroomSec, type Asset, type EventMarket } from "@sdk/venue/types";
 
 export const metadata: Metadata = { title: "Structures — PRISM" };
 

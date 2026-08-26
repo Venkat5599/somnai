@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import { Page } from "@/components/shell";
 import { Chip, Note, PageHead, TableWrap, Td, Th, Tr, cx } from "@/components/ui";
 import { IconArrowOut, IconInfo } from "@/components/icons";
-import { VENUE_CONFIG } from "@/lib/venue/config";
-import { signerAddress } from "@/lib/dreamdex/execution";
-import { getHistory } from "@/lib/dreamdex/history";
+import { VENUE_CONFIG } from "@sdk/venue/config";
+import { signerAddress } from "@sdk/dreamdex/execution";
+import { getHistory } from "@sdk/dreamdex/history";
 
 export const metadata: Metadata = { title: "Activity — PRISM" };
 

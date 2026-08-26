@@ -15,7 +15,7 @@
 import { useEffect, useState } from "react";
 import { Chip, Note, PageHead, Stat, cx } from "@/components/ui";
 import { IconInfo, IconRoll } from "@/components/icons";
-import { headroomSec } from "@/lib/venue/types";
+import { headroomSec } from "@sdk/venue/types";
 import type { Succession } from "./page";
 import { RollPanel } from "./roll-panel";
 

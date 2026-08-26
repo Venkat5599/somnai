@@ -1,5 +1,5 @@
 /** Proves the real read path executes against the live venue. */
-import { getMarketSnapshot, marketsForAsset, termStructure, successionChain } from "../src/lib/venue/markets";
+import { getMarketSnapshot, marketsForAsset, termStructure, successionChain } from "../sdk/venue/markets";
 
 const snap = await getMarketSnapshot();
 console.log(`network      ${snap.network}`);

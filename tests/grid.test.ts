@@ -12,7 +12,7 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { gridFor, toSteps } from "@/lib/dreamdex/grid";
+import { gridFor, toSteps } from "@sdk/dreamdex/grid";
 
 const ONE_18 = 10n ** 18n;
 const ONE_6 = 10n ** 6n;

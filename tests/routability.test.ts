@@ -13,7 +13,7 @@ import {
   secondsToExpiry,
   withinHeadroom,
   type EventMarket,
-} from "@/lib/venue/types";
+} from "@sdk/venue/types";
 
 const NOW = 1_787_700_000_000; // fixed clock; nothing here reads Date.now()
 const nowSec = Math.floor(NOW / 1000);

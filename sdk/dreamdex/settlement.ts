@@ -26,7 +26,7 @@ import "server-only";
  */
 
 import type { Hex } from "viem";
-import { COLLATERAL, resolveVenueConfig, type VenueConfig } from "@/lib/venue/config";
+import { COLLATERAL, resolveVenueConfig, type VenueConfig } from "@sdk/venue/config";
 import { signingExchange, rpc, signerAddress } from "./execution";
 
 export interface ClaimableRow {

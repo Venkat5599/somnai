@@ -11,9 +11,9 @@
 import { useState, useTransition } from "react";
 import { Button, Chip, Note, cx } from "@/components/ui";
 import { IconArrowOut, IconBolt, IconCheck, IconInfo, IconRoll } from "@/components/icons";
-import { COLLATERAL, VENUE_CONFIG } from "@/lib/venue/config";
-import type { Outcome } from "@/lib/venue/types";
-import type { RollPlan, RollResult } from "@/lib/dreamdex/roll";
+import { COLLATERAL, VENUE_CONFIG } from "@sdk/venue/config";
+import type { Outcome } from "@sdk/venue/types";
+import type { RollPlan, RollResult } from "@sdk/dreamdex/roll";
 import { commitRoll, previewRoll } from "./actions";
 
 export function RollPanel({ marketId }: { marketId: string }) {

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Page } from "@/components/shell";
 import { Note, PageHead } from "@/components/ui";
 import { IconInfo } from "@/components/icons";
-import { cachedMarketSnapshot } from "@/lib/venue/cache";
+import { cachedMarketSnapshot } from "@sdk/venue/cache";
 import { MarketsView } from "./view";
 
 export const metadata: Metadata = { title: "Markets — PRISM" };

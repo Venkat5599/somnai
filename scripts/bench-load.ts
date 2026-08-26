@@ -1,5 +1,5 @@
-import { getMarketSnapshot } from "../src/lib/venue/markets";
-import { getPriceSnapshot } from "../src/lib/venue/prices";
+import { getMarketSnapshot } from "../sdk/venue/markets";
+import { getPriceSnapshot } from "../sdk/venue/prices";
 
 const t = async <T>(label: string, fn: () => Promise<T>) => {
   const s = Date.now();

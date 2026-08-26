@@ -12,7 +12,7 @@
  */
 
 import { useId, useMemo, useState } from "react";
-import { fmtK, fmtSigned, type DensityPoint } from "@/lib/quant";
+import { fmtK, fmtSigned, type DensityPoint } from "@sdk/quant";
 import { cx } from "./ui";
 
 /* ------------------------------------------------------------------ */

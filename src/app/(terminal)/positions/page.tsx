@@ -13,9 +13,9 @@ import {
   Tr,
 } from "@/components/ui";
 import { IconArrowOut, IconInfo } from "@/components/icons";
-import { COLLATERAL, VENUE_CONFIG } from "@/lib/venue/config";
-import { exchange } from "@/lib/venue/markets";
-import { readBalances } from "@/lib/dreamdex/execution";
+import { COLLATERAL, VENUE_CONFIG } from "@sdk/venue/config";
+import { exchange } from "@sdk/venue/markets";
+import { readBalances } from "@sdk/dreamdex/execution";
 
 export const metadata: Metadata = { title: "Positions — PRISM" };
 

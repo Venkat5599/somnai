@@ -1,7 +1,7 @@
 "use server";
 
-import { claim, findClaimable, type ClaimResult } from "@/lib/dreamdex/settlement";
-import { resolveVenueConfig } from "@/lib/venue/config";
+import { claim, findClaimable, type ClaimResult } from "@sdk/dreamdex/settlement";
+import { resolveVenueConfig } from "@sdk/venue/config";
 
 /**
  * Claim one settled holding.

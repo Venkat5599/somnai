@@ -27,7 +27,7 @@ import "server-only";
  * These exist so a public demo cannot be trivially drained.
  */
 
-import { COLLATERAL, resolveVenueConfig, type VenueConfig } from "@/lib/venue/config";
+import { COLLATERAL, resolveVenueConfig, type VenueConfig } from "@sdk/venue/config";
 import { readBalances } from "./execution";
 
 /* ------------------------------------------------------------------ */

@@ -28,8 +28,8 @@ import {
   IconLayers,
   IconRoll,
 } from "@/components/icons";
-import { headroomSec, type Asset, type EventMarket, type Outcome } from "@/lib/venue/types";
-import type { PriceSnapshot } from "@/lib/venue/prices";
+import { headroomSec, type Asset, type EventMarket, type Outcome } from "@sdk/venue/types";
+import type { PriceSnapshot } from "@sdk/venue/prices";
 import type { MarketBook } from "./page";
 import { ExecutePanel } from "./execute-panel";
 import { useCountdown, expiryPhase, type ExpiryPhase } from "./use-countdown";

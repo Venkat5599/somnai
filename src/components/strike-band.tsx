@@ -14,7 +14,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { cx } from "./ui";
-import { fmtK } from "@/lib/quant";
+import { fmtK } from "@sdk/quant";
 
 export interface StrikeBandProps {
   strikes: number[];

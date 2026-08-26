@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import { Page } from "@/components/shell";
 import { Chip, Note, PageHead, Stat } from "@/components/ui";
 import { IconInfo } from "@/components/icons";
-import { COLLATERAL, VENUE_CONFIG } from "@/lib/venue/config";
-import { readBalances } from "@/lib/dreamdex/execution";
-import { findClaimable } from "@/lib/dreamdex/settlement";
+import { COLLATERAL, VENUE_CONFIG } from "@sdk/venue/config";
+import { readBalances } from "@sdk/dreamdex/execution";
+import { findClaimable } from "@sdk/dreamdex/settlement";
 import { ClaimList } from "./list";
 
 export const metadata: Metadata = { title: "Settlement — PRISM" };
