@@ -43,6 +43,16 @@ export interface ClaimableRow {
   voided: boolean;
   marketAddress: string;
   outcomeToken: string;
+  /** Settlement fee in bps. The winner is paid 1 - fee, never 1. */
+  settlementFeeBps: number;
+  /**
+   * What redeeming actually returns, in collateral.
+   *
+   * A winner does NOT redeem 1:1 — the venue skims a one-time settlement fee at
+   * finalize. A voided market pays BOTH sides half. Showing the face value here
+   * would overstate every claim on the page.
+   */
+  estimatedPayout: number;
 }
 
 export interface ClaimResult {
@@ -108,10 +118,30 @@ export async function findClaimable(
     const candidates: (0 | 1)[] = voided ? [0, 1] : [Number(oc.winningOutcome) as 0 | 1];
     const decimals = Number(oc.decimals ?? COLLATERAL.decimals);
 
+    // The fee is frozen at finalize and lives on the settlement record; the
+    // pool cannot be asked because it may already be serving a different
+    // market (pools are recycled across windows).
+    let feeBps = 0;
+    try {
+      const fees = (await (
+        client.getMarketFees as unknown as (id: string) => Promise<Record<string, unknown> | null>
+      )(marketId)) ?? null;
+      if (fees?.settlementFeeBps != null) feeBps = Number(fees.settlementFeeBps);
+    } catch {
+      feeBps = 0;
+    }
+
     for (const idx of candidates) {
       const held = idx === 0 ? BigInt(yes) : BigInt(no);
       if (held === 0n) continue;
+      // estPayoutFor's rule, applied in integer bps:
+      //   winner -> amount * (10000 - fee) / 10000 ; voided -> amount / 2
+      const payoutRaw = voided
+        ? held / 2n
+        : (held * BigInt(10_000 - feeBps)) / 10_000n;
       out.push({
+        settlementFeeBps: feeBps,
+        estimatedPayout: Number(payoutRaw) / 10 ** decimals,
         marketId,
         asset: typeof row.asset === "string" ? row.asset : null,
         outcomeIdx: idx,

@@ -94,6 +94,20 @@ export function ClaimList({
                   <span className="text-[12px] text-ink-3">contracts</span>
                 </p>
                 <p className="num text-[11px] text-ink-4 mt-1">raw {r.raw}</p>
+                <div className="mt-3 pt-3 border-t border-line-soft">
+                  <p className="text-label-xs uppercase text-ink-3">Pays out</p>
+                  <p className="num text-[15px] text-accent mt-1">
+                    {r.estimatedPayout.toFixed(6)}{" "}
+                    <span className="text-[11px] text-ink-3">{COLLATERAL.symbol}</span>
+                  </p>
+                  <p className="text-[11px] text-ink-4 mt-1">
+                    {r.voided
+                      ? "voided — both sides redeem at half"
+                      : r.settlementFeeBps > 0
+                        ? `after ${(r.settlementFeeBps / 100).toFixed(2)}% settlement fee`
+                        : "no settlement fee on this market"}
+                  </p>
+                </div>
               </div>
 
               <div className="flex flex-col min-w-0">

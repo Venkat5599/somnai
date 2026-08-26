@@ -9,7 +9,8 @@
     "start": "next start -p 3177",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "runner": "bun runner/index.ts"
   },
   "dependencies": {
     "@designcodeio/threeui": "^1.0.0",
