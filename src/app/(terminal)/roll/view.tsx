@@ -17,6 +17,7 @@ import { Chip, Note, PageHead, Stat, cx } from "@/components/ui";
 import { IconInfo, IconRoll } from "@/components/icons";
 import { headroomSec } from "@/lib/venue/types";
 import type { Succession } from "./page";
+import { RollPanel } from "./roll-panel";
 
 const mmss = (s: number) => {
   if (s <= 0) return "closed";
@@ -78,8 +79,8 @@ export function RollView({
         <div className="bg-surface p-4">
           <Stat
             label="Roll execution"
-            value="Not wired"
-            sub="chains are real, automation is not"
+            value="Manual"
+            sub="preview and commit per chain"
             mono={false}
           />
         </div>
@@ -197,6 +198,8 @@ function Chain({ succession, now }: { succession: Succession; now: number }) {
           );
         })}
       </ol>
+
+      {live ? <RollPanel marketId={live.marketId} /> : null}
 
       <p className="text-[11px] leading-[16px] text-ink-4 mt-3">
         {closed} closed · {live ? "1 trading" : "0 trading"} · {upcoming} successor
