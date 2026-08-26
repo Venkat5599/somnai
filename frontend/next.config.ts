@@ -26,7 +26,11 @@ const UNUSED_CONNECTOR_DEPS = [
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
-  outputFileTracingRoot: path.join(process.cwd()),
+  // The app lives in frontend/ but imports sdk/, which is its SIBLING. Tracing
+  // must start at the REPO ROOT or sdk/ is never bundled into the serverless
+  // function — the build passes and every route 500s at runtime, which is
+  // exactly what happened twice.
+  outputFileTracingRoot: path.join(process.cwd(), ".."),
   webpack: (config) => {
     config.resolve.alias = {
       ...config.resolve.alias,
