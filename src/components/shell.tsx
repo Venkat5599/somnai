@@ -13,6 +13,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { PrismMark, PrismWordmark } from "./logo";
+import { Connect } from "./connect";
 import { cx } from "./ui";
 import { NETWORK } from "@sdk/venue/config";
 import {
@@ -201,6 +202,8 @@ function TopBar({ onMenu }: { onMenu: () => void }) {
               className="absolute top-1 right-1 w-[5px] h-[5px] bg-accent"
             />
           </button>
+
+          <Connect />
 
           <div className="flex items-stretch border border-line h-8">
             <span className="hidden sm:flex items-center px-2.5 text-label-xs uppercase text-ink-3 border-r border-line">

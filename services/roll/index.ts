@@ -17,6 +17,7 @@
  */
 
 import {
+  ORDER_TYPE,
   SomniaMarkets,
   SOMNIA_TESTNET_PRICE_FEED,
   SOMNIA_TESTNET_ADDRESSES,
@@ -156,7 +157,7 @@ async function rollTick(): Promise<void> {
           outcomeToken: oc.outcomeToken,
           yesId: oc.yesId,
           noId: oc.noId,
-          orderType: 2, // IOC — never leave escrow locked in a resting remainder
+          orderType: ORDER_TYPE.MARKET, // fill now, cancel the rest
           expireTimestampNs: BigInt(expiresAt) * 1_000_000_000n,
         });
         assertTxOk(res as any, `roll ${key}`);

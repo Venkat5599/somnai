@@ -132,3 +132,37 @@ export async function executeOrder(input: {
     elapsedMs: Date.now() - started,
   };
 }
+
+/**
+ * Build an order for the USER to sign.
+ *
+ * Returns unsigned calls; nothing is signed or sent here. This is the
+ * non-custodial path — the one that removes the single-nonce ceiling, because
+ * each user broadcasts from their own address.
+ */
+export async function prepareForWallet(input: {
+  marketId: string;
+  outcome: Outcome;
+  amount: number;
+}) {
+  const config = resolveVenueConfig();
+  const rate = checkRate(await callerKey());
+  if (!rate.allowed)
+    return {
+      ok: false as const,
+      reason: "RATE_LIMITED",
+      detail: `Too many attempts. Retry in ${rate.retryAfterSec}s.`,
+    };
+
+  const snap = await getMarketSnapshot(config);
+  const market = snap.all.find((m) => m.marketId === input.marketId) ?? null;
+
+  // No spend guard here on purpose: the user is spending their OWN funds, so
+  // the demo wallet's reserve is irrelevant to them.
+  const { prepareOrder } = await import("@sdk/dreamdex/prepare");
+  return prepareOrder(
+    { marketId: input.marketId, outcome: input.outcome, side: "buy", amount: input.amount },
+    market,
+    config,
+  );
+}

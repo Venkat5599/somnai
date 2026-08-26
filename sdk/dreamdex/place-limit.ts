@@ -35,9 +35,15 @@ const SIDES: Record<string, string> = {
   "NO-sell": "SELL_NO",
 };
 
-const ORDER_TYPE_POST_ONLY = 1;
-const ORDER_TYPE_MARKET = 2;
-const ORDER_TYPE_LIMIT = 0;
+/**
+ * Order types come from the SDK, not from constants typed by hand.
+ *
+ * Hand-written they were WRONG: POST_ONLY was set to 1, which is FILL_OR_KILL.
+ * A post-only order — whose entire purpose is to rest and never take — would
+ * have been sent as all-or-nothing-right-now. The authoritative enum is
+ * { LIMIT: 0, FILL_OR_KILL: 1, MARKET: 2, POST_ONLY: 3 }.
+ */
+import { ORDER_TYPE } from "@somnia-chain/markets-sdk";
 
 /** A reverted write does NOT throw — the receipt has to be checked explicitly. */
 export function assertTxOk(
@@ -70,6 +76,30 @@ export interface PlaceLimitResult {
  * come from chain rather than from an indexed row, because a pool is recycled
  * across windows and an indexed address can be a different market's.
  */
+/**
+ * The venue's own grid, read from the pool.
+ *
+ * Falls back to the per-network defaults only if the chain read fails — a
+ * missing grid must not silently become a wrong grid.
+ */
+async function venueGrid(
+  client: Record<string, unknown>,
+  pool: string,
+  config: VenueConfig,
+): Promise<{ tick: bigint; lot: bigint }> {
+  try {
+    const p = (await (
+      client.getBinaryBookParams as unknown as (p: string) => Promise<Record<string, unknown>>
+    )(pool)) as Record<string, unknown>;
+    const tick = BigInt(String(p.tickSize));
+    const lot = BigInt(String(p.lotSize));
+    if (tick > 0n && lot > 0n) return { tick, lot };
+  } catch {
+    // fall through
+  }
+  return gridFor(config.network);
+}
+
 export async function placeLimit(
   args: {
     marketId: string;
@@ -94,7 +124,12 @@ export async function placeLimit(
 
   const decimals = Number(onchain.decimals ?? 6);
   const one = 10n ** BigInt(decimals);
-  const { tick, lot } = gridFor(config.network);
+
+  // ASK THE VENUE for its grid rather than branching on network. Somnia's own
+  // recipe is explicit: read tickSize/lotSize/minQuantity per venue and the
+  // same code works on either chain without a branch. gridFor() IS that branch,
+  // so it survives only as a fallback when the read fails.
+  const { tick, lot } = await venueGrid(client, String(onchain.pool), config);
 
   const quantity = toSteps(args.size, one, lot, "floor");
   const priceOwn = toSteps(args.price, one, tick, "round");
@@ -133,10 +168,10 @@ export async function placeLimit(
     noId: onchain.noId,
     orderType:
       type === "post-only"
-        ? ORDER_TYPE_POST_ONLY
+        ? ORDER_TYPE.POST_ONLY
         : type === "ioc"
-          ? ORDER_TYPE_MARKET
-          : ORDER_TYPE_LIMIT,
+          ? ORDER_TYPE.MARKET
+          : ORDER_TYPE.LIMIT,
     expireTimestampNs: BigInt(expiresAt) * 1_000_000_000n,
   });
 

@@ -17,12 +17,15 @@ import { useMemo, useState, useTransition } from "react";
 import { Button, Chip, Note, cx } from "@/components/ui";
 import { IconArrowOut, IconBolt, IconCheck, IconCross, IconInfo } from "@/components/icons";
 import type { EventMarket, Outcome } from "@sdk/venue/types";
-import { COLLATERAL } from "@sdk/venue/config";
+import { COLLATERAL, VENUE_CONFIG } from "@sdk/venue/config";
 import type { BookSide } from "./page";
 import type { ExpiryPhase } from "./use-countdown";
-import { executeOrder, type ExecutionReport } from "./actions";
+import { useSendTransaction } from "wagmi";
+import { useSelfCustody } from "@/components/connect";
+import { executeOrder, prepareForWallet, type ExecutionReport } from "./actions";
 
 const UNIT = COLLATERAL.symbol;
+const EXPLORER = VENUE_CONFIG.explorer;
 
 export function ExecutePanel({
   market,
@@ -46,6 +49,51 @@ export function ExecutePanel({
   const [amount, setAmount] = useState(1);
   const [report, setReport] = useState<ExecutionReport | null>(null);
   const [pending, start] = useTransition();
+
+  // Non-custodial path. When a wallet is connected the user signs from their
+  // own address, so there is no shared nonce and no global throughput ceiling.
+  const { canSign, address } = useSelfCustody();
+  const { sendTransactionAsync } = useSendTransaction();
+  const [selfState, setSelfState] = useState<string | null>(null);
+  const [selfHash, setSelfHash] = useState<string | null>(null);
+  const [selfError, setSelfError] = useState<string | null>(null);
+
+  const runSelfCustody = () => {
+    setSelfError(null);
+    setSelfHash(null);
+    start(async () => {
+      setSelfState("Preparing");
+      const prep = await prepareForWallet({ marketId: market.marketId, outcome, amount });
+      if (!prep.ok) {
+        setSelfError(`${prep.reason}: ${prep.detail}`);
+        setSelfState(null);
+        return;
+      }
+      try {
+        // The SDK returns the approval but never sends it. Skipping it reverts
+        // on-chain, so it goes first and is awaited before the order.
+        if (prep.approval) {
+          setSelfState("Approving collateral");
+          await sendTransactionAsync({
+            to: prep.approval.to as `0x${string}`,
+            data: prep.approval.data as `0x${string}`,
+            value: BigInt(prep.approval.value),
+          });
+        }
+        setSelfState("Signing order");
+        const hash = await sendTransactionAsync({
+          to: prep.order.to as `0x${string}`,
+          data: prep.order.data as `0x${string}`,
+          value: BigInt(prep.order.value),
+        });
+        setSelfHash(hash);
+        setSelfState("Submitted");
+      } catch (e) {
+        setSelfError(e instanceof Error ? e.message.slice(0, 180) : String(e));
+        setSelfState(null);
+      }
+    });
+  };
 
   /** Everything a binary needs — no model, just the strike and the book price. */
   const quote = useMemo(() => {
@@ -158,16 +206,26 @@ export function ExecutePanel({
         </Note>
       )}
 
+      {canSign ? (
+        <p className="text-[11px] text-ink-4 text-center -mb-1">
+          Signing as{" "}
+          <span className="num text-ink-3">
+            {address?.slice(0, 6)}…{address?.slice(-4)}
+          </span>{" "}
+          — your key, your funds
+        </p>
+      ) : null}
+
       <Button
         variant="primary"
         size="lg"
         block
         leading={<IconBolt size={15} />}
         disabled={blocked || busy || !quote || !quote.fillable}
-        onClick={run}
+        onClick={canSign ? runSelfCustody : run}
       >
         {busy
-          ? "Submitting…"
+          ? (selfState ?? "Submitting…")
           : phase === "expired"
             ? "Market expired"
             : phase === "imminent"
@@ -186,6 +244,36 @@ export function ExecutePanel({
           Signing, submitting, then verifying against chain state. The SDK
           response alone does not decide the outcome.
         </Note>
+      ) : null}
+
+      {selfError && !busy ? (
+        <Note tone="warn" icon={<IconInfo size={14} />}>
+          <span className="font-medium text-ink">Wallet execution failed</span>
+          <span className="block mt-1 text-ink-3">{selfError}</span>
+        </Note>
+      ) : null}
+
+      {selfHash && !busy ? (
+        <div className="border border-[#124c31] bg-[#04160e] p-3">
+          <span className="inline-flex items-center gap-2">
+            <IconCheck size={14} className="text-up" />
+            <span className="text-label-xs uppercase text-ink">Signed and broadcast</span>
+          </span>
+          <p className="num text-[11px] text-ink-2 mt-2 break-all">{selfHash}</p>
+          <p className="text-[11px] text-ink-4 mt-1.5">
+            Broadcast from your wallet. Confirmation is the chain&apos;s to give —
+            verify it on the explorer.
+          </p>
+          <a
+            href={`${EXPLORER}/tx/${selfHash}`}
+            target="_blank"
+            rel="noreferrer"
+            className="mt-2 inline-flex items-center gap-1.5 text-[12px] uppercase tracking-[0.05em] text-accent hover:text-ink transition-colors"
+          >
+            Verify on explorer
+            <IconArrowOut size={13} />
+          </a>
+        </div>
       ) : null}
 
       {report && !busy ? <Result report={report} /> : null}

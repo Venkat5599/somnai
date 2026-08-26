@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { GeistMono } from "geist/font/mono";
 import "./globals.css";
+import { Providers } from "./providers";
 
 /**
  * Type.
@@ -40,7 +41,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={GeistMono.variable}>
       <body className="substrate antialiased" suppressHydrationWarning>
-        {children}
+        <Providers>{children}</Providers>
       </body>
     </html>
   );
