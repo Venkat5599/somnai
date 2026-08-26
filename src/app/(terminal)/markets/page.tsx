@@ -44,10 +44,22 @@ export default async function MarketsPage() {
     );
   }
 
+  // 548 rows serialized into the RSC payload was ~598 KB on the wire, and 538
+  // of them are finalized windows nobody can trade. Send what the page renders:
+  // everything active, plus the most recent settled ones for context. The full
+  // registry is still read server-side — the counts below are of the whole set.
+  const RECENT_SETTLED = 40;
+  const settled = snapshot.all
+    .filter((m) => !m.active)
+    .sort((a, b) => b.expiry - a.expiry)
+    .slice(0, RECENT_SETTLED);
+  const shown = [...snapshot.active, ...settled];
+
   return (
     <Page>
       <MarketsView
-        markets={snapshot.all}
+        markets={shown}
+        totalInRegistry={snapshot.all.length}
         activeCount={snapshot.active.length}
         routableCount={snapshot.routable.length}
         venueCount={Object.keys(snapshot.venues).length}

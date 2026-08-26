@@ -47,6 +47,7 @@ function countdown(seconds: number): string {
 
 export function MarketsView({
   markets,
+  totalInRegistry,
   activeCount,
   routableCount,
   venueCount,
@@ -54,6 +55,8 @@ export function MarketsView({
   fetchedAt,
 }: {
   markets: EventMarket[];
+  /** Whole registry size; `markets` carries only what this page renders. */
+  totalInRegistry: number;
   activeCount: number;
   routableCount: number;
   venueCount: number;
@@ -114,7 +117,7 @@ export function MarketsView({
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-px bg-line border border-line mb-5">
         {[
-          { label: "Binary markets", value: String(markets.length), sub: "in registry" },
+          { label: "Binary markets", value: String(totalInRegistry), sub: "in registry" },
           { label: "Active", value: String(activeCount), sub: "window open" },
           {
             label: "Routable",
@@ -281,7 +284,7 @@ export function MarketsView({
 
         <div className="flex flex-wrap items-center justify-between gap-3 px-3 h-11 border-t border-line">
           <span className="text-[12px] text-ink-3">
-            {rows.length} of {markets.length} binary markets
+            {rows.length} shown · {totalInRegistry} in registry
           </span>
           <span className="num text-[12px] text-ink-4">
             read from Somnia {network} ·{" "}
