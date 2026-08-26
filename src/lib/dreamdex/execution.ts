@@ -27,6 +27,7 @@ import { somniaShannon, somniaMainnet } from "@somnia-chain/markets-sdk/chains";
 import { COLLATERAL, resolveVenueConfig, type VenueConfig } from "@/lib/venue/config";
 import type { EventMarket, Outcome } from "@/lib/venue/types";
 import { headroomSec } from "@/lib/venue/types";
+import { placeLimit } from "./place-limit";
 
 /* ------------------------------------------------------------------ */
 /* Types                                                               */
@@ -78,6 +79,8 @@ export type ValidationReason =
 
 export interface ValidationOk {
   ok: true;
+  marketId: string;
+  outcome: Outcome;
   /** The venue's outcome reference, e.g. "ETH-…/tUSDC#YES". */
   ref: string;
   /** Price we will actually send. */
@@ -283,6 +286,8 @@ export async function validateOrder(
 
   return {
     ok: true,
+    marketId: market.marketId,
+    outcome: intent.outcome,
     ref,
     price: Number(price.toFixed(market.pricePrecision)),
     amount: intent.amount,
@@ -311,7 +316,43 @@ export async function submitOrder(
   if (!ex)
     return { sdkStatus: null, orderId: null, txHash: null, filled: null, remaining: null, threw: "NO_SIGNER" };
 
+  let rawFallbackReason: string | null = null;
+
   try {
+    // Grid-safe path FIRST. createOrder hands a float to parseUnits, which is
+    // safe at 6 decimals and broken at 18 — so the unified tier would pass every
+    // testnet test and fail on mainnet. placeLimit converts in tick and lot
+    // units as exact integers instead.
+    try {
+      const placed = await placeLimit(
+        {
+          marketId: v.marketId,
+          outcome: v.outcome,
+          side,
+          price: v.price,
+          size: v.amount,
+          type: "ioc",
+        },
+        config,
+      );
+      if (placed.hash || placed.filled > 0) {
+        return {
+          sdkStatus: placed.rested ? "open" : "closed",
+          orderId: placed.orderId,
+          txHash: placed.hash,
+          filled: placed.filled,
+          remaining: placed.size - placed.filled,
+          threw: null,
+        };
+      }
+    } catch (rawErr) {
+      // Fall through to the unified tier, but keep the reason: on a 6-decimal
+      // venue it will very likely succeed, and silently swallowing why the
+      // grid-safe path declined would hide a real mainnet defect.
+      rawFallbackReason =
+        rawErr instanceof Error ? rawErr.message.slice(0, 160) : String(rawErr);
+    }
+
     const order = await ex.createOrder(v.ref, "limit", side, v.amount, v.price, {
       timeInForce: "IOC",
     });
@@ -327,7 +368,7 @@ export async function submitOrder(
       txHash: hash,
       filled: order.filled ?? null,
       remaining: order.remaining ?? null,
-      threw: null,
+      threw: rawFallbackReason ? `grid-safe path declined: ${rawFallbackReason}` : null,
     };
   } catch (e) {
     return {
