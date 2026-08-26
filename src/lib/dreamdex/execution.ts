@@ -40,9 +40,25 @@ export interface OrderIntent {
   price?: number;
 }
 
+/**
+ * Hard server-side ceiling on a single order.
+ *
+ * The deployed demo signs with a shared burner key, so the Buy control is
+ * effectively open to the internet. Without a cap here, one visitor could drain
+ * the wallet and every later visitor would meet INSUFFICIENT_COLLATERAL — the
+ * demo would break itself.
+ *
+ * Enforced on the SERVER, after the client's number arrives, because a limit
+ * that only exists in an input's `max` attribute is not a limit.
+ */
+export const MAX_ORDER_CONTRACTS = Number(
+  process.env.PRISM_MAX_ORDER_CONTRACTS ?? "2",
+);
+
 export type ValidationReason =
   | "DRY_RUN_ENABLED"
   | "NO_SIGNER"
+  | "AMOUNT_ABOVE_LIMIT"
   | "MARKET_NOT_FOUND"
   | "MARKET_NOT_ACTIVE"
   | "MARKET_NOT_TRADING"
@@ -225,6 +241,11 @@ export async function validateOrder(
     );
 
   if (!(intent.amount > 0)) return fail("AMOUNT_NOT_POSITIVE", "Size must be greater than zero.");
+  if (intent.amount > MAX_ORDER_CONTRACTS)
+    return fail(
+      "AMOUNT_ABOVE_LIMIT",
+      `This deployment caps a single order at ${MAX_ORDER_CONTRACTS} contracts; it signs with a shared demo wallet.`,
+    );
   if (intent.amount < market.minAmount)
     return fail("AMOUNT_BELOW_MINIMUM", `Venue minimum is ${market.minAmount} contracts.`);
 
