@@ -17,9 +17,12 @@ import { useMemo, useState, useTransition } from "react";
 import { Button, Chip, Note, cx } from "@/components/ui";
 import { IconArrowOut, IconBolt, IconCheck, IconCross, IconInfo } from "@/components/icons";
 import type { EventMarket, Outcome } from "@/lib/venue/types";
+import { COLLATERAL } from "@/lib/venue/config";
 import type { BookSide } from "./page";
 import type { ExpiryPhase } from "./use-countdown";
 import { executeOrder, type ExecutionReport } from "./actions";
+
+const UNIT = COLLATERAL.symbol;
 
 export function ExecutePanel({
   market,
@@ -116,17 +119,37 @@ export function ExecutePanel({
       />
 
       {quote ? (
-        <dl className="border border-line">
-          <Row k="You pay" v={`${quote.cost.toFixed(4)}`} tone="ink" strong />
-          <Row k="Max payout" v={`${quote.payout.toFixed(4)}`} tone="accent" strong />
-          <Row k="Max loss" v={`${quote.maxLoss.toFixed(4)}`} tone="down" />
-          <Row
-            k="Potential return"
-            v={`${quote.returnPct >= 0 ? "+" : ""}${(quote.returnPct * 100).toFixed(1)}%`}
-            tone={quote.returnPct >= 0 ? "up" : "down"}
-            strong
-          />
-        </dl>
+        <>
+          <dl className="border border-line">
+            <Row k="You pay" v={`${quote.cost.toFixed(4)} ${UNIT}`} tone="ink" strong />
+            <Row k="Max payout" v={`${quote.payout.toFixed(4)} ${UNIT}`} tone="accent" strong />
+            <Row k="Max loss" v={`${quote.maxLoss.toFixed(4)} ${UNIT}`} tone="down" />
+            <Row
+              k="Potential return"
+              v={`${quote.returnPct >= 0 ? "+" : ""}${(quote.returnPct * 100).toFixed(1)}%`}
+              tone={quote.returnPct >= 0 ? "up" : "down"}
+              strong
+            />
+          </dl>
+
+          {/* A return quoted alone is misleading: +1566% IS the correct figure
+              for a 6c contract, and it is exactly what a 6% chance costs. The
+              market's own implied probability belongs next to it. */}
+          <div className="flex items-center justify-between gap-3 border border-line px-3 py-2 -mt-4">
+            <span className="text-[11px] text-ink-3">Market-implied chance</span>
+            <span className="flex items-center gap-2 min-w-0">
+              <span className="relative block h-[5px] w-[70px] bg-line-soft shrink-0">
+                <span
+                  className="absolute inset-y-0 left-0 bg-accent"
+                  style={{ width: `${Math.min(100, (price ?? 0) * 100)}%` }}
+                />
+              </span>
+              <span className="num text-[12px] text-ink-2">
+                {((price ?? 0) * 100).toFixed(1)}%
+              </span>
+            </span>
+          </div>
+        </>
       ) : (
         <Note tone="neutral" icon={<IconInfo size={14} />}>
           {price === null

@@ -28,7 +28,6 @@ import {
   IconLayers,
   IconRoll,
 } from "@/components/icons";
-import { INTERVALS } from "@/lib/venue/config";
 import { headroomSec, type Asset, type EventMarket, type Outcome } from "@/lib/venue/types";
 import type { PriceSnapshot } from "@/lib/venue/prices";
 import type { MarketBook } from "./page";
@@ -91,6 +90,18 @@ export function TradeTerminal({
   };
 
   const side = book[outcome];
+
+  // Cadences come from the live board, never a hardcoded table. The venue
+  // started listing 60s windows after this UI was written, and a fixed list
+  // left the selector with NOTHING highlighted on a 1m market — the control
+  // could not represent the market it was bound to.
+  const cadences = useMemo(() => {
+    const seen = new Map<number, string>();
+    for (const m of active) if (!seen.has(m.intervalSec)) seen.set(m.intervalSec, m.interval);
+    return [...seen.entries()]
+      .sort((a, b) => a[0] - b[0])
+      .map(([sec, label]) => ({ sec, label }));
+  }, [active]);
 
   if (!market) {
     return (
@@ -166,12 +177,12 @@ export function TradeTerminal({
 
           <Selector
             label="Window"
-            options={INTERVALS.map((i) => ({
-              key: String(i.sec),
-              label: i.label,
-              on: i.sec === market.intervalSec,
+            options={cadences.map((c) => ({
+              key: String(c.sec),
+              label: c.label,
+              on: c.sec === market.intervalSec,
               enabled: active.some(
-                (m) => m.asset === market.asset && m.intervalSec === i.sec,
+                (m) => m.asset === market.asset && m.intervalSec === c.sec,
               ),
             }))}
             onPick={(k) => bind(market.asset, Number(k))}
@@ -528,11 +539,9 @@ function Continuity({
   now: number;
 }) {
   const idx = succession.findIndex((m) => m.marketId === market.marketId);
-  const chain = idx >= 0 ? succession.slice(idx, idx + 3) : succession.slice(0, 3);
-  if (chain.length === 0) return null;
-
-  const horizon = chain.length * market.intervalSec;
-  const mins = Math.round(horizon / 60);
+  const chain = idx >= 0 ? succession.slice(idx, idx + 4) : succession.slice(0, 4);
+  const upcoming = Math.max(chain.length - 1, 0);
+  const horizonMin = Math.round((chain.length * market.intervalSec) / 60);
 
   return (
     <section className="border border-line">
@@ -542,11 +551,11 @@ function Continuity({
           PRISM continuity
         </span>
         <span className="num text-[11px] text-ink-4">
-          horizon ≈ {mins}m
+          {upcoming > 0 ? `horizon ≈ ${horizonMin}m` : "awaiting successor"}
         </span>
       </header>
 
-      <div className="flex items-stretch overflow-x-auto p-3 gap-0">
+      <div className="flex items-stretch overflow-x-auto p-3">
         {chain.map((m, i) => {
           const isNow = m.marketId === market.marketId;
           const left = m.expiry - now;
@@ -554,12 +563,12 @@ function Continuity({
             <div key={m.marketId} className="flex items-stretch shrink-0">
               <div
                 className={cx(
-                  "w-[150px] border p-2.5 flex flex-col gap-1",
+                  "w-[146px] border p-2.5 flex flex-col gap-1",
                   isNow ? "border-[#0b4d54] bg-[#04191c]" : "border-line bg-surface-2",
                 )}
               >
                 <span className="text-label-xs uppercase text-ink-4">
-                  {isNow ? "current" : `next +${i}`}
+                  {isNow ? "current" : `+${i}`}
                 </span>
                 <span className="num text-[13px] text-ink">
                   {m.strike !== null
@@ -580,6 +589,23 @@ function Continuity({
             </div>
           );
         })}
+
+        {/* The venue strikes each successor only as the previous window nears
+            close, so an empty slot is the NORMAL state, not a gap. Drawing it
+            as a pending placeholder keeps the mechanism legible instead of
+            leaving one lonely box that reads like the chain is broken. */}
+        {upcoming === 0 ? (
+          <>
+            <span aria-hidden className="self-center px-2 num text-[12px] text-ink-4">
+              →
+            </span>
+            <div className="w-[146px] border border-dashed border-line-strong p-2.5 flex flex-col gap-1 shrink-0">
+              <span className="text-label-xs uppercase text-ink-4">next</span>
+              <span className="text-[13px] text-ink-4">pending</span>
+              <span className="text-[11px] text-ink-4">struck at close</span>
+            </div>
+          </>
+        ) : null}
       </div>
 
       <p className="text-[11px] leading-[15px] text-ink-4 px-3 pb-3">
