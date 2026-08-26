@@ -2,214 +2,234 @@
 
 [![CI](https://github.com/Venkat5599/somnai/actions/workflows/ci.yml/badge.svg)](https://github.com/Venkat5599/somnai/actions/workflows/ci.yml)
 
-**A structured strategy layer built on DreamDEX Event Contracts.**
+**Strategy infrastructure for DreamDEX Event Contracts.**
 
-DreamDEX lists binary Up/Down markets on BTC and ETH that expire every few
-minutes. PRISM reads those markets live from Somnia, prices structures against
-them, and executes real orders on-chain — with every claim in the interface
-backed by verifiable chain state.
+DreamDEX Event Contracts expire every few minutes. PRISM turns those ephemeral
+contracts into positions with a real tenor — reading live markets from Somnia,
+executing against them, verifying the result independently of the SDK, settling
+them, and carrying a view into the successor window.
+
+```
+EVENT CONTRACT → STRATEGY → RISK → EXECUTION → VERIFICATION → SETTLEMENT → CONTINUITY
+```
 
 - **Live demo** — [prism-terminal-cyan.vercel.app](https://prism-terminal-cyan.vercel.app)
+- **On-chain proof** — [/proof](https://prism-terminal-cyan.vercel.app/proof), re-read from chain on every request
 - **Network** — Somnia Shannon testnet (chain `50312`)
-- **Verified trade** — [`0xd6f0a3e2…fef65e`](https://shannon-explorer.somnia.network/tx/0xd6f0a3e2831b5fdea150e9d026234f9dfc5bd62e33064510117e114f9ffef65e)
 
 ---
 
 ## The problem
 
 An Event Contract is a cash-or-nothing digital: it pays 1 tUSDC if the
-underlying finishes above a strike at the close of a fixed window, and 0
-otherwise. That makes it a genuine derivatives primitive.
+underlying finishes above a strike at window close, 0 otherwise. A real
+derivatives primitive.
 
-It is also **extremely short-lived**. The venue's routable windows are five
-minutes long. A trader who wants exposure lasting longer than one window has to
-rediscover markets, re-strike, and re-enter continuously — by hand, every five
-minutes, forever.
+It is also **extremely short-lived**. Routable windows are minutes long, and the
+venue does not pre-strike successors — measured across all twelve live chains,
+every one reported *no successor listed* for seventeen minutes straight. A
+trader wanting exposure beyond one window must rediscover, re-strike and
+re-enter continuously, by hand, forever.
 
-PRISM exists to abstract that away: state a view once, and carry it across
-successive contract windows.
+PRISM exists to remove that.
+
+## Why DreamDEX specifically
+
+The venue lists **one strike per window** and five cadences per asset. That kills
+composition across strike — no ladder, no Range, no Spread, no risk-neutral
+density — and makes composition across **time** the only real axis. PRISM is
+built on the axis the venue actually has, not the one a generic options UI
+assumes.
 
 ---
 
-## What works today
+## What is real
 
-Everything in this section is live and independently verifiable. Nothing is
-simulated.
-
-### Live now
+Everything below executes against Somnia and is independently verifiable.
+**There is no simulated data anywhere in this repository.**
 
 | Capability | Evidence |
 |---|---|
-| Market discovery | 548 binary markets read from the Somnia indexer |
-| Market normalization | `UnifiedMarket` → typed `EventMarket` at one boundary |
-| Routability detection | struck / unstruck / expired / inside-headroom, from chain fields |
-| Oracle prices | live BTC & ETH from Somnia's on-chain EMA oracle |
-| OHLC candles | real 1m/1h/1d candles, charted with TradingView's `lightweight-charts` |
-| **Real execution** | order signed, submitted, mined — [tx on explorer](https://shannon-explorer.somnia.network/tx/0xd6f0a3e2831b5fdea150e9d026234f9dfc5bd62e33064510117e114f9ffef65e) |
-| **Independent verification** | outcome re-derived from receipt, nonce and balance delta |
+| Market discovery | 548 binary markets from the Somnia indexer |
+| Normalization | `UnifiedMarket` → typed `EventMarket` at one boundary |
+| Routability | struck / unstruck / expired / inside-headroom, from chain fields |
+| Oracle prices | live BTC & ETH from Somnia's on-chain EMA feed |
+| OHLC candles | real 1m/1h/1d, charted with TradingView's `lightweight-charts` |
+| **Execution** | signed, mined, verified — [tx](https://shannon-explorer.somnia.network/tx/0xd6f0a3e2831b5fdea150e9d026234f9dfc5bd62e33064510117e114f9ffef65e) |
+| **Settlement** | finalized sweep, fee-aware payout, real redeem |
+| **Verification** | outcome re-derived from receipt, nonce and balance delta |
+| **Non-custodial signing** | RainbowKit — users sign with their own key |
+| Roll planner + daemon | real succession chains, typed blockers |
+| Wallet history | read from the Shannon explorer account API |
 
 ### Not implemented
 
-Stated plainly, because the interface used to imply otherwise:
+Stated plainly, and labelled in the UI:
 
-- Automated roll execution across window succession
-- Atomic multi-leg batching (EIP-7702)
-- Settlement and claim automation
-- Persistent portfolio state
-- Range / Spread / Ladder structures — see *Known limitations*
+- **Atomic multi-leg batching (EIP-7702)** — the Advanced panel says so
+- **Range / Spread / Ladder** — need 2+ strikes on one expiry; the venue has one
+- **A live successor roll** — the planner and daemon are real and share the
+  verified execution path, but no roll has fired on a live successor because the
+  venue never exposed one during extensive polling
 
-Screens still backed by fixtures (`/positions`, `/settlement`, `/roll`,
-`/activity`, `/agents`, `/analytics`, `/structures`) carry a **Sample data**
-banner in the UI.
+---
+
+## The verified round trip
+
+```
+buy     0xd6f0a3e2831b5fdea150e9d026234f9dfc5bd62e33064510117e114f9ffef65e
+        1 YES at 0.886 tUSDC
+        market resolved YES
+redeem  0x1b21a41150cd019ca1fdc1472f416563de7e3a6158499e4b1844aa0cfc793206
+        block 471,513,467 · receipt 0x1
+
+tUSDC   499.114000 → 500.114000            net +0.114000
+```
+
+[`/proof`](https://prism-terminal-cyan.vercel.app/proof) re-reads both
+transactions from Somnia on every request — receipt status, block, sender, and
+the collateral movement **decoded from the transfer logs**. Only the two hashes
+are constants. If the chain stopped agreeing, the page would say so.
 
 ---
 
 ## Architecture
 
 ```
-                         User
-                          │
-                          ▼
-                     PRISM UI  (Next.js App Router)
-                          │
-              ┌───────────┴───────────┐
-              ▼                       ▼
-      Payoff engine            Execution adapter
-      src/lib/quant.ts       src/lib/dreamdex/
-      pure, React-free         execution.ts
-              │                       │
-              └───────────┬───────────┘
-                          ▼
-                    Venue adapter
-                   src/lib/venue/
-              markets · prices · config
-                          │
-                          ▼
+                        User
+                          |
+              +-----------+-----------+
+              v                       v
+     Wallet (RainbowKit)        PRISM web (Vercel)
+     user's own key                   |
+              |                       v
+              |            services/market-data     no key -> scales out
+              |            services/executor        SINGLE WRITER, one key
+              |            services/roll            the daemon
+              |                       |
+              +-----------+-----------+
+                          v
+                       sdk/
+              venue/ · dreamdex/ · quant
+                          |
               @somnia-chain/markets-sdk
-                          │
-              ┌───────────┴───────────┐
-              ▼                       ▼
-      DreamDEX Event          Somnia EMA oracle
-        Contracts                (price feed)
-              │
-              ▼
-        Somnia Shannon
-              │
-              ▼
-      Verification layer  ← raw RPC, independent of the SDK
-              │
-              ▼
-      Shannon explorer
+                          |
+                   Somnia Shannon
+                          |
+              VERIFICATION: raw RPC, independent of the SDK
+                          |
+                  Shannon explorer
 ```
 
-React components never call the SDK. All protocol interaction lives behind the
-adapters.
+```
+services/executor/     owns the key — serialized queue
+services/market-data/  read fan-out — no key
+services/roll/         the roll + claim daemon
+sdk/                   venue, dreamdex, quant — shared, React-free
+src/                   the Next.js app
+docs/                  architecture · gotchas · demo
+tests/                 35 tests
+```
+
+**There is no `contracts/` directory.** PRISM deploys none — it is a client of
+DreamDEX's contracts.
 
 ---
 
-## Live market flow
+## Two signing paths
 
-```
-loadMarkets(true)          548 binary rows from the indexer
-        ↓
-normalizeMarket()          stringified fields → typed numbers, once
-        ↓
-strike === 0 → null        "not struck yet" is a real state, not a price
-        ↓
-isRoutable()               active · Trading · struck · outside headroom
-        ↓
-/markets → /trade          the real marketId is handed over, never a fixture
-```
+| | Custody | Nonce | Ceiling |
+|---|---|---|---|
+| **Wallet connected** | user's key | user's own | none |
+| Demo burner | server key, guarded | one shared | ~1 tx globally |
 
-**Venue scoping is deliberately unfiltered.** Active markets span *two* venue
-ids on testnet; pinning the single id published in the bot-kit README hides half
-the live book.
+Nonces are sequential, so a single server key means every trade in the system
+contends for one nonce. Connecting a wallet removes that entirely.
 
----
+The split of responsibility matters:
 
-## Execution flow
+- **Server owns the arithmetic.** Price and size snap to the venue's integer
+  tick and lot grid before anything reaches the browser, so a float never
+  reaches an 18-decimal venue. That must not depend on the client.
+- **Client owns the key.** It receives `to`, `data`, `value` and signs. No
+  private material crosses the boundary in either direction.
 
-```
-validateOrder()   →  reject before a signature exists
-        ↓
-preflightSnapshot()  →  nonce + collateral balance, for attribution
-        ↓
-submitOrder()     →  createOrder(ref, "limit", side, amount, price, {IOC})
-        ↓
-verifyExecution() →  re-derive the outcome from chain state
-        ↓
-VERIFIED_EXECUTED | VERIFIED_FAILED | PENDING | UNKNOWN
-```
-
-Orders are **IOC** so no resting remainder is left with escrow locked.
-
-Validation rejects — before signing, costing no gas — on: dry-run enabled, no
-signer, market not found, not active, not Trading, unstruck, expired, inside
-expiry headroom, non-positive size, below venue minimum, price outside `(0,1)`,
-no book liquidity, insufficient collateral, insufficient gas.
+The SDK **returns** the approval and never sends it — skipping it reverts
+on-chain — so it is sent first and awaited before the order.
 
 ---
 
-## Verification — why the SDK response is not the truth
+## Why the SDK response is not the truth
 
 The DreamDEX bot kit documents that a write **can resolve without throwing even
-when the underlying transaction reverted**, and that the receipt rides on `info`
-rather than the returned order. A `success` flag is therefore *evidence*, not a
+when the transaction reverted**. A `success` flag is therefore evidence, not a
 verdict.
 
-`verifyExecution()` never reads the SDK's status. It re-derives the outcome from
-chain state via raw RPC:
+`verifyExecution()` never reads it. It re-derives the outcome from chain via raw
+RPC:
 
-1. `eth_getTransactionReceipt` — `status` is authoritative when a hash exists
+1. `eth_getTransactionReceipt` — authoritative when a hash exists
 2. `eth_getTransactionCount` — nonce movement proves something was broadcast
-3. `balanceOf(tUSDC)` — a real delta proves collateral actually moved
+3. `balanceOf(tUSDC)` — a real delta proves collateral moved
 
-It is allowed to answer **`UNKNOWN`**, and the UI renders `UNKNOWN` as
-`UNKNOWN`. An explorer link is constructed **only** from a hash that survived
-verification.
-
-### The verified trade
-
-```
-market   ETH-246144-26AUG26-0340/tUSDC   (5m window)
-action   BUY 1 YES, crossing the resting ask at 0.953
-tx       0xd6f0a3e2831b5fdea150e9d026234f9dfc5bd62e33064510117e114f9ffef65e
-block    471,425,180
-
-receipt.status              0x1 (success)
-nonce                       0 → 0x2
-tUSDC balanceOf             500.000000 → 499.114000
-```
-
-The **−0.886 against an offered 0.953** is not a discrepancy: the bot kit
-documents that a taker is charged the *fill* price, not the price it offered.
-Observing exactly that is itself corroboration the fill was real.
+It may answer **`UNKNOWN`**, and the UI renders `UNKNOWN` as `UNKNOWN`. An
+explorer link is built only from a hash that survived verification.
 
 ---
 
-## Known limitations
+## Performance
 
-**The venue lists one strike per window.** Verified across every live market:
+Measured, before and after:
 
 ```
-BTC/5m 1   BTC/15m 1   BTC/1h 1   BTC/4h 1   BTC/24h 1
-ETH/5m 1   ETH/15m 1   ETH/1h 1   ETH/4h 1   ETH/24h 1
+getMarketSnapshot()   1245-4876ms, uncached, on EVERY page render
+                      -> ~50k GraphQL queries at 50k users
+
+/markets   req 1  5.996s   (cold)
+           req 6  0.053s   (cached)          112x
+/trade     1.120s -> 0.452s
+/roll      817 KB -> 104 KB
 ```
 
-A strike *ladder* is therefore not available, which means:
+Registry pulls at 50k users: **~6/min**, not 50,000. TTLs are set against how
+fast the data can change — windows are minutes long, so a 10s-stale registry is
+still correct, and countdowns tick client-side from the snapshot's own
+`fetchedAt` so a cached snapshot shows a *correct* clock.
 
-- **Range, Spread and Ladder cannot be routed** — each needs two or more strikes
-  on one expiry. The UI flags them rather than fabricating legs.
-- **Risk-neutral density and a strike-axis vol surface are not derivable** — both
-  require differentiating across strikes.
-- **Directional and Calendar are the constructible pair.**
+Never cached: anything that signs, and anything per-wallet. A stale balance is a
+wrong trade.
 
-This is why PRISM composes along **time** rather than along strike. Five real
-cadences exist per asset, and `successionChain()` already returns them.
+---
 
-Other limits: most longer windows carry `strike: 0` (listed, not yet struck);
-only 5m windows were routable during development, so a live demo must execute
-inside a ~5 minute window.
+## Security
+
+- No key ever reaches the browser; `.env*` is gitignored and CI scans full
+  history for key literals
+- `server-only` on every module that can move funds
+- Rate limit per caller, plus an **on-chain spend floor** that holds across
+  serverless instances where in-memory limits cannot
+- Server-side order size cap — a limit that only exists in an input's `max`
+  attribute is not a limit
+- Mandatory order expiry, capped at the market's own
+- IOC by default, so no remainder rests with escrow locked
+
+---
+
+## Testing
+
+```
+tests/quant.test.ts        payoff boundaries, PAVA repair, depth limits
+tests/grid.test.ts         reproduces the 18-decimal bug, then proves the fix
+tests/routability.test.ts  expiry headroom, struck/unstruck, status gating
+```
+
+35 tests, all pure — no mocked blockchain. Live behaviour is verified manually
+against Shannon and recorded above; that is stated separately rather than dressed
+up as integration coverage.
+
+The grid tests matter most: the 18-decimal failure is **invisible on a 6-decimal
+testnet**, so a happy-path test would pass against broken code. They assert the
+failure first.
 
 ---
 
@@ -217,40 +237,43 @@ inside a ~5 minute window.
 
 ```bash
 bun install
-cp .env.example .env.local     # then fill in the values below
+cp .env.example .env.local
 bun run dev                    # http://localhost:3177
 ```
 
 ```bash
-bun run typecheck              # tsc --noEmit
-bun run test                   # vitest — 25 tests
-bun run build                  # production build
+bun run typecheck
+bun run test
+bun run build
+
+bun run svc:market-data        # :8082  no key
+bun run svc:executor           # :8081  needs PRIVATE_KEY
+bun run svc:roll               # the daemon
+docker compose up              # all three
 ```
 
-Diagnostics that hit the live venue:
+Live diagnostics:
 
 ```bash
-bun scripts/probe-venue.mjs        # market discovery + venue scoping
-bun scripts/probe-pricefeed.mjs    # oracle prices + candles
-bun --conditions react-server scripts/verify-markets.ts
+bun scripts/probe-venue.mjs        # discovery + venue scoping
 bun scripts/probe-exec.ts          # balances, order book (places NO order)
+bun --conditions react-server scripts/verify-markets.ts
 ```
 
----
+## Environment
 
-## Environment variables
-
-Names only. Never commit values; `.env*` is gitignored.
+Names only; never commit values.
 
 | Variable | Purpose |
 |---|---|
 | `PRISM_NETWORK` | `testnet` or `mainnet` |
-| `PRISM_RPC_URL` | Somnia JSON-RPC |
 | `PRISM_INDEXER_URL` | GraphQL indexer — **not** the RPC url |
-| `PRISM_WS_RPC_URL` | chain websocket |
-| `PRISM_VENUE_ID` | optional venue pin; unset accepts all venues |
-| `PRISM_DRY_RUN` | `true` blocks all signing. Only `false` enables execution |
-| `PRIVATE_KEY` | signer. Use a burner holding testnet value only |
+| `PRISM_RPC_URL` | Somnia JSON-RPC |
+| `PRISM_DRY_RUN` | `true` blocks all signing; only `false` arms it |
+| `PRIVATE_KEY` | demo signer. Burner holding testnet value only |
+| `PRISM_MAX_ORDER_CONTRACTS` | server-side per-order cap |
+| `PRISM_RESERVE` | collateral floor for the shared demo wallet |
+| `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID` | optional; injected wallets work without it |
 
 > The indexer URL is a different host from the RPC. Passing the RPC where the
 > indexer belongs fails with `RegistryMarkets failed: empty response`, which
@@ -258,24 +281,26 @@ Names only. Never commit values; `.env*` is gitignored.
 
 ---
 
-## Testing
+## Venue behaviour we design around
 
-```
-tests/quant.test.ts        payoff maths, quantisation, PAVA repair, depth limits
-tests/routability.test.ts  expiry headroom, struck/unstruck, status gating
-```
+Eight gotchas, each **reproduced live** rather than cited — one strike per
+window, `loadMarkets` hiding your winnings, the 18-decimal float bug, silent
+reverts, unstruck successors, taker-pays-fill. See
+[`docs/gotchas.md`](docs/gotchas.md).
 
-25 tests, all pure — no mocked blockchain. Live-network behaviour is verified
-manually against Shannon and recorded above; that is stated separately rather
-than dressed up as integration coverage.
+## Further reading
+
+- [`docs/architecture.md`](docs/architecture.md) — the read/write split
+- [`docs/gotchas.md`](docs/gotchas.md) — venue behaviour, reproduced
+- [`docs/demo.md`](docs/demo.md) — 2:30 script
 
 ---
 
 ## Stack
 
 Next.js 15 · React 19 · TypeScript (strict) · Tailwind v4 ·
-`@somnia-chain/markets-sdk` · viem · lightweight-charts · Geist Mono ·
-Vitest · Bun
+`@somnia-chain/markets-sdk` · viem · wagmi · RainbowKit · lightweight-charts ·
+Geist Mono · Vitest · Bun · Docker
 
 ---
 
