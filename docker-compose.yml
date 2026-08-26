@@ -4,7 +4,7 @@
 # be single-writer, because nonces are sequential. Everything else scales out.
 services:
   market-data:
-    build: { context: ., dockerfile: services/market-data/Dockerfile }
+    build: { context: ., dockerfile: backend/market-data/Dockerfile }
     environment:
       - PRISM_NETWORK=${PRISM_NETWORK:-testnet}
       - MARKET_DATA_PORT=8082
@@ -16,7 +16,7 @@ services:
       interval: 15s
 
   executor:
-    build: { context: ., dockerfile: services/executor/Dockerfile }
+    build: { context: ., dockerfile: backend/executor/Dockerfile }
     environment:
       - PRISM_NETWORK=${PRISM_NETWORK:-testnet}
       - PRISM_DRY_RUN=${PRISM_DRY_RUN:-true}
@@ -32,7 +32,7 @@ services:
       interval: 15s
 
   roll:
-    build: { context: ., dockerfile: services/roll/Dockerfile }
+    build: { context: ., dockerfile: backend/roll/Dockerfile }
     environment:
       - PRISM_NETWORK=${PRISM_NETWORK:-testnet}
       - PRISM_DRY_RUN=${PRISM_DRY_RUN:-true}

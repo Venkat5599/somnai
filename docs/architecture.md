@@ -47,7 +47,7 @@ trades and settles against them.
                Shannon explorer
 
   +---------------------------------------------+
-  |  services/roll  - the daemon Vercel cannot   |
+  |  backend/roll  - the daemon Vercel cannot   |
   |  host. One sequential loop: roll, then claim |
   |  same key, so never two senders              |
   +---------------------------------------------+
@@ -61,18 +61,18 @@ the server; needs no key.
 **`sdk/dreamdex` can move funds.** Everything that signs lives here, behind
 `server-only`. React orchestrates state; it never calls the SDK.
 
-**`services/roll` is separate because Vercel cannot host it.** Carrying a
+**`backend/roll` is separate because Vercel cannot host it.** Carrying a
 position across windows needs a process that stays awake. A serverless function
 cannot, and neither can a browser tab.
 
-**`services/executor` is single-writer by construction.** Nonces are sequential,
+**`backend/executor` is single-writer by construction.** Nonces are sequential,
 so two senders on one key race and the loser dies with `nonce too low`. The web
 tier is serverless — many instances, no shared memory, no coordination — so
 in-process signing is correct at ONE instance and silently broken at two. One
 executor, one queue, `replicas: 1`. Scaling it reintroduces the bug it exists to
 prevent.
 
-**`services/market-data` is the mirror image.** It holds no key, so it scales
+**`backend/market-data` is the mirror image.** It holds no key, so it scales
 horizontally without limit. That asymmetry — one service that must NOT scale,
 one that can — is the only honest reason these are two services.
 

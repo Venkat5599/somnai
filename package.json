@@ -10,9 +10,9 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "svc:executor": "bun --conditions react-server services/executor/index.ts",
-    "svc:market-data": "bun --conditions react-server services/market-data/index.ts",
-    "svc:roll": "bun --conditions react-server services/roll/index.ts"
+    "svc:executor": "bun --conditions react-server backend/executor/index.ts",
+    "svc:market-data": "bun --conditions react-server backend/market-data/index.ts",
+    "svc:roll": "bun --conditions react-server backend/roll/index.ts"
   },
   "dependencies": {
     "@designcodeio/threeui": "^1.0.0",

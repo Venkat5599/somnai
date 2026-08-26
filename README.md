@@ -103,9 +103,9 @@ are constants. If the chain stopped agreeing, the page would say so.
      Wallet (RainbowKit)        PRISM web (Vercel)
      user's own key                   |
               |                       v
-              |            services/market-data     no key -> scales out
-              |            services/executor        SINGLE WRITER, one key
-              |            services/roll            the daemon
+              |            backend/market-data     no key -> scales out
+              |            backend/executor        SINGLE WRITER, one key
+              |            backend/roll            the daemon
               |                       |
               +-----------+-----------+
                           v
@@ -122,17 +122,19 @@ are constants. If the chain stopped agreeing, the page would say so.
 ```
 
 ```
-services/executor/     owns the key — serialized queue
-services/market-data/  read fan-out — no key
-services/roll/         the roll + claim daemon
-sdk/                   venue, dreamdex, quant — shared, React-free
-src/                   the Next.js app
-docs/                  architecture · gotchas · demo
-tests/                 35 tests
+backend/executor/     owns the key — serialized queue
+backend/market-data/  read fan-out — no key
+backend/roll/         the roll + claim daemon
+contracts/            addresses + ABIs of the contracts PRISM calls
+sdk/                  venue, dreamdex, quant — shared, React-free
+src/                  the Next.js app
+docs/                 architecture · gotchas · demo
+tests/                35 tests
 ```
 
-**There is no `contracts/` directory.** PRISM deploys none — it is a client of
-DreamDEX's contracts.
+`contracts/` documents the DreamDEX contracts PRISM *talks to* — addresses,
+ABIs, and the transactions that verified each one. **PRISM deploys none of
+them**; it is a client. See [`contracts/README.md`](contracts/README.md).
 
 ---
 
