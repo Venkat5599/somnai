@@ -1,0 +1,86 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+# A newer push supersedes an in-flight run on the same ref.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: typecheck · test · build
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.8
+
+      # --frozen-lockfile: CI must fail on a stale lockfile rather than quietly
+      # resolving a different dependency tree than the one that was reviewed.
+      - name: Install
+        run: bun install --frozen-lockfile
+
+      - name: Typecheck
+        run: bun run typecheck
+
+      - name: Test
+        run: bun run test
+
+      # Every venue-reading page is force-dynamic, so the build performs no
+      # network calls and needs no secrets. If that ever stops being true this
+      # step will fail here rather than in production.
+      - name: Build
+        run: bun run build
+
+  secrets:
+    name: secret scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # full history — a key committed once and reverted still leaks
+
+      - name: No private keys or env files in the tree
+        run: |
+          set -euo pipefail
+
+          echo "::group::tracked .env files"
+          if git ls-files | grep -E '^\.env' | grep -v '\.env\.example'; then
+            echo "::error::An .env file is tracked. Secrets must never be committed."
+            exit 1
+          fi
+          echo "none"
+          echo "::endgroup::"
+
+          echo "::group::private-key literals in history"
+          # A venue id is also 64 hex chars, so match only on assignment to a
+          # key-shaped variable rather than on the shape alone.
+          if git grep -InE '(PRIVATE_KEY|SECRET_KEY|MNEMONIC)\s*[:=]\s*["'"'"']?0x[0-9a-fA-F]{64}' \
+               $(git rev-list --all) -- 2>/dev/null; then
+            echo "::error::A private key literal exists in git history."
+            exit 1
+          fi
+          echo "none"
+          echo "::endgroup::"
+
+          echo "::group::gitignore protects .env"
+          grep -qE '^\.env\*?' .gitignore || {
+            echo "::error::.gitignore does not cover .env files."
+            exit 1
+          }
+          echo "ok"
+          echo "::endgroup::"
+
+          echo "secret scan passed"
