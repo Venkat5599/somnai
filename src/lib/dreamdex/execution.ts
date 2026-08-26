@@ -18,7 +18,11 @@ import "server-only";
  */
 
 import { createPublicClient, http, type Hex } from "viem";
-import { SomniaMarkets, SOMNIA_TESTNET_PRICE_FEED } from "@somnia-chain/markets-sdk";
+import {
+  SomniaMarkets,
+  SOMNIA_TESTNET_PRICE_FEED,
+  SOMNIA_TESTNET_ADDRESSES,
+} from "@somnia-chain/markets-sdk";
 import { somniaShannon, somniaMainnet } from "@somnia-chain/markets-sdk/chains";
 import { COLLATERAL, resolveVenueConfig, type VenueConfig } from "@/lib/venue/config";
 import type { EventMarket, Outcome } from "@/lib/venue/types";
@@ -141,6 +145,9 @@ export function signingExchange(
     indexerUrl: config.indexer,
     wsRpcUrl: config.wsRpc,
     priceFeed: SOMNIA_TESTNET_PRICE_FEED,
+    // getMarketOnchain resolves markets through the binary module, so the
+    // address book is required for any settlement read.
+    addresses: SOMNIA_TESTNET_ADDRESSES,
     privateKey: pk as Hex,
   });
 }
