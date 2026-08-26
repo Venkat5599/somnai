@@ -9,7 +9,7 @@ minutes. PRISM reads those markets live from Somnia, prices structures against
 them, and executes real orders on-chain — with every claim in the interface
 backed by verifiable chain state.
 
-- **Live demo** — [prism-dex.vercel.app](https://prism-dex.vercel.app)
+- **Live demo** — [prism-terminal-cyan.vercel.app](https://prism-terminal-cyan.vercel.app)
 - **Network** — Somnia Shannon testnet (chain `50312`)
 - **Verified trade** — [`0xd6f0a3e2…fef65e`](https://shannon-explorer.somnia.network/tx/0xd6f0a3e2831b5fdea150e9d026234f9dfc5bd62e33064510117e114f9ffef65e)
 
