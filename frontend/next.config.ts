@@ -12,6 +12,10 @@ import path from "node:path";
  * one of these were ever used, the failure would surface at the call site.
  */
 const UNUSED_CONNECTOR_DEPS = [
+  // MetaMask's SDK optionally imports React Native storage. Harmless when the
+  // app builds at the repo root, fatal from a subdirectory — module resolution
+  // walks up and the optional dep is gone. PRISM is a web app, never uses it.
+  "@react-native-async-storage/async-storage",
   "@x402/core/client",
   "@x402/evm",
   "@x402/evm/exact/client",

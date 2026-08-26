@@ -1,18 +1,11 @@
 {
-  "name": "prism-terminal",
-  "version": "0.1.0",
+  "name": "prism-frontend",
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "cd frontend && next dev -p 3177",
-    "build": "cd frontend && next build",
-    "start": "cd frontend && next start -p 3177",
-    "typecheck": "tsc --noEmit && cd frontend && tsc --noEmit",
-    "test": "vitest run",
-    "test:watch": "vitest",
-    "svc:executor": "bun --conditions react-server backend/executor/index.ts",
-    "svc:market-data": "bun --conditions react-server backend/market-data/index.ts",
-    "svc:roll": "bun --conditions react-server backend/roll/index.ts"
+    "dev": "next dev -p 3177",
+    "build": "next build",
+    "start": "next start -p 3177"
   },
   "dependencies": {
     "@designcodeio/threeui": "^1.0.0",
