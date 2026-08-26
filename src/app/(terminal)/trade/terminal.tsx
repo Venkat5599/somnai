@@ -17,6 +17,7 @@ import { TICK, LOT } from "@/lib/venue";
 import type { EventMarket } from "@/lib/venue/types";
 import type { PriceSnapshot } from "@/lib/venue/prices";
 import { PriceChart } from "@/components/price-chart";
+import { ExecutePanel } from "./execute-panel";
 import {
   Button,
   Chip,
@@ -571,39 +572,8 @@ export function TradeTerminal({
 
           {/* Actions anchored to the bottom of the panel so the ticket reads
               the same whatever the notes above it are doing. */}
-          <div className="mt-auto pt-6 flex flex-col gap-2">
-            <Note tone="warn" icon={<IconInfo size={14} />}>
-              <span className="font-medium text-ink">
-                Execution not connected.
-              </span>{" "}
-              The replication above is real and computed from the live ladder,
-              but PRISM cannot yet submit it to the venue. This control is
-              disabled rather than reporting a result it did not produce.
-            </Note>
-
-            <Button
-              variant="ghost"
-              size="lg"
-              block
-              onClick={() => setStaged((v) => !v)}
-              aria-pressed={staged}
-            >
-              {staged ? "Preview staged" : "Preview trade"}
-            </Button>
-            <Button
-              variant="primary"
-              size="lg"
-              block
-              disabled
-              leading={<IconBolt size={15} />}
-              title="Live Event Contract execution is being integrated"
-            >
-              Execution unavailable
-            </Button>
-            <p className="text-[11px] leading-[16px] text-ink-4 text-center">
-              Live Event Contract execution is being integrated. No transaction
-              is signed, sent, or simulated here.
-            </p>
+          <div className="mt-auto pt-6">
+            <ExecutePanel market={market} routable={liveNow} />
           </div>
         </PanelBody>
       </section>
