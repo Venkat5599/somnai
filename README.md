@@ -1,5 +1,7 @@
 # PRISM
 
+[![CI](https://github.com/Venkat5599/somnai/actions/workflows/ci.yml/badge.svg)](https://github.com/Venkat5599/somnai/actions/workflows/ci.yml)
+
 **A structured strategy layer built on DreamDEX Event Contracts.**
 
 DreamDEX lists binary Up/Down markets on BTC and ETH that expire every few
