@@ -4,19 +4,32 @@ import { HeroField } from "@/components/hero-field";
 import { PrismMark, PrismWordmark } from "@/components/logo";
 import { Button, cx } from "@/components/ui";
 import { IconArrowOut, IconArrowRight } from "@/components/icons";
-import { MARKETS, NETWORK, SPOT, strikeAt } from "@/lib/data";
-import { fmtProb, fmtUsd } from "@/lib/quant";
-import { HomeDemo } from "./home-demo";
+import { NETWORK } from "@/lib/data";
+import { getMarketSnapshot } from "@/lib/venue/markets";
+import { getLivePrice } from "@/lib/venue/prices";
+import { headroomSec } from "@/lib/venue/types";
 
-export default function HomePage() {
-  const strip = MARKETS.filter((m) => m.asset === "BTC" && m.intervalSec === 14400)
-    .sort((a, b) => a.strike - b.strike)
-    .slice(2, 9)
-    .map((m) => ({ strike: m.strike, up: m.up }));
+/** Live venue state; nothing here can be prerendered. */
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
-  const lo = strikeAt("BTC", "4h", -2);
-  const hi = strikeAt("BTC", "4h", 2);
-  const kfmt = (k: number) => k.toLocaleString("en-US");
+export default async function HomePage() {
+  // The fold used to render a generated "BTC 4h ladder" of seven fake strikes.
+  // The venue lists ONE strike per window, so that ladder never existed. What
+  // follows is the real live board.
+  const [snap, btc, eth] = await Promise.all([
+    getMarketSnapshot().catch(() => null),
+    getLivePrice("BTC").catch(() => null),
+    getLivePrice("ETH").catch(() => null),
+  ]);
+
+  const nowSec = Math.floor(Date.now() / 1000);
+  const board = (snap?.active ?? [])
+    .slice()
+    .sort((a, b) =>
+      a.asset === b.asset ? a.intervalSec - b.intervalSec : a.asset.localeCompare(b.asset),
+    );
+  const routableCount = (snap?.routable ?? []).length;
 
   return (
     <div className="min-h-dvh flex flex-col bg-base">
@@ -81,13 +94,13 @@ export default function HomePage() {
                   stretching until the beam reads as a stray line. */}
               <div className="min-w-0 lg:pt-1 max-w-[620px]">
                 <p className="text-label-xs uppercase text-ink-4 mb-4">
-                  BTC settles between {kfmt(lo)} and {kfmt(hi)}
+                  One view, carried across successive windows
                 </p>
                 <Refraction
                   legs={[
-                    { label: "LONG UP", detail: `K ${kfmt(lo)}` },
-                    { label: "SHORT UP", detail: `K ${kfmt(hi)}` },
-                    { label: "ROLL", detail: "next window" },
+                    { label: "WINDOW N", detail: "fill" },
+                    { label: "WINDOW N+1", detail: "re-strike" },
+                    { label: "WINDOW N+2", detail: "carry" },
                   ]}
                 />
               </div>
@@ -95,37 +108,67 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* Live ladder strip, flush to the fold's bottom edge. Real strikes,
-            real probabilities, so the first screen carries specificity. */}
+        {/* Live board, flush to the fold's bottom edge. Real markets read from
+            the Somnia indexer at request time — one strike per window, which is
+            exactly why PRISM composes across succession rather than a ladder. */}
         <div className="relative z-10 border-y border-line bg-surface/60 backdrop-blur-md">
           <div className="max-w-[1560px] mx-auto px-5 sm:px-8 lg:px-12">
             <div className="flex items-stretch overflow-x-auto">
               <div className="flex items-center gap-3 pr-6 py-3 shrink-0 border-r border-line">
-                <span className="text-label-xs uppercase text-ink-3">
-                  BTC 4h ladder
-                </span>
+                <span className="text-label-xs uppercase text-ink-3">Live board</span>
                 <span className="num text-[13px] text-ink">
-                  {fmtUsd(SPOT.BTC.price)}
+                  {routableCount} routable
                 </span>
               </div>
-              {strip.map((r) => (
-                <div
-                  key={r.strike}
-                  className="flex flex-col justify-center px-5 py-3 shrink-0 border-r border-line-soft last:border-r-0"
-                >
-                  <span className="num text-[11px] text-ink-4">
-                    {r.strike.toLocaleString("en-US")}
-                  </span>
-                  <span
-                    className={cx(
-                      "num text-[13px] mt-0.5",
-                      r.up >= 0.5 ? "text-up" : "text-ink-2",
-                    )}
-                  >
-                    {fmtProb(r.up)}
-                  </span>
+
+              {btc || eth ? (
+                <div className="flex items-center gap-5 px-5 py-3 shrink-0 border-r border-line">
+                  {[btc, eth].filter(Boolean).map((p) => (
+                    <span key={p!.asset} className="flex flex-col justify-center">
+                      <span className="text-label-xs uppercase text-ink-4">
+                        {p!.asset} oracle
+                      </span>
+                      <span className="num text-[13px] text-ink mt-0.5">
+                        {p!.price.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                      </span>
+                    </span>
+                  ))}
                 </div>
-              ))}
+              ) : null}
+
+              {board.length === 0 ? (
+                <div className="flex items-center px-5 py-3 text-[12px] text-ink-3">
+                  Venue returned no active markets right now.
+                </div>
+              ) : (
+                board.map((m) => {
+                  const left = m.expiry - nowSec;
+                  const routable =
+                    m.strike !== null &&
+                    m.status === "Trading" &&
+                    left > headroomSec(m.intervalSec);
+                  return (
+                    <div
+                      key={m.marketId}
+                      className="flex flex-col justify-center px-5 py-3 shrink-0 border-r border-line-soft last:border-r-0"
+                    >
+                      <span className="num text-[11px] text-ink-4">
+                        {m.asset} {m.interval}
+                      </span>
+                      <span
+                        className={cx(
+                          "num text-[13px] mt-0.5",
+                          routable ? "text-up" : "text-ink-3",
+                        )}
+                      >
+                        {m.strike !== null
+                          ? m.strike.toLocaleString("en-US", { minimumFractionDigits: 2 })
+                          : "unstruck"}
+                      </span>
+                    </div>
+                  );
+                })
+              )}
             </div>
           </div>
         </div>
@@ -159,25 +202,6 @@ export default function HomePage() {
               </article>
             ))}
           </div>
-        </div>
-      </section>
-
-      {/* ============================================================
-          THE PRODUCT AS A REAL ARTIFACT — a working router, not a
-          screenshot. Drag the band and the legs and the payoff change.
-          ============================================================ */}
-      <section className="border-b border-line">
-        <div className="max-w-[1560px] mx-auto px-5 sm:px-8 lg:px-12 py-16 lg:py-20">
-          <div className="flex flex-wrap items-end justify-between gap-6 mb-8">
-            <h2 className="text-headline-md text-ink">
-              Move the band. Watch the legs change.
-            </h2>
-            <p className="text-[13px] text-ink-3 max-w-[44ch]">
-              This is the live router, priced off the same Event Contract ladder
-              the terminal trades. Nothing here is a mockup.
-            </p>
-          </div>
-          <HomeDemo />
         </div>
       </section>
 

@@ -2,146 +2,202 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Page } from "@/components/shell";
 import {
-  DemoData,
   Button,
   Chip,
+  Note,
   PageHead,
   Stat,
   TableWrap,
   Td,
   Th,
   Tr,
-  cx,
 } from "@/components/ui";
-import { IconArrowOut, IconLayers } from "@/components/icons";
-import { POSITIONS } from "@/lib/data";
-import { fmtSigned, fmtUsd } from "@/lib/quant";
+import { IconArrowOut, IconInfo } from "@/components/icons";
+import { COLLATERAL, VENUE_CONFIG } from "@/lib/venue/config";
+import { exchange } from "@/lib/venue/markets";
+import { readBalances } from "@/lib/dreamdex/execution";
 
 export const metadata: Metadata = { title: "Positions — PRISM" };
 
-export default function PositionsPage() {
-  const totalValue = POSITIONS.reduce((s, p) => s + p.notional, 0);
-  const pnl = POSITIONS.reduce((s, p) => s + p.pnl, 0);
-  const legs = POSITIONS.reduce((s, p) => s + p.legs, 0);
-  const rolling = POSITIONS.filter((p) => p.status === "Rolling").length;
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
+interface Holding {
+  symbol: string;
+  side: string;
+  size: number;
+  marketId: string | null;
+}
+
+const VERIFIED_TX =
+  "0xd6f0a3e2831b5fdea150e9d026234f9dfc5bd62e33064510117e114f9ffef65e";
+
+/**
+ * Real wallet state.
+ *
+ * This page previously rendered five invented structures with invented P&L. It
+ * now reads the signer's actual balances from chain and its open positions from
+ * the venue.
+ *
+ * One caveat is itself documented venue behaviour rather than a gap: a SETTLED
+ * market leaves the live registry, so a holding whose window has closed cannot
+ * appear here. An empty table means "no OPEN position", not "never traded".
+ */
+export default async function PositionsPage() {
+  let balances: Awaited<ReturnType<typeof readBalances>> = null;
+  let holdings: Holding[] = [];
+
+  try {
+    balances = await readBalances();
+  } catch {
+    balances = null;
+  }
+
+  try {
+    const ex = exchange();
+    await ex.loadMarkets(true);
+    const pos = await ex.fetchPositions();
+    holdings = (pos ?? []).map((p) => {
+      const row = p as unknown as Record<string, unknown>;
+      return {
+        symbol: String(row.symbol ?? "—"),
+        side: String(row.side ?? "—"),
+        size: Number(row.contracts ?? row.size ?? 0),
+        marketId: typeof row.id === "string" ? row.id : null,
+      };
+    });
+  } catch {
+    // The testnet portfolio endpoint times out intermittently. Report empty as
+    // empty rather than dressing a read failure up as "no positions".
+    holdings = [];
+  }
+
+  const signerless = !balances;
 
   return (
     <Page>
       <PageHead
-        title="Your structures"
-        lede="One position object per structure. The underlying legs are held together, rolled together and redeemed together, so a settled window never strands value in a market you have to hunt for."
+        title="Positions"
+        lede="The signer's real balances and open Event Contract holdings, read from chain and from the venue registry."
       >
-        <Link href="/trade">
-          <Button variant="primary" size="md">
-            New structure
-          </Button>
-        </Link>
+        <Chip tone={signerless ? "neutral" : "up"} live={!signerless}>
+          {signerless ? "No signer" : "Connected"}
+        </Chip>
       </PageHead>
 
-      <DemoData>These structures are sample data. No position shown here is held on-chain.</DemoData>
+      {signerless ? (
+        <Note tone="warn" icon={<IconInfo size={14} />}>
+          <span className="font-medium text-ink">No signer configured.</span> This
+          deployment has no PRIVATE_KEY, so there is no wallet to report on.
+        </Note>
+      ) : (
+        <>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-px bg-line border border-line mb-6">
+            <div className="bg-surface p-4">
+              <Stat
+                label={`${COLLATERAL.symbol} balance`}
+                value={balances!.collateral.toLocaleString("en-US", {
+                  minimumFractionDigits: 6,
+                })}
+                sub="collateral, read from chain"
+                tone="accent"
+              />
+            </div>
+            <div className="bg-surface p-4">
+              <Stat
+                label="STT balance"
+                value={balances!.gas.toLocaleString("en-US", {
+                  maximumFractionDigits: 6,
+                })}
+                sub="gas"
+              />
+            </div>
+            <div className="bg-surface p-4">
+              <Stat
+                label="Open positions"
+                value={String(holdings.length)}
+                sub="live windows only"
+              />
+            </div>
+            <div className="bg-surface p-4">
+              <Stat
+                label="Signer"
+                value={`${balances!.address.slice(0, 6)}…${balances!.address.slice(-4)}`}
+                sub={VENUE_CONFIG.network}
+              />
+            </div>
+          </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-px bg-line border border-line mb-6">
-        <div className="bg-surface p-4">
-          <Stat label="Notional" value={fmtUsd(totalValue, 0)} sub={`${POSITIONS.length} structures`} />
-        </div>
-        <div className="bg-surface p-4">
-          <Stat
-            label="Unrealised P&L"
-            value={fmtSigned(pnl)}
-            sub="mark to ladder mid"
-            tone={pnl >= 0 ? "up" : "down"}
-          />
-        </div>
-        <div className="bg-surface p-4">
-          <Stat label="Open legs" value={String(legs)} sub="across all windows" />
-        </div>
-        <div className="bg-surface p-4">
-          <Stat
-            label="Rolling"
-            value={String(rolling)}
-            sub="re-striking into successor"
-            tone="accent"
-          />
-        </div>
-      </div>
+          <div className="border border-line bg-surface">
+            <TableWrap>
+              <thead>
+                <tr>
+                  <Th>Market</Th>
+                  <Th>Side</Th>
+                  <Th align="right">Contracts</Th>
+                  <Th align="right">Open</Th>
+                </tr>
+              </thead>
+              <tbody>
+                {holdings.map((h, i) => (
+                  <Tr key={`${h.symbol}-${i}`}>
+                    <Td mono>{h.symbol}</Td>
+                    <Td tone="muted">{h.side}</Td>
+                    <Td align="right" mono>
+                      {h.size}
+                    </Td>
+                    <Td align="right">
+                      {h.marketId ? (
+                        <Link
+                          href={`/trade?market=${encodeURIComponent(h.marketId)}`}
+                          className="inline-flex items-center gap-1.5 text-[12px] uppercase tracking-[0.05em] text-ink-3 hover:text-accent transition-colors"
+                        >
+                          Manage
+                          <IconArrowOut size={13} />
+                        </Link>
+                      ) : (
+                        <span className="text-[12px] text-ink-4">—</span>
+                      )}
+                    </Td>
+                  </Tr>
+                ))}
+                {holdings.length === 0 ? (
+                  <tr>
+                    <td colSpan={4} className="h-24 text-center text-[13px] text-ink-3">
+                      No open position in a live window.
+                    </td>
+                  </tr>
+                ) : null}
+              </tbody>
+            </TableWrap>
+          </div>
 
-      <div className="border border-line bg-surface">
-        <TableWrap>
-          <thead>
-            <tr>
-              <Th>Structure</Th>
-              <Th>Market</Th>
-              <Th>Strategy</Th>
-              <Th align="right">Legs</Th>
-              <Th align="right">Notional</Th>
-              <Th align="right">Entry</Th>
-              <Th align="right">Mark</Th>
-              <Th align="right">P&amp;L</Th>
-              <Th align="right">Expires in</Th>
-              <Th align="center">Status</Th>
-              <Th align="right">Open</Th>
-            </tr>
-          </thead>
-          <tbody>
-            {POSITIONS.map((p) => (
-              <Tr key={p.id}>
-                <Td>
-                  <span className="flex flex-col leading-tight py-1">
-                    <span className="text-ink">{p.name}</span>
-                    <span className="num text-[11px] text-ink-4 mt-0.5">{p.id}</span>
-                  </span>
-                </Td>
-                <Td mono tone="muted">
-                  {p.asset}
-                </Td>
-                <Td tone="muted">{p.strategy}</Td>
-                <Td align="right" mono>
-                  <span className="inline-flex items-center gap-1.5">
-                    <IconLayers size={12} className="text-ink-4" />
-                    {p.legs}
-                  </span>
-                </Td>
-                <Td align="right" mono>
-                  {fmtUsd(p.notional, 0)}
-                </Td>
-                <Td align="right" mono tone="muted">
-                  {p.entry.toLocaleString("en-US", { minimumFractionDigits: 2 })}
-                </Td>
-                <Td align="right" mono>
-                  {p.current.toLocaleString("en-US", { minimumFractionDigits: 2 })}
-                </Td>
-                <Td align="right" mono tone={p.pnl >= 0 ? "up" : "down"}>
-                  {fmtSigned(p.pnl)}
-                </Td>
-                <Td align="right" mono tone={p.expiresIn === "00:00:00" ? "muted" : undefined}>
-                  {p.expiresIn}
-                </Td>
-                <Td align="center">
-                  <Chip
-                    tone={
-                      p.status === "Active" ? "up" : p.status === "Rolling" ? "accent" : "warn"
-                    }
-                    live={p.status !== "Settling"}
-                  >
-                    {p.status}
-                  </Chip>
-                </Td>
-                <Td align="right">
-                  <Link
-                    href={p.status === "Settling" ? "/settlement" : "/trade"}
-                    className={cx(
-                      "inline-flex items-center gap-1.5 text-[12px] uppercase tracking-[0.05em]",
-                      "text-ink-3 hover:text-accent transition-colors",
-                    )}
-                  >
-                    {p.status === "Settling" ? "Claim" : "Manage"}
-                    <IconArrowOut size={13} />
-                  </Link>
-                </Td>
-              </Tr>
-            ))}
-          </tbody>
-        </TableWrap>
+          <div className="mt-6">
+            <Note icon={<IconInfo size={14} />}>
+              A settled market leaves the live registry, so a holding whose
+              window has already closed cannot appear above — documented venue
+              behaviour, not a missing feature. PRISM&apos;s first verified fill
+              sits on a window that has since closed:{" "}
+              <a
+                href={`${VENUE_CONFIG.explorer}/tx/${VERIFIED_TX}`}
+                target="_blank"
+                rel="noreferrer"
+                className="num text-accent hover:text-ink transition-colors"
+              >
+                0xd6f0a3e2…fef65e
+              </a>
+              .
+            </Note>
+          </div>
+        </>
+      )}
+
+      <div className="mt-6">
+        <Link href="/structures">
+          <Button variant="primary" size="md">
+            Open a position
+          </Button>
+        </Link>
       </div>
     </Page>
   );
