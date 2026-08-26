@@ -32,7 +32,19 @@ export default async function RollPage() {
     for (const asset of ["BTC", "ETH"] as Asset[]) {
       for (const { sec, label } of INTERVALS) {
         const windows = successionChain(snap, asset, sec);
-        if (windows.length) successions.push({ asset, intervalSec: sec, interval: label, windows });
+        // 817 KB came from serializing EVERY window ever listed per chain.
+        // A succession chain only needs the recent past and the near future:
+        // the closed windows before the live one, and whatever follows it.
+        if (windows.length) {
+          const liveIdx = windows.findIndex((w) => w.active);
+          const from = liveIdx >= 0 ? Math.max(0, liveIdx - 2) : Math.max(0, windows.length - 4);
+          successions.push({
+            asset,
+            intervalSec: sec,
+            interval: label,
+            windows: windows.slice(from, from + 6),
+          });
+        }
       }
     }
     successions = successions

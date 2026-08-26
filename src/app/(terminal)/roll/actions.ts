@@ -2,6 +2,7 @@
 
 import { executeRoll, planRoll, type RollPlan, type RollResult } from "@/lib/dreamdex/roll";
 import type { Outcome } from "@/lib/venue/types";
+import { callerKey, checkRate } from "@/lib/dreamdex/guard";
 
 export async function previewRoll(
   marketId: string,
@@ -16,6 +17,17 @@ export async function commitRoll(
   outcome: Outcome,
   size: number,
 ): Promise<RollResult> {
+  const rate = checkRate(await callerKey());
+  if (!rate.allowed) {
+    return {
+      planned: await planRoll({ marketId, outcome, size }),
+      txHash: null,
+      filled: 0,
+      status: "NOT_ATTEMPTED",
+      blockNumber: null,
+      evidence: [`rate limited — retry in ${rate.retryAfterSec}s`],
+    };
+  }
   // Re-plans internally before signing: the successor may have been struck,
   // filled or moved between preview and commit.
   return executeRoll({ marketId, outcome, size });

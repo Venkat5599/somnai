@@ -16,6 +16,7 @@
 import { getMarketSnapshot, exchange } from "@/lib/venue/markets";
 import { resolveVenueConfig } from "@/lib/venue/config";
 import type { Outcome } from "@/lib/venue/types";
+import { callerKey, checkRate, checkSpend } from "@/lib/dreamdex/guard";
 import {
   explorerTx,
   preflightSnapshot,
@@ -50,6 +51,20 @@ export async function executeOrder(input: {
   const started = Date.now();
   const config = resolveVenueConfig();
 
+  // Guards run BEFORE any venue read, so an abusive caller costs nothing
+  // upstream either.
+  const rate = checkRate(await callerKey());
+  if (!rate.allowed) {
+    return {
+      phase: "VALIDATION_FAILED",
+      validation: {
+        reason: "RATE_LIMITED",
+        detail: `Too many execution attempts. Try again in ${rate.retryAfterSec}s.`,
+      },
+      elapsedMs: Date.now() - started,
+    };
+  }
+
   const snap = await getMarketSnapshot(config);
   const market = snap.all.find((m) => m.marketId === input.marketId) ?? null;
 
@@ -79,6 +94,16 @@ export async function executeOrder(input: {
     return {
       phase: v.reason === "NO_SIGNER" ? "NO_SIGNER" : "VALIDATION_FAILED",
       validation: { reason: v.reason, detail: v.detail },
+      elapsedMs: Date.now() - started,
+    };
+  }
+
+  // The shared demo wallet must stay solvent for the next visitor.
+  const spend = await checkSpend(v.estimatedCost, config);
+  if (!spend.allowed) {
+    return {
+      phase: "VALIDATION_FAILED",
+      validation: { reason: "SPEND_LIMIT", detail: spend.reason ?? "Spend refused." },
       elapsedMs: Date.now() - started,
     };
   }
