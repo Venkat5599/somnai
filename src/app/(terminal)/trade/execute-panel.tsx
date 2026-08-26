@@ -202,9 +202,22 @@ export function ExecutePanel({
         </>
       ) : (
         <Note tone="neutral" icon={<IconInfo size={14} />}>
-          {price === null
-            ? "No resting offer on this outcome, so there is nothing to buy."
-            : "Enter a size to see the quote."}
+          {price === null ? (
+            <>
+              Nothing is offered on {outcome} right now, so there is nothing to
+              buy.{" "}
+              <button
+                type="button"
+                onClick={() => onOutcome(outcome === "YES" ? "NO" : "YES")}
+                className="text-accent hover:text-ink transition-colors underline-offset-2"
+              >
+                Check {outcome === "YES" ? "NO" : "YES"}
+              </button>{" "}
+              — books here are often one-sided.
+            </>
+          ) : (
+            "Enter a size to see the quote."
+          )}
         </Note>
       )}
 

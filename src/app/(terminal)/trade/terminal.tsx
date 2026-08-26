@@ -424,11 +424,30 @@ function BinaryPayoff({
 
   const k = market.strike;
   if (k === null || price === null) {
+    // A dead end is a UX failure, not an honest empty state. Say what is wrong
+    // AND where to go — the other outcome often has a book when this one does
+    // not, and /markets shows which windows are routable right now.
     return (
-      <div className="border border-line bg-base p-8 text-center text-[13px] text-ink-3">
-        {k === null
-          ? "This window has no strike yet, so it has no payoff."
-          : "No resting offer on this outcome — nothing to price against."}
+      <div className="border border-line bg-base p-8 text-center">
+        <p className="text-[13px] text-ink-2">
+          {k === null
+            ? "This window has no strike yet, so it has no payoff."
+            : `No resting offer on ${outcome} — nothing to price against.`}
+        </p>
+        {k !== null ? (
+          <p className="text-[12px] text-ink-3 mt-2 max-w-[52ch] mx-auto">
+            Books on this venue are frequently one-sided. Try{" "}
+            <span className="text-ink-2">{outcome === "YES" ? "NO" : "YES"}</span>,
+            or pick a window that is quoting.
+          </p>
+        ) : null}
+        <Link
+          href="/markets"
+          className="mt-4 inline-flex items-center gap-1.5 text-[12px] uppercase tracking-[0.05em] text-accent hover:text-ink transition-colors"
+        >
+          Browse routable markets
+          <IconArrowRight size={13} />
+        </Link>
       </div>
     );
   }

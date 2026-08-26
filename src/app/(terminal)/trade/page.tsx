@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { exchange, successionChain } from "@sdk/venue/markets";
 import { cachedMarketSnapshot } from "@sdk/venue/cache";
+import { resolveVenueConfig } from "@sdk/venue/config";
 import type { PriceSnapshot } from "@sdk/venue/prices";
 import { cachedPriceSnapshot } from "@sdk/venue/cache";
 import type { EventMarket, Outcome } from "@sdk/venue/types";
@@ -27,6 +28,20 @@ export interface MarketBook {
 
 const emptySide = (): BookSide => ({ levels: [], best: null, depth: 0 });
 
+/** Does either outcome have a resting offer? Cheap enough to scan a few. */
+async function hasBook(m: EventMarket, config: ReturnType<typeof resolveVenueConfig>) {
+  const ex = exchange(config);
+  for (const o of ["YES", "NO"] as Outcome[]) {
+    try {
+      const ob = await ex.fetchOrderBook(`${m.symbol}#${o}`);
+      if (((ob.asks ?? []) as [number, number][])[0]) return true;
+    } catch {
+      /* keep looking */
+    }
+  }
+  return false;
+}
+
 export default async function TradePage({
   searchParams,
 }: {
@@ -42,13 +57,29 @@ export default async function TradePage({
   let prices: PriceSnapshot | null = null;
   let venueError: string | null = null;
 
+  const config = resolveVenueConfig();
+
   try {
     const snap = await cachedMarketSnapshot();
     routable = snap.routable;
     active = snap.active;
     selected = wanted
       ? (snap.all.find((m) => m.marketId === wanted) ?? null)
-      : (snap.routable[0] ?? null);
+      : null;
+
+    // Auto-selection must prefer a market with a REAL book. Taking routable[0]
+    // blindly lands the user on a market with no resting offer, where every
+    // control is disabled and there is no path forward — which is exactly the
+    // dead end this used to produce.
+    if (!selected && snap.routable.length) {
+      for (const m of snap.routable) {
+        const has = await hasBook(m, config);
+        if (has) { selected = m; break; }
+      }
+      // Nothing has depth: bind the first routable anyway so the market context
+      // still renders, and let the UI say plainly that no book exists.
+      selected ??= snap.routable[0];
+    }
 
     if (selected) {
       // The succession chain IS the product thesis: what this view rolls into

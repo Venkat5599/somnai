@@ -49,8 +49,6 @@ const NAV = [
   { href: "/docs", label: "Documentation", Icon: IconDocs },
 ] as const;
 
-const WALLET = "0x7A41...92F";
-
 export function TerminalShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
@@ -211,9 +209,6 @@ function TopBar({ onMenu }: { onMenu: () => void }) {
             <span className="hidden sm:flex items-center px-2.5 text-label-xs uppercase text-ink-3 border-r border-line">
               <span className="pip-live inline-block w-[5px] h-[5px] bg-up mr-2" />
               {NETWORK.name}
-            </span>
-            <span className="flex items-center px-2.5 num text-[12px] text-ink">
-              {WALLET}
             </span>
           </div>
         </div>
