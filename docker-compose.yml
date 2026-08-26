@@ -1,0 +1,43 @@
+# PRISM services.
+#
+# The split follows one real constraint: anything holding the signing key must
+# be single-writer, because nonces are sequential. Everything else scales out.
+services:
+  market-data:
+    build: { context: ., dockerfile: services/market-data/Dockerfile }
+    environment:
+      - PRISM_NETWORK=${PRISM_NETWORK:-testnet}
+      - MARKET_DATA_PORT=8082
+    ports: ["8082:8082"]
+    # Holds no key, so replicas are safe and useful.
+    deploy: { replicas: 2 }
+    healthcheck:
+      test: ["CMD", "bun", "-e", "await fetch('http://localhost:8082/health')"]
+      interval: 15s
+
+  executor:
+    build: { context: ., dockerfile: services/executor/Dockerfile }
+    environment:
+      - PRISM_NETWORK=${PRISM_NETWORK:-testnet}
+      - PRISM_DRY_RUN=${PRISM_DRY_RUN:-true}
+      - PRIVATE_KEY=${PRIVATE_KEY}
+      - EXECUTOR_TOKEN=${EXECUTOR_TOKEN}
+      - EXECUTOR_PORT=8081
+    ports: ["8081:8081"]
+    # EXACTLY ONE. More than one instance means two senders on one key, which
+    # is the nonce race this service exists to prevent. Do not scale this.
+    deploy: { replicas: 1 }
+    healthcheck:
+      test: ["CMD", "bun", "-e", "await fetch('http://localhost:8081/health')"]
+      interval: 15s
+
+  roll:
+    build: { context: ., dockerfile: services/roll/Dockerfile }
+    environment:
+      - PRISM_NETWORK=${PRISM_NETWORK:-testnet}
+      - PRISM_DRY_RUN=${PRISM_DRY_RUN:-true}
+      - PRIVATE_KEY=${PRIVATE_KEY}
+    # Also single-writer: it signs from the same key the executor does. Running
+    # two would race the nonce exactly the same way.
+    deploy: { replicas: 1 }
+    depends_on: [market-data]
