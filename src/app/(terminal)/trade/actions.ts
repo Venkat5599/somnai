@@ -166,3 +166,52 @@ export async function prepareForWallet(input: {
     config,
   );
 }
+
+/**
+ * Mint or burn complete sets on the demo signer.
+ *
+ * Server-signed only: the SDK has no unsigned builder for sets, so a connected
+ * user cannot route this through their own wallet yet. Guarded like every other
+ * fund-moving action.
+ */
+export async function runSetAction(input: {
+  marketId: string;
+  amount: number;
+  kind: "mint" | "burn";
+}) {
+  const config = resolveVenueConfig();
+  const rate = checkRate(await callerKey());
+  if (!rate.allowed)
+    return {
+      ok: false as const,
+      status: "REJECTED" as const,
+      txHash: null,
+      blockNumber: null,
+      collateralDelta: null,
+      reason: `Too many attempts. Retry in ${rate.retryAfterSec}s.`,
+      evidence: [],
+    };
+
+  // Minting escrows collateral, so it draws on the shared demo wallet.
+  if (input.kind === "mint") {
+    const spend = await checkSpend(input.amount, config);
+    if (!spend.allowed)
+      return {
+        ok: false as const,
+        status: "REJECTED" as const,
+        txHash: null,
+        blockNumber: null,
+        collateralDelta: null,
+        reason: spend.reason ?? "Spend refused.",
+        evidence: [],
+      };
+  }
+
+  const snap = await getMarketSnapshot(config);
+  const market = snap.all.find((m) => m.marketId === input.marketId) ?? null;
+
+  const { mintSet, burnSet } = await import("@sdk/dreamdex/sets");
+  return input.kind === "mint"
+    ? mintSet(market, input.amount, config)
+    : burnSet(market, input.amount, config);
+}

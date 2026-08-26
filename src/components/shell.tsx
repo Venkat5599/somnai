@@ -14,6 +14,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { PrismMark, PrismWordmark } from "./logo";
 import { Connect } from "./connect";
+import { WalletBalance } from "./wallet-balance";
 import { cx } from "./ui";
 import { NETWORK } from "@sdk/venue/config";
 import {
@@ -203,6 +204,7 @@ function TopBar({ onMenu }: { onMenu: () => void }) {
             />
           </button>
 
+          <WalletBalance compact />
           <Connect />
 
           <div className="flex items-stretch border border-line h-8">

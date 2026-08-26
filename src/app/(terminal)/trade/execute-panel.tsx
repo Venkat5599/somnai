@@ -22,6 +22,7 @@ import type { BookSide } from "./page";
 import type { ExpiryPhase } from "./use-countdown";
 import { useSendTransaction } from "wagmi";
 import { useSelfCustody } from "@/components/connect";
+import { WalletBalance, useWalletFunds } from "@/components/wallet-balance";
 import { executeOrder, prepareForWallet, type ExecutionReport } from "./actions";
 
 const UNIT = COLLATERAL.symbol;
@@ -53,6 +54,7 @@ export function ExecutePanel({
   // Non-custodial path. When a wallet is connected the user signs from their
   // own address, so there is no shared nonce and no global throughput ceiling.
   const { canSign, address } = useSelfCustody();
+  const funds = useWalletFunds();
   const { sendTransactionAsync } = useSendTransaction();
   const [selfState, setSelfState] = useState<string | null>(null);
   const [selfHash, setSelfHash] = useState<string | null>(null);
@@ -206,7 +208,9 @@ export function ExecutePanel({
         </Note>
       )}
 
-      {canSign ? (
+      {funds.connected ? <WalletBalance /> : null}
+
+      {canSign && funds.canTrade ? (
         <p className="text-[11px] text-ink-4 text-center -mb-1">
           Signing as{" "}
           <span className="num text-ink-3">
@@ -221,7 +225,15 @@ export function ExecutePanel({
         size="lg"
         block
         leading={<IconBolt size={15} />}
-        disabled={blocked || busy || !quote || !quote.fillable}
+        disabled={
+          blocked ||
+          busy ||
+          !quote ||
+          !quote.fillable ||
+          // A connected wallet with no funds cannot sign a valid order. Block
+          // here rather than letting the wallet pop and fail.
+          (canSign && !funds.canTrade)
+        }
         onClick={canSign ? runSelfCustody : run}
       >
         {busy
@@ -230,7 +242,11 @@ export function ExecutePanel({
             ? "Market expired"
             : phase === "imminent"
               ? "Too close to expiry"
-              : `Buy ${outcome}`}
+              : canSign && funds.blocker === "NO_COLLATERAL"
+                ? "No tUSDC in wallet"
+                : canSign && funds.blocker === "NO_GAS"
+                  ? "No STT for gas"
+                  : `Buy ${outcome}`}
       </Button>
 
       {phase === "imminent" && !busy ? (
