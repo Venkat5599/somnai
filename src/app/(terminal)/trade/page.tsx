@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
-import { exchange, getMarketSnapshot, successionChain } from "@/lib/venue/markets";
-import { getPriceSnapshot, type PriceSnapshot } from "@/lib/venue/prices";
+import { exchange, successionChain } from "@/lib/venue/markets";
+import { cachedMarketSnapshot } from "@/lib/venue/cache";
+import type { PriceSnapshot } from "@/lib/venue/prices";
+import { cachedPriceSnapshot } from "@/lib/venue/cache";
 import type { EventMarket, Outcome } from "@/lib/venue/types";
 import { TradeTerminal } from "./terminal";
 
@@ -41,7 +43,7 @@ export default async function TradePage({
   let venueError: string | null = null;
 
   try {
-    const snap = await getMarketSnapshot();
+    const snap = await cachedMarketSnapshot();
     routable = snap.routable;
     active = snap.active;
     selected = wanted
@@ -77,7 +79,7 @@ export default async function TradePage({
         NO: sides.find(([o]) => o === "NO")?.[1] ?? emptySide(),
       };
 
-      prices = await getPriceSnapshot(selected.asset, "1m", 240).catch(() => null);
+      prices = await cachedPriceSnapshot(selected.asset, "1m", 240).catch(() => null);
     }
   } catch (e) {
     venueError = e instanceof Error ? e.message : String(e);

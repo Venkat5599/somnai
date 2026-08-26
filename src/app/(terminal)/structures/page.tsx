@@ -3,7 +3,8 @@ import Link from "next/link";
 import { Page } from "@/components/shell";
 import { Button, Chip, Note, PageHead, cx } from "@/components/ui";
 import { IconArrowRight, IconInfo, IconLayers, IconRoll } from "@/components/icons";
-import { getMarketSnapshot, successionChain } from "@/lib/venue/markets";
+import { successionChain } from "@/lib/venue/markets";
+import { cachedMarketSnapshot } from "@/lib/venue/cache";
 import { INTERVALS } from "@/lib/venue/config";
 import { headroomSec, type Asset, type EventMarket } from "@/lib/venue/types";
 
@@ -30,7 +31,7 @@ export default async function StructuresPage() {
   let error: string | null = null;
 
   try {
-    const snap = await getMarketSnapshot();
+    const snap = await cachedMarketSnapshot();
     routable = snap.routable;
     for (const asset of ["BTC", "ETH"] as Asset[]) {
       for (const { sec, label } of INTERVALS) {

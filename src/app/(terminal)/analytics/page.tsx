@@ -14,8 +14,8 @@ import {
   cx,
 } from "@/components/ui";
 import { IconArrowOut, IconInfo } from "@/components/icons";
-import { getMarketSnapshot } from "@/lib/venue/markets";
-import { getPriceSnapshot } from "@/lib/venue/prices";
+import { cachedMarketSnapshot } from "@/lib/venue/cache";
+import { cachedPriceSnapshot } from "@/lib/venue/cache";
 import { headroomSec, type Asset, type EventMarket } from "@/lib/venue/types";
 
 export const metadata: Metadata = { title: "Analytics — PRISM" };
@@ -39,9 +39,9 @@ export const revalidate = 0;
  */
 export default async function AnalyticsPage() {
   const [snap, btc, eth] = await Promise.all([
-    getMarketSnapshot().catch(() => null),
-    getPriceSnapshot("BTC", "1m", 180).catch(() => null),
-    getPriceSnapshot("ETH", "1m", 180).catch(() => null),
+    cachedMarketSnapshot().catch(() => null),
+    cachedPriceSnapshot("BTC", "1m", 180).catch(() => null),
+    cachedPriceSnapshot("ETH", "1m", 180).catch(() => null),
   ]);
 
   if (!snap) {

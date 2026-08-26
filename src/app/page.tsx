@@ -5,7 +5,7 @@ import { PrismMark, PrismWordmark } from "@/components/logo";
 import { Button, cx } from "@/components/ui";
 import { IconArrowOut, IconArrowRight } from "@/components/icons";
 import { NETWORK } from "@/lib/venue/config";
-import { getMarketSnapshot } from "@/lib/venue/markets";
+import { cachedMarketSnapshot } from "@/lib/venue/cache";
 import { getLivePrice } from "@/lib/venue/prices";
 import { headroomSec } from "@/lib/venue/types";
 
@@ -18,7 +18,7 @@ export default async function HomePage() {
   // The venue lists ONE strike per window, so that ladder never existed. What
   // follows is the real live board.
   const [snap, btc, eth] = await Promise.all([
-    getMarketSnapshot().catch(() => null),
+    cachedMarketSnapshot().catch(() => null),
     getLivePrice("BTC").catch(() => null),
     getLivePrice("ETH").catch(() => null),
   ]);
