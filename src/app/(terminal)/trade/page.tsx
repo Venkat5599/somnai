@@ -1,14 +1,29 @@
 import type { Metadata } from "next";
-import { getMarketSnapshot } from "@/lib/venue/markets";
+import { exchange, getMarketSnapshot, successionChain } from "@/lib/venue/markets";
 import { getPriceSnapshot, type PriceSnapshot } from "@/lib/venue/prices";
-import type { EventMarket } from "@/lib/venue/types";
+import type { EventMarket, Outcome } from "@/lib/venue/types";
 import { TradeTerminal } from "./terminal";
 
 export const metadata: Metadata = { title: "Trade — PRISM" };
 
-/** Live venue state; a 5-minute window cannot be prerendered. */
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
+
+export interface BookSide {
+  /** [price, size] best-first. */
+  levels: [number, number][];
+  /** Best price, or null when nothing is resting. */
+  best: number | null;
+  /** Contracts available at or better than the best level. */
+  depth: number;
+}
+
+export interface MarketBook {
+  YES: BookSide;
+  NO: BookSide;
+}
+
+const emptySide = (): BookSide => ({ levels: [], best: null, depth: 0 });
 
 export default async function TradePage({
   searchParams,
@@ -19,35 +34,65 @@ export default async function TradePage({
 
   let selected: EventMarket | null = null;
   let routable: EventMarket[] = [];
-  let venueError: string | null = null;
+  let active: EventMarket[] = [];
+  let succession: EventMarket[] = [];
+  let book: MarketBook = { YES: emptySide(), NO: emptySide() };
   let prices: PriceSnapshot | null = null;
+  let venueError: string | null = null;
 
   try {
     const snap = await getMarketSnapshot();
     routable = snap.routable;
-    // Honour the marketId handed over by /markets. Falling back to "some other
-    // market" would silently trade something the user did not choose, so an
-    // unknown id resolves to nothing and the UI says so.
+    active = snap.active;
     selected = wanted
       ? (snap.all.find((m) => m.marketId === wanted) ?? null)
       : (snap.routable[0] ?? null);
+
+    if (selected) {
+      // The succession chain IS the product thesis: what this view rolls into
+      // when the window closes.
+      succession = successionChain(snap, selected.asset, selected.intervalSec);
+
+      // Real resting depth per outcome. Every number in the ticket is derived
+      // from this, so nothing on screen can disagree with the book.
+      const ex = exchange();
+      const sides = await Promise.all(
+        (["YES", "NO"] as Outcome[]).map(async (o) => {
+          try {
+            const ob = await ex.fetchOrderBook(`${selected!.symbol}#${o}`);
+            // Buying an outcome lifts the ask.
+            const asks = (ob.asks ?? []) as [number, number][];
+            const best = asks[0]?.[0] ?? null;
+            const depth = best === null ? 0 : asks.reduce((n, [, s]) => n + s, 0);
+            return [o, { levels: asks, best, depth }] as const;
+          } catch {
+            return [o, emptySide()] as const;
+          }
+        }),
+      );
+      // Built explicitly rather than via Object.fromEntries, which widens the
+      // key type to string and loses the YES/NO guarantee.
+      book = {
+        YES: sides.find(([o]) => o === "YES")?.[1] ?? emptySide(),
+        NO: sides.find(([o]) => o === "NO")?.[1] ?? emptySide(),
+      };
+
+      prices = await getPriceSnapshot(selected.asset, "1m", 240).catch(() => null);
+    }
   } catch (e) {
     venueError = e instanceof Error ? e.message : String(e);
-  }
-
-  // Oracle candles for whichever asset the ticket ended up on. Failure here is
-  // not fatal to the page — the chart renders its own empty state.
-  if (selected) {
-    prices = await getPriceSnapshot(selected.asset, "1m", 240).catch(() => null);
   }
 
   return (
     <TradeTerminal
       market={selected}
       routable={routable}
+      active={active}
+      succession={succession}
+      book={book}
+      prices={prices}
       requestedId={wanted ?? null}
       venueError={venueError}
-      prices={prices}
     />
   );
 }

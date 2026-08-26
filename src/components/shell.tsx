@@ -115,9 +115,11 @@ function RailContent({ pathname }: { pathname: string }) {
     <>
       <div className="px-4 py-4 border-b border-line shrink-0">
         <p className="text-[13px] text-ink font-medium leading-tight">
-          Institutional Terminal
+          PRISM Terminal
         </p>
-        <p className="text-label-xs uppercase text-ink-4 mt-1.5">Tier 1 access</p>
+        <p className="text-label-xs uppercase text-ink-4 mt-1.5">
+          Structured event contracts
+        </p>
       </div>
 
       <ul className="flex-1 min-h-0 overflow-y-auto py-2">
