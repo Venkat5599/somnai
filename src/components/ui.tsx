@@ -427,35 +427,6 @@ export function PageHead({
 }
 
 /* ------------------------------------------------------------------ */
-/* Demo data banner                                                    */
-/* ------------------------------------------------------------------ */
-
-/**
- * Marks a screen whose numbers are fixtures rather than venue state.
- *
- * PRISM reads real markets off Somnia Shannon, but positions, settlement,
- * roll history and the agent transcript are not yet wired to the chain. Those
- * screens keep their fixtures so the product is legible — but they say so,
- * plainly, at the top. A reader must never mistake a fixture for chain state.
- */
-export function DemoData({ children }: { children: ReactNode }) {
-  return (
-    <div className="flex items-start gap-2.5 border border-[#4d3b17] bg-[#1a1408] p-3 mb-5">
-      <span
-        aria-hidden
-        className="shrink-0 mt-[3px] w-[6px] h-[6px] bg-warn"
-      />
-      <p className="text-[12px] leading-[17px] text-ink-2 min-w-0">
-        <span className="uppercase tracking-[0.06em] font-semibold text-warn">
-          Sample data
-        </span>{" "}
-        — {children}
-      </p>
-    </div>
-  );
-}
-
-/* ------------------------------------------------------------------ */
 /* Note                                                                */
 /* ------------------------------------------------------------------ */
 

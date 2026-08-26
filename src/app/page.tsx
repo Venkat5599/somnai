@@ -4,7 +4,7 @@ import { HeroField } from "@/components/hero-field";
 import { PrismMark, PrismWordmark } from "@/components/logo";
 import { Button, cx } from "@/components/ui";
 import { IconArrowOut, IconArrowRight } from "@/components/icons";
-import { NETWORK } from "@/lib/data";
+import { NETWORK } from "@/lib/venue/config";
 import { getMarketSnapshot } from "@/lib/venue/markets";
 import { getLivePrice } from "@/lib/venue/prices";
 import { headroomSec } from "@/lib/venue/types";

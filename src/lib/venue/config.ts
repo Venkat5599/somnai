@@ -152,3 +152,20 @@ export function resolveVenueConfig(
 export const VENUE_CONFIG = resolveVenueConfig();
 
 export { env };
+
+/**
+ * Venue identity for display.
+ *
+ * Lived in lib/data.ts beside the fixture generators; the constants were always
+ * real, the file around them was not. Moved here so nothing imports a module
+ * whose other exports were invented.
+ */
+export const NETWORK = {
+  name: "Somnia",
+  chainName: "Shannon Testnet",
+  chainId: 50312,
+  rpc: "https://api.infra.testnet.somnia.network",
+  indexer: "https://dev.smk.somnia.host/v1/graphql",
+  collateral: COLLATERAL.symbol,
+  venueId: KNOWN_VENUE_IDS.primary,
+} as const;

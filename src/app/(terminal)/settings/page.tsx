@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Page } from "@/components/shell";
 import { Chip, KV, Note, PageHead } from "@/components/ui";
 import { IconInfo } from "@/components/icons";
-import { NETWORK } from "@/lib/data";
+import { NETWORK } from "@/lib/venue/config";
 import { TICK, LOT } from "@/lib/venue";
 
 export const metadata: Metadata = { title: "Settings — PRISM" };

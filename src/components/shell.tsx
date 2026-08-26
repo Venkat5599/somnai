@@ -14,7 +14,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { PrismMark, PrismWordmark } from "./logo";
 import { cx } from "./ui";
-import { NETWORK } from "@/lib/data";
+import { NETWORK } from "@/lib/venue/config";
 import {
   IconActivity,
   IconAgents,
@@ -43,7 +43,7 @@ const NAV = [
   { href: "/settlement", label: "Settlement", Icon: IconSettlement },
   { href: "/proof", label: "Proof", Icon: IconCheck },
   { href: "/activity", label: "Activity", Icon: IconActivity },
-  { href: "/agents", label: "Agents", Icon: IconAgents },
+  { href: "/agents", label: "Integration", Icon: IconAgents },
   { href: "/docs", label: "Documentation", Icon: IconDocs },
 ] as const;
 
