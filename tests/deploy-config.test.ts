@@ -185,6 +185,45 @@ describe("every capability module has a real caller", () => {
   });
 });
 
+describe("no server action can reject", () => {
+  /**
+   * A rejected server action does not render as a handled error. Next shows
+   * "Application error: a server-side exception has occurred" plus an opaque
+   * digest, and the user is stranded — on a WRITE path, unable to tell a
+   * refusal from a transaction that may already have been broadcast.
+   *
+   * Reported in production. Three of the four action files had no try/catch at
+   * all, while every one of them reads a venue whose indexer times out as
+   * routine documented behaviour.
+   */
+  const ACTION_FILES = [
+    "frontend/src/app/(terminal)/trade/actions.ts",
+    "frontend/src/app/(terminal)/roll/actions.ts",
+    "frontend/src/app/(terminal)/settlement/actions.ts",
+    "frontend/src/app/(terminal)/structures/actions.ts",
+  ];
+
+  it.each(ACTION_FILES)("%s guards its venue reads", (file) => {
+    expect(existsSync(file)).toBe(true);
+    const src = read(file);
+    const exported = src.split("export async function").length - 1;
+    const guards = src.split("try {").length - 1;
+    expect(exported, `${file} exports no actions`).toBeGreaterThan(0);
+    expect(
+      guards,
+      `${file} has ${exported} action(s) and ${guards} try block(s) — an unguarded action renders the digest crash screen`,
+    ).toBeGreaterThanOrEqual(exported);
+  });
+
+  it("never reports a failure verdict when the chain could not be read", () => {
+    // If submission threw, the order may still have been broadcast. UNKNOWN is
+    // the only honest answer; VERIFIED_FAILED would be a claim we cannot make.
+    const trade = read("frontend/src/app/(terminal)/trade/actions.ts");
+    const guarded = trade.slice(trade.indexOf("preflightSnapshot"));
+    expect(guarded).toContain('status: "UNKNOWN"');
+  });
+});
+
 describe("secrets", () => {
   it("never ships a private key literal in tracked config", () => {
     for (const p of ["frontend/next.config.ts", "package.json", "frontend/package.json"]) {

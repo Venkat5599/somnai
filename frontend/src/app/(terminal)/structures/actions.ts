@@ -53,7 +53,22 @@ export async function planBasket(legs: BatchLeg[]): Promise<BasketPlan> {
       reason: `Too many attempts. Retry in ${rate.retryAfterSec}s.`,
     };
 
-  const plans = await planBatch(legs, config);
+  let plans;
+  try {
+    plans = await planBatch(legs, config);
+  } catch (e) {
+    // A rejected action renders Next's opaque digest screen. A basket that
+    // could not be priced is a basket that will not be sent, which is a
+    // perfectly expressible answer.
+    return {
+      ok: false,
+      plans: [],
+      totalCost: null,
+      reason: `The venue could not be read, so nothing was priced: ${
+        e instanceof Error ? e.message.slice(0, 140) : "unknown error"
+      }`,
+    };
+  }
   const ok = plans.every((p) => p.ok);
 
   return {
@@ -93,7 +108,18 @@ export async function executeBasket(legs: BatchLeg[]): Promise<BasketRun> {
   // executeBatch is deliberate and cheap: the book can move between the two
   // reads, and the plan that matters is the one taken immediately before the
   // first signature.
-  const plans = await planBatch(legs, config);
+  let plans;
+  try {
+    plans = await planBatch(legs, config);
+  } catch (e) {
+    return {
+      ok: false,
+      result: null,
+      reason: `The venue could not be read, so nothing was sent: ${
+        e instanceof Error ? e.message.slice(0, 140) : "unknown error"
+      }`,
+    };
+  }
   if (!plans.every((p) => p.ok))
     return {
       ok: false,
@@ -106,6 +132,19 @@ export async function executeBasket(legs: BatchLeg[]): Promise<BasketRun> {
   if (!spend.allowed)
     return { ok: false, result: null, reason: spend.reason ?? "Spend refused." };
 
-  const result = await executeBatch(legs, config);
-  return { ok: result.atomicity === "SEQUENTIAL_VERIFIED", result };
+  try {
+    const result = await executeBatch(legs, config);
+    return { ok: result.atomicity === "SEQUENTIAL_VERIFIED", result };
+  } catch (e) {
+    // executeBatch wraps each leg, so a throw here happens before the first
+    // signature. Saying "nothing was sent" is therefore accurate rather than
+    // hopeful — but it is stated as what we know, not as a success.
+    return {
+      ok: false,
+      result: null,
+      reason: `Batch failed before the first leg was signed: ${
+        e instanceof Error ? e.message.slice(0, 160) : "unknown error"
+      }`,
+    };
+  }
 }

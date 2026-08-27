@@ -65,7 +65,24 @@ export async function executeOrder(input: {
     };
   }
 
-  const snap = await getMarketSnapshot(config);
+  let snap;
+  try {
+    snap = await getMarketSnapshot(config);
+  } catch (e) {
+    // Never let this reject: a rejected action renders Next's opaque digest
+    // screen, and on a signing path the user cannot tell a refusal from a
+    // transaction that may have been broadcast.
+    return {
+      phase: "VALIDATION_FAILED",
+      validation: {
+        reason: "VENUE_UNREADABLE",
+        detail: `The registry could not be read, so nothing was signed: ${
+          e instanceof Error ? e.message.slice(0, 140) : "unknown error"
+        }`,
+      },
+      elapsedMs: Date.now() - started,
+    };
+  }
   const market = snap.all.find((m) => m.marketId === input.marketId) ?? null;
 
   // Book is only needed to price a crossing order; a failure here is not fatal
@@ -109,9 +126,24 @@ export async function executeOrder(input: {
   }
 
   // Snapshot BEFORE signing so balance and nonce deltas are attributable.
-  const before = await preflightSnapshot(config);
-  const submitted = await submitOrder(v, input.side, config);
-  const verification = await verifyExecution(submitted, before, config);
+  //
+  // From here on a throw is genuinely dangerous: the order may have reached the
+  // chain. submitOrder never throws by design, but preflight and verification
+  // read the chain and can. The answer is UNKNOWN — never a failure verdict,
+  // because "it failed" would be a claim we cannot support.
+  let verification: VerificationResult;
+  try {
+    const before = await preflightSnapshot(config);
+    const submitted = await submitOrder(v, input.side, config);
+    verification = await verifyExecution(submitted, before, config);
+  } catch (e) {
+    verification = {
+      status: "UNKNOWN",
+      reason:
+        "The chain could not be read while submitting, so the outcome cannot be attributed. Check the wallet on the explorer before retrying.",
+      evidence: [e instanceof Error ? e.message.slice(0, 160) : "unknown error"],
+    };
+  }
 
   const hash =
     verification.status === "VERIFIED_EXECUTED"
@@ -154,17 +186,28 @@ export async function prepareForWallet(input: {
       detail: `Too many attempts. Retry in ${rate.retryAfterSec}s.`,
     };
 
-  const snap = await getMarketSnapshot(config);
-  const market = snap.all.find((m) => m.marketId === input.marketId) ?? null;
-
   // No spend guard here on purpose: the user is spending their OWN funds, so
-  // the demo wallet's reserve is irrelevant to them.
-  const { prepareOrder } = await import("@sdk/dreamdex/prepare");
-  return prepareOrder(
-    { marketId: input.marketId, outcome: input.outcome, side: "buy", amount: input.amount },
-    market,
-    config,
-  );
+  // the demo wallet's reserve is irrelevant to them. But the registry read can
+  // still fail, and an unsigned-order builder that REJECTS strands the user on
+  // the digest crash screen instead of telling them to retry.
+  try {
+    const snap = await getMarketSnapshot(config);
+    const market = snap.all.find((m) => m.marketId === input.marketId) ?? null;
+    const { prepareOrder } = await import("@sdk/dreamdex/prepare");
+    return await prepareOrder(
+      { marketId: input.marketId, outcome: input.outcome, side: "buy", amount: input.amount },
+      market,
+      config,
+    );
+  } catch (e) {
+    return {
+      ok: false as const,
+      reason: "VENUE_UNREADABLE",
+      detail: `Nothing was built to sign: ${
+        e instanceof Error ? e.message.slice(0, 140) : "unknown error"
+      }`,
+    };
+  }
 }
 
 /**
@@ -207,11 +250,27 @@ export async function runSetAction(input: {
       };
   }
 
-  const snap = await getMarketSnapshot(config);
-  const market = snap.all.find((m) => m.marketId === input.marketId) ?? null;
+  try {
+    const snap = await getMarketSnapshot(config);
+    const market = snap.all.find((m) => m.marketId === input.marketId) ?? null;
 
-  const { mintSet, burnSet } = await import("@sdk/dreamdex/sets");
-  return input.kind === "mint"
-    ? mintSet(market, input.amount, config)
-    : burnSet(market, input.amount, config);
+    const { mintSet, burnSet } = await import("@sdk/dreamdex/sets");
+    return await (input.kind === "mint"
+      ? mintSet(market, input.amount, config)
+      : burnSet(market, input.amount, config));
+  } catch (e) {
+    // UNKNOWN, not REJECTED: mint and burn move funds, and a throw after the
+    // write was sent must not be reported as "nothing happened".
+    return {
+      ok: false as const,
+      status: "UNKNOWN" as const,
+      txHash: null,
+      blockNumber: null,
+      collateralDelta: null,
+      reason: `The set operation could not be completed or confirmed: ${
+        e instanceof Error ? e.message.slice(0, 160) : "unknown error"
+      }`,
+      evidence: [],
+    };
+  }
 }
