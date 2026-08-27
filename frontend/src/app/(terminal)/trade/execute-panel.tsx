@@ -329,7 +329,10 @@ export function ExecutePanel({
           <Row k="Venue" v={market.venueId ? `${market.venueId.slice(0, 8)}…` : "—"} />
           <Row k="Collateral" v={`${market.quoteDecimals}dp`} />
           <Row k="Min size" v={String(market.minAmount)} />
-          <Row k="Multi-leg" v="Not implemented" />
+          {/* EIP-7702 is unavailable on this chain (pre-Prague), so a batch
+              refuses whole before signing and unwinds what filled. Never
+              described as atomic. See sdk/dreamdex/batch.ts. */}
+          <Row k="Multi-leg" v="Sequential + unwind" />
         </div>
       </details>
     </div>

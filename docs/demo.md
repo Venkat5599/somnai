@@ -37,9 +37,16 @@ reason shown, not faked.
 
 **Does the roll work?** The planner and daemon are real and share the verified
 execution path. It has **not** fired on a live successor, because the venue does
-not pre-strike them. That is an honest gap, not a hidden one.
+not pre-strike them. That is an honest gap, not a hidden one -
+`scripts/roll-watch.ts` sits on the venue waiting for one and fires the same
+`executeRoll` the app fires, writing a receipt when it lands.
 
-**Where is EIP-7702?** Not implemented. The Advanced panel says so.
+**Where is EIP-7702?** Unavailable on this chain, not merely unbuilt. Shannon is
+pre-Prague - no EIP-2935 or EIP-7002 system contracts - and `/settings` probes
+that live rather than asserting it. Multi-leg execution instead refuses whole
+before signing, sends each leg FILL_OR_KILL, and unwinds what filled if a later
+leg fails. It reports which of the four guarantees it delivered and never claims
+atomicity.
 
 ## Fallback
 

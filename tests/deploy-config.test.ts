@@ -8,6 +8,7 @@
 
 import { describe, expect, it } from "vitest";
 import { readFileSync, existsSync } from "node:fs";
+import { discoverRoutes, verifiableRoutes } from "../scripts/routes";
 
 const read = (p: string) => readFileSync(p, "utf8");
 
@@ -40,6 +41,75 @@ describe("workspace layout", () => {
     // different failure, same restructure.
     const cfg = read("frontend/next.config.ts");
     expect(cfg).toContain("@react-native-async-storage/async-storage");
+  });
+});
+
+describe("the deploy gate checks every route that exists", () => {
+  /**
+   * The gate used to hold a hand-written list of eight routes against an app
+   * with fourteen, so six pages were never requested and could have been 500ing
+   * in production under a "all routes 200" log line. These assert the list can
+   * never fall behind again.
+   */
+
+  it("finds the terminal pages and the health handler", () => {
+    const paths = verifiableRoutes();
+    for (const expected of [
+      "/",
+      "/trade",
+      "/markets",
+      "/structures",
+      "/analytics",
+      "/positions",
+      "/roll",
+      "/settlement",
+      "/proof",
+      "/activity",
+      "/agents",
+      "/docs",
+      "/settings",
+      "/api/health",
+    ]) {
+      expect(paths, `${expected} is not in the verified route set`).toContain(expected);
+    }
+  });
+
+  it("collapses route groups — (terminal) is a directory, not a URL segment", () => {
+    for (const p of verifiableRoutes()) expect(p).not.toContain("(");
+    expect(verifiableRoutes()).toContain("/trade");
+  });
+
+  it("covers one route per page file, with nothing invented", () => {
+    // Every discovered page must correspond to a file on disk. A route the gate
+    // requests but that does not exist would fail the deploy for no reason.
+    for (const r of discoverRoutes()) {
+      const dir = r.path === "/" ? "" : r.path;
+      const base = `frontend/src/app${dir}`;
+      const grouped = `frontend/src/app/(terminal)${dir}`;
+      const file = r.kind === "page" ? "page.tsx" : "route.ts";
+      expect(
+        existsSync(`${base}/${file}`) || existsSync(`${grouped}/${file}`),
+        `${r.path} was discovered but no ${file} backs it`,
+      ).toBe(true);
+    }
+  });
+
+  it("never asks the gate to fetch a dynamic segment blind", () => {
+    for (const p of verifiableRoutes()) expect(p).not.toContain("[");
+  });
+
+  it("verifies off a staging alias, so a bad deploy cannot take production down", () => {
+    // The previous gate promoted production and checked afterwards, so every
+    // failed deploy caused the outage it was written to prevent.
+    const gate = read("scripts/deploy-verify.ts");
+    expect(gate).toContain("PRISM_STAGING_ALIAS");
+    // Route list must come from discovery, never from an array in this file.
+    expect(gate).toContain("verifiableRoutes");
+    expect(gate).not.toMatch(/const ROUTES\s*=\s*\[/);
+  });
+
+  it("checks the body, because a 200 is not proof the app rendered", () => {
+    expect(read("scripts/deploy-verify.ts")).toContain("RENDER_MARKER");
   });
 });
 

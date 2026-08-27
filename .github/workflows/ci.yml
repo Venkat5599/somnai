@@ -67,9 +67,27 @@ jobs:
           echo "::group::private-key literals in history"
           # A venue id is also 64 hex chars, so match only on assignment to a
           # key-shaped variable rather than on the shape alone.
-          if git grep -InE '(PRIVATE_KEY|SECRET_KEY|MNEMONIC)\s*[:=]\s*["'"'"']?0x[0-9a-fA-F]{64}' \
-               $(git rev-list --all) -- 2>/dev/null; then
+          #
+          # The revision list is piped rather than substituted with $(...): this
+          # repository's history is long enough that the expanded argument list
+          # can exceed ARG_MAX, and when it does the shell fails the command in
+          # a way that `if` reads as "no matches found". A scan that silently
+          # passes because it never ran is worse than no scan, so xargs batches
+          # the revisions and any hit in any batch fails the job.
+          PATTERN='(PRIVATE_KEY|SECRET_KEY|MNEMONIC)\s*[:=]\s*["'"'"']?0x[0-9a-fA-F]{64}'
+          if git rev-list --all \
+               | xargs -n 200 git grep -InE "$PATTERN" -- 2>/dev/null \
+               | grep . ; then
             echo "::error::A private key literal exists in git history."
+            exit 1
+          fi
+          echo "none"
+          echo "::endgroup::"
+
+          echo "::group::deploy credentials and local state are untracked"
+          # .vercel holds the project and org ids the CLI writes on first deploy.
+          if git ls-files | grep -E '^\.vercel(/|$)'; then
+            echo "::error::.vercel is tracked. It carries deployment identifiers."
             exit 1
           fi
           echo "none"

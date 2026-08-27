@@ -109,7 +109,7 @@ export async function placeLimit(
     price: number;
     /** Contracts. */
     size: number;
-    type?: "post-only" | "ioc" | "limit";
+    type?: "post-only" | "ioc" | "fok" | "limit";
     expiresInSec?: number;
   },
   config: VenueConfig = resolveVenueConfig(),
@@ -171,7 +171,12 @@ export async function placeLimit(
         ? ORDER_TYPE.POST_ONLY
         : type === "ioc"
           ? ORDER_TYPE.MARKET
-          : ORDER_TYPE.LIMIT,
+          : type === "fok"
+            // All-or-nothing on ONE leg. This is what makes a multi-leg batch
+            // recoverable: a leg either fills whole or does not exist, so an
+            // unwind never has to reason about a partial.
+            ? ORDER_TYPE.FILL_OR_KILL
+            : ORDER_TYPE.LIMIT,
     expireTimestampNs: BigInt(expiresAt) * 1_000_000_000n,
   });
 

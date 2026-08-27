@@ -62,15 +62,62 @@ Everything below executes against Somnia and is independently verifiable.
 | Roll planner + daemon | real succession chains, typed blockers |
 | Wallet history | read from the Shannon explorer account API |
 
-### Not implemented
+### Not implemented, and why
 
-Stated plainly, and labelled in the UI:
+Each of these was "planned" until it was actually checked. Two turned out to be
+unreachable rather than unbuilt, and both are now **probed at runtime** instead
+of asserted, so the UI stops claiming them the moment the chain changes.
 
-- **Atomic multi-leg batching (EIP-7702)** — the Advanced panel says so
-- **Range / Spread / Ladder** — need 2+ strikes on one expiry; the venue has one
-- **A live successor roll** — the planner and daemon are real and share the
-  verified execution path, but no roll has fired on a live successor because the
-  venue never exposed one during extensive polling
+**Atomic multi-leg batching (EIP-7702) — unavailable on this chain.**
+EIP-7702 ships in Prague. Shannon carries none of Prague's system contracts
+(`0x…2935`, `0x…7002`), nor Cancun's beacon-roots contract, and its block
+headers have no `withdrawalsRoot`, `excessBlobGas` or `requestsHash`. Probing
+by transaction envelope is useless here — the node answers a malformed type-`0x2`,
+a type-`0x4` and a nonexistent type-`0x7f` with the identical
+`invalid transaction / 0x08`, verified against a negative control — so
+[`sdk/venue/capabilities.ts`](sdk/venue/capabilities.ts) detects the fork by
+system-contract presence instead.
+
+In its place, [`sdk/dreamdex/batch.ts`](sdk/dreamdex/batch.ts) delivers the
+guarantee 7702 was wanted for, as far as this chain allows:
+
+| | |
+|---|---|
+| `PREFLIGHT_ALL_OR_NOTHING` | every leg gated before a signature exists — nothing is sent |
+| `SEQUENTIAL_VERIFIED` | every leg filled, each verdict read from its own receipt |
+| `PARTIAL_UNWOUND` | a leg failed; the filled legs were sold back and the sale verified |
+| `PARTIAL_EXPOSED` | a leg failed **and** an unwind failed — read this one |
+
+Legs go out `FILL_OR_KILL`, so a leg either exists whole or not at all and an
+unwind never faces a partial. **This is not atomic**: between the first fill and
+the unwind there is a real window in which the position is one-sided. The result
+carries which of the four it delivered, and the UI prints it.
+
+**Range / Spread / Ladder — the venue cannot express them.**
+Each needs 2+ strikes on one expiry. Re-verified live while writing this: across
+**548 markets**, the most distinct strikes on any single expiry is **1**. This is
+no longer a paragraph — [`sdk/venue/structures.ts`](sdk/venue/structures.ts)
+decides it from the registry, `/structures` and `/docs` print the counts they
+were decided from, and `tests/structures.test.ts` asserts the verdict *flips* the
+day a second strike appears.
+
+**A live successor roll — venue-dependent, and the instrument is now real.**
+The planner and daemon share the verified execution path. What was missing is a
+successor: the venue does not pre-strike them, so the window in which one exists,
+is struck and has a resting offer is short and unpredictable.
+[`scripts/roll-watch.ts`](scripts/roll-watch.ts) was a parallel implementation —
+it hard-coded the tick grid and read the SDK's own receipt field as the verdict,
+so a success there proved nothing about PRISM. It now calls `planRoll` /
+`executeRoll` directly, sits on the venue for as long as you tell it to, and
+writes `docs/evidence/roll-receipt.json` on a chain-verified roll.
+
+```bash
+PRISM_DRY_RUN=false ROLL_WATCH_MINUTES=120 \
+  bun --conditions react-server scripts/roll-watch.ts
+```
+
+Still open: no successor has appeared during polling, so the receipt does not
+exist yet. That is the venue's behaviour, not a gap in the roll path.
 
 ---
 
@@ -129,7 +176,7 @@ contracts/            addresses + ABIs of the contracts PRISM calls
 sdk/                  venue, dreamdex, quant — shared, React-free
 src/                  the Next.js app
 docs/                 architecture · gotchas · demo
-tests/                35 tests
+tests/                62 tests
 ```
 
 `contracts/` documents the DreamDEX contracts PRISM *talks to* — addresses,
@@ -220,18 +267,26 @@ wrong trade.
 ## Testing
 
 ```
-tests/quant.test.ts        payoff boundaries, PAVA repair, depth limits
-tests/grid.test.ts         reproduces the 18-decimal bug, then proves the fix
-tests/routability.test.ts  expiry headroom, struck/unstruck, status gating
+tests/quant.test.ts         payoff boundaries, PAVA repair, depth limits
+tests/grid.test.ts          reproduces the 18-decimal bug, then proves the fix
+tests/routability.test.ts   expiry headroom, struck/unstruck, status gating
+tests/structures.test.ts    the one-strike constraint, AND that it flips
+tests/deploy-config.test.ts tracing root, route coverage, staging-first gate
 ```
 
-35 tests, all pure — no mocked blockchain. Live behaviour is verified manually
+62 tests, all pure — no mocked blockchain. Live behaviour is verified manually
 against Shannon and recorded above; that is stated separately rather than dressed
 up as integration coverage.
 
 The grid tests matter most: the 18-decimal failure is **invisible on a 6-decimal
 testnet**, so a happy-path test would pass against broken code. They assert the
 failure first.
+
+`structures.test.ts` is the second-most important, for the opposite reason. It is
+easy to write a test that agrees the venue has one strike; the useful assertions
+are the ones proving Range and Spread turn **on** at two strikes and Ladder at
+three. A constraint that can only ever answer "no" is indistinguishable from a
+hard-coded no.
 
 ---
 

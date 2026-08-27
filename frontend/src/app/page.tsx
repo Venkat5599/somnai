@@ -210,24 +210,35 @@ export default async function HomePage() {
   );
 }
 
+/**
+ * The mechanism, as it actually works.
+ *
+ * These three cards used to describe differentiating a strike ladder into a
+ * risk-neutral density, a weight vector over a digital basis, and legs landing
+ * in one batched transaction. The venue lists one strike per window, so there
+ * is no ladder to differentiate and no basis to solve over; and EIP-7702 is not
+ * available on this chain, so the batch was never coming. Marketing copy that
+ * promises a product the venue cannot express is the most expensive kind of
+ * wrong, because it is the first thing anyone reads.
+ */
 const MECHANISM = [
   {
     n: "01",
-    title: "Read the strip",
-    body: "Every live Up price is a risk-neutral probability. Repaired for monotonicity and differentiated across strikes, the ladder becomes a full risk-neutral density and an implied volatility surface.",
-    foot: "Breeden-Litzenberger, 1978",
+    title: "Read the term structure",
+    body: "Every live YES price is a risk-neutral probability. The venue lists one strike per window and five window lengths, so the real structure is that one strike observed across 5m, 15m, 1h, 4h and 24h — a term structure rather than a smile.",
+    foot: "One strike per window, five cadences",
   },
   {
     n: "02",
-    title: "Solve the legs",
-    body: "Your payoff intent becomes a weight vector over the digital basis, constrained by the depth actually resting on each book rather than a theoretical mid.",
-    foot: "Depth-aware replication router",
+    title: "Price the carry",
+    body: "A view is priced against the depth actually resting on the successor's book, not a theoretical mid. If nothing is resting, the plan says so and refuses rather than quoting a fill that cannot happen.",
+    foot: "Depth-aware, refuses on an empty book",
   },
   {
     n: "03",
     title: "Fill and roll",
-    body: "Legs are intended to land in one batched transaction, so no leg risk. When the window expires, the roll engine re-strikes into the successor market and the position keeps its tenor.",
-    foot: "Batched execution — planned",
+    body: "Every fill is verified from chain — receipt, nonce and collateral delta — never from the SDK's word, which can report success on a reverted transaction. When the window closes, the expiring leg is left to settle and claimed, while the equivalent exposure opens in the successor.",
+    foot: "Verified on-chain, settle-don't-churn",
   },
 ] as const;
 

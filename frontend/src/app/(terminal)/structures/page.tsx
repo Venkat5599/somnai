@@ -7,6 +7,7 @@ import { successionChain } from "@sdk/venue/markets";
 import { cachedMarketSnapshot } from "@sdk/venue/cache";
 import { INTERVALS } from "@sdk/venue/config";
 import { headroomSec, type Asset, type EventMarket } from "@sdk/venue/types";
+import { structureMatrix, type Constructibility } from "@sdk/venue/structures";
 
 export const metadata: Metadata = { title: "Structures — PRISM" };
 
@@ -16,23 +17,30 @@ export const revalidate = 0;
 /**
  * Structures, restricted to what this venue can actually express.
  *
- * Range, Spread and Ladder were removed rather than shown as disabled cards.
- * Each needs two or more strikes on ONE expiry; the venue lists exactly one
- * strike per window, so those structures cannot be routed here at all. Keeping
- * them as inert cards would imply a capability that does not exist.
+ * Range, Spread and Ladder are absent rather than shown as disabled cards, and
+ * an inert card would still imply a capability that does not exist.
  *
- * What survives is real:
+ * WHAT CHANGED: the reason for their absence used to be a paragraph. Prose does
+ * not re-check itself, so if the venue ever listed a second strike on one
+ * expiry this page would go on saying it had not. The verdict now comes from
+ * `structureMatrix(snap.all)` — live counts of strikes per expiry and expiries
+ * per asset — and the note prints the numbers it was decided from.
+ *
+ * What survives today is real:
  *   DIRECTIONAL — one live market, one leg.
  *   CALENDAR    — one strike carried across a succession chain.
  */
 export default async function StructuresPage() {
   let routable: EventMarket[] = [];
   let chains: { asset: Asset; interval: string; windows: EventMarket[] }[] = [];
+  let matrix: Constructibility[] = [];
   let error: string | null = null;
 
   try {
     const snap = await cachedMarketSnapshot();
     routable = snap.routable;
+    // Verdicts come from the registry, not from the paragraph below.
+    matrix = structureMatrix(snap.all);
     for (const asset of ["BTC", "ETH"] as Asset[]) {
       for (const { sec, label } of INTERVALS) {
         const windows = successionChain(snap, asset, sec);
@@ -46,6 +54,7 @@ export default async function StructuresPage() {
   }
 
   const now = Math.floor(Date.now() / 1000);
+  const blocked = matrix.filter((m) => !m.constructible);
 
   return (
     <Page>
@@ -58,13 +67,27 @@ export default async function StructuresPage() {
         </Chip>
       </PageHead>
 
-      <Note icon={<IconInfo size={14} />} tone="warn">
-        <span className="font-medium text-ink">
-          Range, Spread and Ladder are not listed here.
-        </span>{" "}
-        Each needs two or more strikes on one expiry, and the venue lists exactly
-        one strike per window. They are absent rather than shown disabled,
-        because an inert card still implies the capability exists.
+      {/* The absence is explained with the counts it was decided from, read on
+          this request. If the venue ever lists a second strike on one expiry,
+          this note stops claiming otherwise without anyone editing it. */}
+      <Note icon={<IconInfo size={14} />} tone={blocked.length ? "warn" : "accent"}>
+        {blocked.length ? (
+          <>
+            <span className="font-medium text-ink">
+              {blocked.map((b) => b.kind.charAt(0) + b.kind.slice(1).toLowerCase()).join(", ")}{" "}
+              {blocked.length === 1 ? "is" : "are"} not listed here.
+            </span>{" "}
+            {blocked[0].reason} They are absent rather than shown disabled,
+            because an inert card still implies the capability exists.
+          </>
+        ) : (
+          <>
+            <span className="font-medium text-ink">
+              Every structure is constructible on this read.
+            </span>{" "}
+            {matrix[0]?.reason}
+          </>
+        )}
       </Note>
 
       {error ? (
