@@ -5,10 +5,11 @@ import { Button, Chip, Note, PageHead, cx } from "@/components/ui";
 import { IconArrowRight, IconInfo, IconLayers, IconRoll } from "@/components/icons";
 import { successionChain } from "@sdk/venue/markets";
 import { cachedMarketSnapshot } from "@sdk/venue/cache";
-import { headroomSec, type Asset, type EventMarket } from "@sdk/venue/types";
+import { isRoutable, type Asset, type EventMarket } from "@sdk/venue/types";
 import { structureMatrix, type Constructibility } from "@sdk/venue/structures";
 import { resolveVenueConfig } from "@sdk/venue/config";
 import { BasketPanel } from "./basket-panel";
+import { WindowChip, WindowCountdown } from "./live-window";
 
 export const metadata: Metadata = { title: "Structures — PRISM" };
 
@@ -39,7 +40,11 @@ export default async function StructuresPage() {
 
   try {
     const snap = await cachedMarketSnapshot();
-    routable = snap.routable;
+    // Re-derived against the clock. snap.routable was computed when the
+    // snapshot was fetched and that is cached for 10s — on a 60s window that
+    // is a sixth of its life, which is how four expired cards came to render
+    // under a header claiming they were routable.
+    routable = snap.routable.filter((m) => isRoutable(m, Date.now()));
     // Verdicts come from the registry, not from the paragraph below.
     matrix = structureMatrix(snap.all);
     // Cadences come off the LIVE BOARD, never from the INTERVALS constant.
@@ -126,7 +131,6 @@ export default async function StructuresPage() {
       ) : (
         <div className="grid gap-px bg-line border border-line sm:grid-cols-2 xl:grid-cols-4">
           {routable.map((m) => {
-            const left = m.expiry - now;
             return (
               <article key={m.marketId} className="bg-surface p-5 flex flex-col min-w-0">
                 <header className="flex items-start justify-between gap-3">
@@ -139,22 +143,14 @@ export default async function StructuresPage() {
                       {m.strike?.toLocaleString("en-US", { minimumFractionDigits: 2 })}
                     </p>
                   </div>
-                  <Chip tone="up" live>
-                    Live
-                  </Chip>
+                  <WindowChip expiry={m.expiry} intervalSec={m.intervalSec} />
                 </header>
 
                 <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 border-t border-line-soft pt-4">
                   <div>
                     <dt className="text-label-xs uppercase text-ink-4">Closes in</dt>
-                    <dd
-                      className={cx(
-                        "num text-[13px] mt-1",
-                        left <= headroomSec(m.intervalSec) ? "text-down" : "text-ink",
-                      )}
-                    >
-                      {Math.max(0, Math.floor(left / 60))}m{" "}
-                      {Math.max(0, left % 60)}s
+                    <dd>
+                      <WindowCountdown expiry={m.expiry} intervalSec={m.intervalSec} />
                     </dd>
                   </div>
                   <div>
