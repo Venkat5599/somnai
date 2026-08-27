@@ -40,6 +40,20 @@ const PRODUCTION = process.env.PRISM_PROD_ALIAS ?? "prism-terminal-cyan.vercel.a
  */
 const STAGING = process.env.PRISM_STAGING_ALIAS ?? "prism-terminal-staging.vercel.app";
 
+/**
+ * Vercel Deployment Protection sends unauthenticated requests to an SSO page.
+ *
+ * A fresh alias inherits it, so the staging alias answered 302 to every route
+ * and the gate reported fourteen failures for a deployment that was fine. That
+ * is a false negative, and a gate that cries wolf gets bypassed.
+ *
+ * Vercel's own answer is Protection Bypass for Automation: a project-level
+ * secret sent as a header. When it is set the gate verifies normally; when it
+ * is not, the gate says the alias is PROTECTED rather than BROKEN, and refuses
+ * to promote — an unverifiable deployment must not reach production either.
+ */
+const BYPASS = process.env.VERCEL_AUTOMATION_BYPASS_SECRET ?? "";
+
 const TIMEOUT_MS = 40_000;
 /** Vercel's alias propagation is not instant; this is the observed settle time. */
 const PROPAGATE_MS = 12_000;
@@ -70,9 +84,21 @@ async function probe(base: string, route: string): Promise<Probe> {
   try {
     const res = await fetch(`https://${base}${route}`, {
       redirect: "manual",
-      headers: { "cache-control": "no-cache" },
+      headers: {
+        "cache-control": "no-cache",
+        ...(BYPASS ? { "x-vercel-protection-bypass": BYPASS } : {}),
+      },
       signal: AbortSignal.timeout(TIMEOUT_MS),
     });
+
+    if (res.status === 302 && (res.headers.get("location") ?? "").includes("vercel.com/sso")) {
+      return {
+        route,
+        status: 302,
+        ok: false,
+        note: "Deployment Protection — the app was never reached",
+      };
+    }
 
     if (res.status !== 200)
       return { route, status: res.status, ok: false, note: "" };
@@ -166,10 +192,25 @@ const main = async () => {
   const bad = staged.filter((p) => !p.ok);
 
   if (bad.length) {
+    const protectedAll = bad.length === routes.length && bad.every((p) => p.status === 302);
+
     log("");
-    log(`${bad.length} of ${routes.length} route(s) failed on staging.`);
+    if (protectedAll) {
+      // Every route bounced to SSO: this says nothing about the build.
+      log(`${STAGING} is behind Vercel Deployment Protection, so the app was never reached.`);
+      log("This is not a failed deployment — it is an unverifiable one, and an");
+      log("unverifiable deployment must not reach production either.");
+      log("");
+      log("Fix it once, either way:");
+      log("  a) Project Settings → Deployment Protection → Protection Bypass for");
+      log("     Automation, then export VERCEL_AUTOMATION_BYPASS_SECRET before deploying.");
+      log(`  b) Disable protection for the ${STAGING} alias.`);
+    } else {
+      log(`${bad.length} of ${routes.length} route(s) failed on staging.`);
+      for (const p of bad) log(`  ${p.route}  ${p.status}  ${p.note}`);
+    }
+    log("");
     log("PRODUCTION WAS NEVER TOUCHED — it is still serving the previous deployment.");
-    for (const p of bad) log(`  ${p.route}  ${p.status}  ${p.note}`);
     process.exit(1);
   }
 
