@@ -43,3 +43,6 @@ Thumbs.db
 .scratch/
 
 .vercel
+
+# a generated bot config carries tuning, and may carry a key line
+bot.env

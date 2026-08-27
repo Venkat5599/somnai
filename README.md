@@ -190,7 +190,7 @@ contracts/            addresses + ABIs of the contracts PRISM calls
 sdk/                  venue, dreamdex, quant — shared, React-free
 src/                  the Next.js app
 docs/                 architecture · gotchas · demo
-tests/                80 tests
+tests/                111 tests
 ```
 
 `contracts/` documents the DreamDEX contracts PRISM *talks to* — addresses,
@@ -289,7 +289,7 @@ tests/batch.test.ts         the grading function, incl. the unwind-died case
 tests/deploy-config.test.ts tracing root, route coverage, no uncalled modules
 ```
 
-80 tests, all pure — no mocked blockchain. Live behaviour is verified manually
+111 tests, all pure — no mocked blockchain. Live behaviour is verified manually
 against Shannon and recorded above; that is stated separately rather than dressed
 up as integration coverage.
 
@@ -302,6 +302,54 @@ easy to write a test that agrees the venue has one strike; the useful assertions
 are the ones proving Range and Spread turn **on** at two strikes and Ladder at
 three. A constraint that can only ever answer "no" is indistinguishable from a
 hard-coded no.
+
+---
+
+## dreamBot Builder configs
+
+The [dreamBot Builder](https://dreambot-builder.vercel.app) is Somnia's no-code
+front end for the bot kit. Walking it end to end, it emits exactly one artifact
+— a `.env` block — and tells you to run it against the kit:
+
+```
+NETWORK=testnet
+DRY_RUN=true
+STRATEGY=ec-starter
+PRIVATE_KEY=0x...
+TAKE_MAX_SHARES=5
+TAKE_MAX_POSITION=20
+TAKE_INTERVAL_MS=8000
+```
+
+PRISM runs that same config against **its own** execution path, so the config
+stays portable while the execution stays verified — the grid-safe integer tier,
+and an outcome re-derived from the receipt rather than the SDK's return value,
+which is precisely what the kit documents can lie.
+
+```bash
+cp bot.env.example bot.env      # or paste the Builder's block
+bun run svc:bot bot.env
+```
+
+**The key is deliberately not read from the config.** The Builder's block
+carries a `PRIVATE_KEY` line; the parser reports only whether a usable key is
+*present* and never carries its value — a config object gets logged and
+serialised into errors. PRISM reads the key from its own environment, in the one
+place that already does.
+
+| Builder strategy | PRISM |
+|---|---|
+| **EC Starter** | ✅ crosses the spread on the verified IOC path |
+| **EC Settlement** | ✅ `findClaimable` + fee-aware `claim` |
+| EC Market Maker | ❌ needs cancel/re-quote |
+| EC Passive Bid | ❌ needs cancel/re-quote |
+| EC Ladder | ❌ the Builder flattens it before expiry; flattening needs cancel |
+
+The three refusals are one fact: **PRISM has no order cancellation anywhere** —
+verified by search. A post-only order it could place and never pull leaves
+escrow locked, which the bot kit calls the easiest way to lose track of
+collateral. So those configs are refused *with that reason* and pointed back at
+the kit, rather than half-run.
 
 ---
 
