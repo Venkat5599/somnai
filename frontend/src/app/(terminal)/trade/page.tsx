@@ -4,7 +4,7 @@ import { cachedMarketSnapshot } from "@sdk/venue/cache";
 import { resolveVenueConfig } from "@sdk/venue/config";
 import type { PriceSnapshot } from "@sdk/venue/prices";
 import { cachedPriceSnapshot } from "@sdk/venue/cache";
-import type { EventMarket, Outcome } from "@sdk/venue/types";
+import { isRoutable, type EventMarket, type Outcome } from "@sdk/venue/types";
 import { TradeTerminal } from "./terminal";
 
 export const metadata: Metadata = { title: "Trade — PRISM" };
@@ -61,7 +61,10 @@ export default async function TradePage({
 
   try {
     const snap = await cachedMarketSnapshot();
-    routable = snap.routable;
+    // Re-derived against the clock, not taken from the cached snapshot: the
+    // terminal renders this list as "routable", and a 10s-stale 1m window is
+    // already dead. The count in the header has to mean what it says.
+    routable = snap.routable.filter((m) => isRoutable(m, Date.now()));
     active = snap.active;
     selected = wanted
       ? (snap.all.find((m) => m.marketId === wanted) ?? null)
@@ -69,16 +72,39 @@ export default async function TradePage({
 
     // Auto-selection must prefer a market with a REAL book. Taking routable[0]
     // blindly lands the user on a market with no resting offer, where every
-    // control is disabled and there is no path forward — which is exactly the
-    // dead end this used to produce.
+    // control is disabled and there is no path forward.
+    //
+    // BUT DEPTH IS NOT THE ONLY WAY TO LAND SOMEWHERE DEAD. Observed live: the
+    // page opened on an ETH 1m window already showing MARKET EXPIRED, while two
+    // other markets were routable. Two things caused it, and both are timing:
+    //
+    //   1. `snap.routable` was computed when the SNAPSHOT was fetched, and that
+    //      snapshot is cached for 10s. A 1m window is only routable for 55s
+    //      after its 5s headroom, so up to a fifth of its life can already be
+    //      gone before this code runs.
+    //   2. The scan below awaits a `fetchOrderBook` PER MARKET. Against this
+    //      indexer that is not free, and a 60s window can die part-way through.
+    //
+    // So routability is re-derived against the clock HERE rather than trusted
+    // from the snapshot, candidates are ordered by time remaining so the most
+    // durable window is tried first, and the winner is re-checked after the
+    // scan — because the scan itself is what consumes the time.
     if (!selected && snap.routable.length) {
-      for (const m of snap.routable) {
-        const has = await hasBook(m, config);
-        if (has) { selected = m; break; }
+      const durable = snap.routable
+        .filter((m) => isRoutable(m, Date.now()))
+        .sort((a, b) => b.expiry - a.expiry);
+
+      for (const m of durable) {
+        if (await hasBook(m, config)) {
+          // The scan took real time; the window may have closed inside it.
+          if (isRoutable(m, Date.now())) { selected = m; break; }
+        }
       }
-      // Nothing has depth: bind the first routable anyway so the market context
-      // still renders, and let the UI say plainly that no book exists.
-      selected ??= snap.routable[0];
+
+      // Nothing has depth: bind the longest-lived market that is STILL open, so
+      // the context renders and the UI can say plainly that no book exists.
+      // Never fall back to a window that has already closed.
+      selected ??= durable.find((m) => isRoutable(m, Date.now())) ?? null;
     }
 
     if (selected) {
