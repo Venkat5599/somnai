@@ -15,11 +15,17 @@
  * key and sends strictly one order at a time. Never run two of these on one
  * key: nonces are sequential and the loser dies with "nonce too low".
  *
- * WHAT IT WILL NOT DO. Three of the Builder's five EC strategies rest orders
- * and must re-quote or flatten them, and PRISM has no order cancellation at
- * all. Those configs are refused with that reason rather than half-run, because
- * a post-only order placed and never pulled leaves escrow locked — which the
- * bot kit calls the easiest way to lose track of collateral.
+ * ALL FIVE EC STRATEGIES RUN. The three resting ones — maker, passive bid,
+ * ladder — were refused until PRISM had order cancellation, because each must
+ * manage a quote after placing it and a post-only order that can never be
+ * pulled leaves escrow locked in a market that settles. sdk/dreamdex/cancel.ts
+ * closed that; backend/bot/quoting.ts is the loop they share.
+ *
+ *   ec-starter      taker, crosses the spread          runStarter
+ *   ec-settlement   claims what already settled        runSettlement
+ *   ec-market-maker post-only bid and ask around fair  runQuoting
+ *   ec-passive-bid  one post-only bid                  runQuoting
+ *   ec-ladder       post-only grid, flattened on exit  runQuoting
  */
 
 import { readFileSync } from "node:fs";
@@ -30,6 +36,7 @@ import { isRoutable, type EventMarket, type Outcome } from "../../sdk/venue/type
 import { placeLimit } from "../../sdk/dreamdex/place-limit";
 import { rpc, readBalances } from "../../sdk/dreamdex/execution";
 import { findClaimable, claim } from "../../sdk/dreamdex/settlement";
+import { runQuoting } from "./quoting";
 import type { Hex } from "viem";
 
 const log = (s: string) => console.log(`${new Date().toISOString()} ${s}`);
@@ -290,7 +297,10 @@ async function main() {
     }
   }
 
-  await (cfg.strategy === "ec-settlement" ? runSettlement(cfg, venue) : runStarter(cfg, venue));
+  if (cfg.strategy === "ec-settlement") await runSettlement(cfg, venue);
+  else if (cfg.strategy === "ec-starter") await runStarter(cfg, venue);
+  // maker, passive bid and ladder all share one quote-and-flatten loop.
+  else await runQuoting(cfg, venue);
 }
 
 await main();

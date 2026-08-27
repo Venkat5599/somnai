@@ -190,7 +190,7 @@ contracts/            addresses + ABIs of the contracts PRISM calls
 sdk/                  venue, dreamdex, quant — shared, React-free
 src/                  the Next.js app
 docs/                 architecture · gotchas · demo
-tests/                111 tests
+tests/                134 tests
 ```
 
 `contracts/` documents the DreamDEX contracts PRISM *talks to* — addresses,
@@ -289,7 +289,7 @@ tests/batch.test.ts         the grading function, incl. the unwind-died case
 tests/deploy-config.test.ts tracing root, route coverage, no uncalled modules
 ```
 
-111 tests, all pure — no mocked blockchain. Live behaviour is verified manually
+134 tests, all pure — no mocked blockchain. Live behaviour is verified manually
 against Shannon and recorded above; that is stated separately rather than dressed
 up as integration coverage.
 
@@ -337,19 +337,42 @@ carries a `PRIVATE_KEY` line; the parser reports only whether a usable key is
 serialised into errors. PRISM reads the key from its own environment, in the one
 place that already does.
 
-| Builder strategy | PRISM |
-|---|---|
-| **EC Starter** | ✅ crosses the spread on the verified IOC path |
-| **EC Settlement** | ✅ `findClaimable` + fee-aware `claim` |
-| EC Market Maker | ❌ needs cancel/re-quote |
-| EC Passive Bid | ❌ needs cancel/re-quote |
-| EC Ladder | ❌ the Builder flattens it before expiry; flattening needs cancel |
+| Builder strategy | PRISM | runner |
+|---|---|---|
+| **EC Starter** | crosses the spread on the verified IOC path | `runStarter` |
+| **EC Settlement** | `findClaimable` + fee-aware `claim` | `runSettlement` |
+| **EC Market Maker** | post-only bid and ask around fair, re-quoted as it moves | `runQuoting` |
+| **EC Passive Bid** | one post-only bid, never pays the spread | `runQuoting` |
+| **EC Ladder** | post-only grid each side, flattened inside expiry headroom | `runQuoting` |
 
-The three refusals are one fact: **PRISM has no order cancellation anywhere** —
-verified by search. A post-only order it could place and never pull leaves
-escrow locked, which the bot kit calls the easiest way to lose track of
-collateral. So those configs are refused *with that reason* and pointed back at
-the kit, rather than half-run.
+All five run. The three resting ones were refused until PRISM had
+**order cancellation** — each must *manage* a quote after placing it, and a
+post-only order that can never be pulled leaves escrow locked in a market that
+settles, which the bot kit calls the easiest way to lose track of collateral.
+
+[`sdk/dreamdex/cancel.ts`](sdk/dreamdex/cancel.ts) closed that: `cancelOrder` /
+`cancelOrders` through the raw trader tier, with **what is still resting re-read
+from chain** rather than inferred from a receipt — a green receipt says the
+transaction executed, not that every id in it was pulled, and the batch call
+skips stale ids silently. Open orders come from `getOwnOpenOrdersOnchain`, not
+the indexer, whose order view lags chain head; cancelling against a lagged list
+means believing you are flat while a quote is still resting.
+
+Three rules the quote loop enforces, each one a way to lose money quietly:
+
+- **Flatten inside the expiry headroom**, and on `SIGINT`. A quote outliving its
+  window is escrow locked in a settled market — and `loadMarkets` drops
+  finalized markets, so it is hard to even find again.
+- **Cancel before re-quoting, and abort if anything survives.** Placing on top
+  of orders you failed to pull is how a maker ends up on both sides of its own
+  book.
+- **Only re-quote when fair moved at least half a tick.** Below that the
+  replacement snaps to the same on-grid price, so it spends two nonces to arrive
+  where it already was.
+
+The quote maths is pure and tested in [`tests/quotes.test.ts`](tests/quotes.test.ts)
+— a maker that computes a crossed pair does not throw, it rests, and the venue
+takes whichever side is free money.
 
 ---
 

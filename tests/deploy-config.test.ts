@@ -168,6 +168,8 @@ describe("every capability module has a real caller", () => {
     ["sdk/venue/structures.ts", "venue/structures"],
     ["sdk/dreamdex/atomicity.ts", "dreamdex/atomicity"],
     ["sdk/bot/config.ts", "bot/config"],
+    ["sdk/dreamdex/cancel.ts", "dreamdex/cancel"],
+    ["sdk/dreamdex/quotes.ts", "dreamdex/quotes"],
     ["scripts/routes.ts", "routes"],
   ])("%s is imported by something", (file, specifier) => {
     expect(existsSync(file), `${file} is missing`).toBe(true);

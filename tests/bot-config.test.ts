@@ -181,16 +181,12 @@ describe("support is stated per strategy, never assumed", () => {
     }
   });
 
-  it("runs the two PRISM can actually back", () => {
-    expect(supportFor({ strategy: "ec-starter" } as BotConfig).supported).toBe(true);
-    expect(supportFor({ strategy: "ec-settlement" } as BotConfig).supported).toBe(true);
-  });
-
-  it("refuses the resting strategies, and says it is about cancellation", () => {
-    for (const s of ["ec-market-maker", "ec-passive-bid", "ec-ladder"] as const) {
-      const v = supportFor({ strategy: s } as BotConfig);
-      expect(v.supported).toBe(false);
-      expect(v.reason.toLowerCase()).toContain("cancel");
+  it("runs every strategy the Builder offers", () => {
+    // The three resting ones were refused until sdk/dreamdex/cancel.ts existed:
+    // placing a post-only order that could never be pulled leaves escrow locked
+    // in a market that settles. With cancellation they are all runnable.
+    for (const s of EC_STRATEGIES) {
+      expect(supportFor({ strategy: s } as BotConfig).supported, `${s} is refused`).toBe(true);
     }
   });
 });

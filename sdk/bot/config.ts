@@ -46,17 +46,18 @@ export const EC_STRATEGIES = [
 export type EcStrategy = (typeof EC_STRATEGIES)[number];
 
 /**
- * What PRISM can actually run today, and why the rest cannot.
+ * What PRISM can run, and why.
  *
- * The three resting strategies need to cancel and re-quote: a maker leans on
- * both sides and must move them as the mid moves, and the Builder's own
- * description of the Ladder says it is "flattened before expiry". PRISM has NO
- * order cancellation anywhere in the codebase — verified by search — so it can
- * place a post-only order and then never manage it. Running one would leave
- * resting size with escrow locked and no way to pull it, which the bot kit
- * calls the easiest way to lose track of collateral.
+ * The three resting strategies were refused here until PRISM had order
+ * cancellation, because each of them must manage a quote after placing it: a
+ * maker moves both sides as the mid moves, and the Builder's own description of
+ * the Ladder says it is "flattened before expiry". Placing a post-only order
+ * that could never be pulled would leave escrow locked in a settled market —
+ * what the bot kit calls the easiest way to lose track of collateral.
  *
- * So they are recognised and refused with the reason, rather than half-run.
+ * `sdk/dreamdex/cancel.ts` closed that gap: cancelOrder / cancelOrders through
+ * the raw trader tier, with what is STILL resting re-read from chain rather
+ * than inferred from a receipt. All five now run.
  */
 export const STRATEGY_SUPPORT: Record<EcStrategy, { supported: boolean; reason: string }> = {
   // A taker that crosses the spread — exactly what placeLimit(type:"ioc") does,
@@ -70,19 +71,16 @@ export const STRATEGY_SUPPORT: Record<EcStrategy, { supported: boolean; reason: 
     reason: "Claims finalized markets through findClaimable + claim, fee-aware.",
   },
   "ec-market-maker": {
-    supported: false,
-    reason:
-      "Rests quotes on both sides and must re-quote as the mid moves. PRISM has no order cancellation, so a quote could be placed and never pulled.",
+    supported: true,
+    reason: "Rests a post-only bid and ask around fair, re-quoting as it moves.",
   },
   "ec-passive-bid": {
-    supported: false,
-    reason:
-      "Rests a bid that must be repriced or withdrawn. PRISM has no order cancellation, so the bid could not be managed once placed.",
+    supported: true,
+    reason: "Rests one post-only bid, repriced as fair moves. Never pays the spread.",
   },
   "ec-ladder": {
-    supported: false,
-    reason:
-      "A grid of resting orders that the Builder itself flattens before expiry. Flattening requires cancellation, which PRISM does not have.",
+    supported: true,
+    reason: "A post-only grid each side of the mid, flattened inside expiry headroom.",
   },
 };
 
@@ -99,6 +97,12 @@ export interface BotConfig {
   intervalMs: number;
   /** Blank in the Builder means "whatever the venue is running". */
   asset: "BTC" | "ETH" | null;
+  /** Width between bid and ask, in probability. Resting strategies only. */
+  spread: number;
+  /** Levels per side for the ladder. */
+  levels: number;
+  /** Distance between ladder levels, in probability. */
+  step: number;
   /** Whether the block carried a syntactically valid key. NEVER the key itself. */
   hasKey: boolean;
   /** Keys present in the block that this parser did not recognise. */
@@ -154,7 +158,16 @@ function findBySuffix(pairs: Map<string, string>, suffix: string): string | unde
   return undefined;
 }
 
-const RECOGNISED_SUFFIXES = ["MAX_SHARES", "MAX_POSITION", "INTERVAL_MS", "ASSET", "UNDERLYING"];
+const RECOGNISED_SUFFIXES = [
+  "MAX_SHARES",
+  "MAX_POSITION",
+  "INTERVAL_MS",
+  "ASSET",
+  "UNDERLYING",
+  "SPREAD",
+  "LEVELS",
+  "STEP",
+];
 const RECOGNISED_EXACT = ["NETWORK", "DRY_RUN", "STRATEGY", "PRIVATE_KEY"];
 
 const num = (v: string | undefined, fallback: number, warn: (s: string) => void, label: string) => {
@@ -240,6 +253,9 @@ export function parseBotConfig(text: string): ParseResult {
       maxShares: num(findBySuffix(pairs, "MAX_SHARES"), 1, warn, "MAX_SHARES"),
       maxPosition: num(findBySuffix(pairs, "MAX_POSITION"), 10, warn, "MAX_POSITION"),
       intervalMs: num(findBySuffix(pairs, "INTERVAL_MS"), 8000, warn, "INTERVAL_MS"),
+      spread: num(findBySuffix(pairs, "SPREAD"), 0.04, warn, "SPREAD"),
+      levels: num(findBySuffix(pairs, "LEVELS"), 3, warn, "LEVELS"),
+      step: num(findBySuffix(pairs, "STEP"), 0.01, warn, "STEP"),
       asset,
       hasKey,
       unknownKeys,
