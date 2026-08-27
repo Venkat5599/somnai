@@ -31,6 +31,7 @@ const EXPLORER = VENUE_CONFIG.explorer;
 export function ExecutePanel({
   market,
   side,
+  otherSide,
   outcome,
   onOutcome,
   phase,
@@ -39,6 +40,8 @@ export function ExecutePanel({
 }: {
   market: EventMarket;
   side: BookSide;
+  /** The opposite leg's book, so a suggestion can be checked before it is made. */
+  otherSide: BookSide;
   outcome: Outcome;
   onOutcome: (o: Outcome) => void;
   phase: ExpiryPhase;
@@ -203,17 +206,35 @@ export function ExecutePanel({
       ) : (
         <Note tone="neutral" icon={<IconInfo size={14} />}>
           {price === null ? (
+            /* This used to send the user to the other leg unconditionally,
+               without looking at whether the other leg had a book. Observed
+               live: YES was empty on an ETH 1m window, the panel said "Check
+               NO", and NO had no offer either — while YES on the 5m window was
+               quoting 994 contracts. The advice was not just useless, it aimed
+               away from the trade that existed. The page already fetches BOTH
+               books, so the suggestion is now checked before it is made. */
             <>
               Nothing is offered on {outcome} right now, so there is nothing to
               buy.{" "}
-              <button
-                type="button"
-                onClick={() => onOutcome(outcome === "YES" ? "NO" : "YES")}
-                className="text-accent hover:text-ink transition-colors underline-offset-2"
-              >
-                Check {outcome === "YES" ? "NO" : "YES"}
-              </button>{" "}
-              — books here are often one-sided.
+              {otherSide.best !== null ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => onOutcome(outcome === "YES" ? "NO" : "YES")}
+                    className="text-accent hover:text-ink transition-colors underline-offset-2"
+                  >
+                    {outcome === "YES" ? "NO" : "YES"} is quoting{" "}
+                    {otherSide.best.toFixed(3)}
+                  </button>{" "}
+                  — books here are often one-sided.
+                </>
+              ) : (
+                <>
+                  Neither side of this window is quoting, so switching legs will
+                  not help. Try another window — the cadence selector shows which
+                  are live.
+                </>
+              )}
             </>
           ) : (
             "Enter a size to see the quote."

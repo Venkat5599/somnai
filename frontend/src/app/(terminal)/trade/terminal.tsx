@@ -294,6 +294,7 @@ export function TradeTerminal({
           <ExecutePanel
             market={market}
             side={side}
+            otherSide={book[outcome === "YES" ? "NO" : "YES"]}
             outcome={outcome}
             onOutcome={setOutcome}
             phase={phase}
