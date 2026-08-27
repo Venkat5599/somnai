@@ -436,6 +436,7 @@ reverts, unstruck successors, taker-pays-fill. See
 - [`docs/architecture.md`](docs/architecture.md) — the read/write split
 - [`docs/gotchas.md`](docs/gotchas.md) — venue behaviour, reproduced
 - [`docs/demo.md`](docs/demo.md) — 2:30 script
+- [`docs/worklog.md`](docs/worklog.md) — what changed and why, with the evidence
 
 ---
 
