@@ -264,7 +264,27 @@ export function successionChain(
   asset: Asset,
   intervalSec: number,
 ): EventMarket[] {
+  // Match on the venue's OWN label for the series, not on the raw second count.
+  //
+  // VERIFIED 2026-08-27: the venue lists BTC and ETH "15m" windows at 898, 899
+  // AND 900 seconds. An exact `intervalSec ===` match splits one series into
+  // three chains, so a position on the 900s window cannot see a successor
+  // listed at 899s and the roll reports NO_SUCCESSOR_LISTED on a successor that
+  // is right there. The venue calling them all "15m" is the venue saying they
+  // are one series; that is the authority, not the drifted integer.
+  //
+  // This was not the cause of the successors missing today — a label match
+  // finds none either — but it is a live trap the moment one appears.
+  const series = snap.all.find(
+    (m) => m.asset === asset && m.intervalSec === intervalSec,
+  );
+  const label = series?.interval ?? intervalLabel(intervalSec);
+
   return snap.all
-    .filter((m) => m.asset === asset && m.intervalSec === intervalSec)
+    .filter(
+      (m) =>
+        m.asset === asset &&
+        (m.interval === label || m.intervalSec === intervalSec),
+    )
     .sort((a, b) => a.expiry - b.expiry);
 }

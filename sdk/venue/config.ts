@@ -93,8 +93,20 @@ export const MARKET_STATUS = {
 
 export type MarketStatusName = keyof typeof MARKET_STATUS;
 
-/** Cadences the venue actually lists, verified present and active. */
+/**
+ * Cadences with sustained active listings — a DISPLAY fallback, never a filter.
+ *
+ * VERIFIED 2026-08-27: the live board is not a clean table. Alongside these it
+ * carries 51 markets at 60s and a tail of one-off windows — 6s, 45s, 47s, 52s,
+ * 56s, 59s, 89s, 92s, 176s, 540s, 542s, 898s, 899s, 3163s, 3164s. Iterating
+ * this constant to enumerate the board therefore HIDES real markets, which is
+ * exactly what /structures did to every 1m succession chain.
+ *
+ * So anything enumerating cadences must read them off the snapshot instead.
+ * This list survives only to label a known interval nicely.
+ */
 export const INTERVALS = [
+  { sec: 60, label: "1m" },
   { sec: 300, label: "5m" },
   { sec: 900, label: "15m" },
   { sec: 3600, label: "1h" },

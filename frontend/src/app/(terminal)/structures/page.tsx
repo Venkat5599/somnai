@@ -5,7 +5,6 @@ import { Button, Chip, Note, PageHead, cx } from "@/components/ui";
 import { IconArrowRight, IconInfo, IconLayers, IconRoll } from "@/components/icons";
 import { successionChain } from "@sdk/venue/markets";
 import { cachedMarketSnapshot } from "@sdk/venue/cache";
-import { INTERVALS } from "@sdk/venue/config";
 import { headroomSec, type Asset, type EventMarket } from "@sdk/venue/types";
 import { structureMatrix, type Constructibility } from "@sdk/venue/structures";
 
@@ -41,12 +40,22 @@ export default async function StructuresPage() {
     routable = snap.routable;
     // Verdicts come from the registry, not from the paragraph below.
     matrix = structureMatrix(snap.all);
-    for (const asset of ["BTC", "ETH"] as Asset[]) {
-      for (const { sec, label } of INTERVALS) {
-        const windows = successionChain(snap, asset, sec);
-        if (windows.filter((w) => w.active).length)
-          chains.push({ asset, interval: label, windows });
-      }
+    // Cadences come off the LIVE BOARD, never from the INTERVALS constant.
+    //
+    // Iterating the constant meant this page could only ever show the five
+    // cadences someone wrote down. Verified 2026-08-27: the venue also lists 51
+    // markets at 60s, so every 1m succession chain was invisible here while the
+    // trade terminal happily bound to one.
+    const cadences = new Map<string, { asset: Asset; sec: number; label: string }>();
+    for (const m of snap.active) {
+      const key = `${m.asset}|${m.interval}`;
+      if (!cadences.has(key))
+        cadences.set(key, { asset: m.asset, sec: m.intervalSec, label: m.interval });
+    }
+    for (const { asset, sec, label } of cadences.values()) {
+      const windows = successionChain(snap, asset, sec);
+      if (windows.filter((w) => w.active).length)
+        chains.push({ asset, interval: label, windows });
     }
     chains = chains.sort((a, b) => a.asset.localeCompare(b.asset));
   } catch (e) {
