@@ -124,7 +124,14 @@ describe("every capability module has a real caller", () => {
    * This walks the tree for imports rather than trusting a list, so it catches
    * the next one too.
    */
-  const SOURCE_DIRS = ["sdk", "frontend/src", "backend", "scripts", "tests"];
+  /**
+   * Tests are NOT a caller.
+   *
+   * The first version of this guard counted tests/ as source, so a module
+   * imported only by its own test file would pass — which is exactly the
+   * dead-code shape it exists to catch, wearing a green tick.
+   */
+  const SOURCE_DIRS = ["sdk", "frontend/src", "backend", "scripts"];
 
   const sources = (): string[] => {
     const out: string[] = [];
@@ -160,6 +167,8 @@ describe("every capability module has a real caller", () => {
     ["sdk/venue/capabilities.ts", "venue/capabilities"],
     ["sdk/venue/structures.ts", "venue/structures"],
     ["sdk/dreamdex/atomicity.ts", "dreamdex/atomicity"],
+    ["sdk/bot/config.ts", "bot/config"],
+    ["scripts/routes.ts", "routes"],
   ])("%s is imported by something", (file, specifier) => {
     expect(existsSync(file), `${file} is missing`).toBe(true);
     expect(
