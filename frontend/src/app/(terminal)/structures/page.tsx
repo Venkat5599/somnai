@@ -7,6 +7,8 @@ import { successionChain } from "@sdk/venue/markets";
 import { cachedMarketSnapshot } from "@sdk/venue/cache";
 import { headroomSec, type Asset, type EventMarket } from "@sdk/venue/types";
 import { structureMatrix, type Constructibility } from "@sdk/venue/structures";
+import { resolveVenueConfig } from "@sdk/venue/config";
+import { BasketPanel } from "./basket-panel";
 
 export const metadata: Metadata = { title: "Structures — PRISM" };
 
@@ -186,6 +188,11 @@ export default async function StructuresPage() {
           })}
         </div>
       )}
+
+      {/* Multi-leg. This is the caller sdk/dreamdex/batch.ts did not have —
+          the README claimed the UI printed the delivered guarantee while
+          nothing imported the module at all. */}
+      <BasketPanel routable={routable} explorer={resolveVenueConfig().explorer} />
 
       {/* ---- CALENDAR: one strike carried across succession ---- */}
       <h2 className="text-title-sm text-ink mt-10 mb-1">Calendar</h2>

@@ -7,7 +7,8 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { readFileSync, existsSync } from "node:fs";
+import { readFileSync, existsSync, readdirSync } from "node:fs";
+import { join } from "node:path";
 import { discoverRoutes, verifiableRoutes } from "../scripts/routes";
 
 const read = (p: string) => readFileSync(p, "utf8");
@@ -110,6 +111,77 @@ describe("the deploy gate checks every route that exists", () => {
 
   it("checks the body, because a 200 is not proof the app rendered", () => {
     expect(read("scripts/deploy-verify.ts")).toContain("RENDER_MARKER");
+  });
+});
+
+describe("every capability module has a real caller", () => {
+  /**
+   * sdk/dreamdex/batch.ts shipped with NO importer while the README described
+   * what "the UI prints". A module nobody calls is a claim, not a capability,
+   * and it is invisible to typecheck, tests and the build — all three pass
+   * happily on dead code.
+   *
+   * This walks the tree for imports rather than trusting a list, so it catches
+   * the next one too.
+   */
+  const SOURCE_DIRS = ["sdk", "frontend/src", "backend", "scripts", "tests"];
+
+  const sources = (): string[] => {
+    const out: string[] = [];
+    const walk = (dir: string) => {
+      let entries;
+      try {
+        entries = readdirSync(dir, { withFileTypes: true });
+      } catch {
+        return;
+      }
+      for (const e of entries) {
+        const full = join(dir, e.name);
+        if (e.isDirectory()) walk(full);
+        else if (/\.tsx?$/.test(e.name)) out.push(full);
+      }
+    };
+    for (const d of SOURCE_DIRS) walk(d);
+    return out;
+  };
+
+  /** Files that import the module, by any path spelling, excluding itself. */
+  const importersOf = (moduleFile: string, specifier: string): string[] => {
+    const norm = (p: string) => p.split("\\").join("/");
+    return sources().filter(
+      (f) =>
+        norm(f) !== norm(moduleFile) &&
+        new RegExp(`from ["'][^"']*${specifier}["']`).test(read(f)),
+    );
+  };
+
+  it.each([
+    ["sdk/dreamdex/batch.ts", "dreamdex/batch"],
+    ["sdk/venue/capabilities.ts", "venue/capabilities"],
+    ["sdk/venue/structures.ts", "venue/structures"],
+    ["sdk/dreamdex/atomicity.ts", "dreamdex/atomicity"],
+  ])("%s is imported by something", (file, specifier) => {
+    expect(existsSync(file), `${file} is missing`).toBe(true);
+    expect(
+      importersOf(file, specifier).length,
+      `${file} has no importer — it is a claim, not a capability`,
+    ).toBeGreaterThan(0);
+  });
+
+  it("routes multi-leg execution through a server action the UI can call", () => {
+    const action = "frontend/src/app/(terminal)/structures/actions.ts";
+    expect(existsSync(action)).toBe(true);
+    expect(read(action)).toContain("executeBatch");
+    // The panel must render the delivered guarantee, not a boolean.
+    const panel = read("frontend/src/app/(terminal)/structures/basket-panel.tsx");
+    for (const verdict of [
+      "PREFLIGHT_ALL_OR_NOTHING",
+      "SEQUENTIAL_VERIFIED",
+      "PARTIAL_UNWOUND",
+      "PARTIAL_EXPOSED",
+    ]) {
+      expect(panel, `the panel never renders ${verdict}`).toContain(verdict);
+    }
   });
 });
 

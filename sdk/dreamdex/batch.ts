@@ -38,84 +38,32 @@ import "server-only";
 import { getMarketSnapshot, exchange } from "@sdk/venue/markets";
 import { resolveVenueConfig, type VenueConfig } from "@sdk/venue/config";
 import { chainCapabilities } from "@sdk/venue/capabilities";
-import { headroomSec, type EventMarket, type Outcome } from "@sdk/venue/types";
+import { headroomSec, type EventMarket } from "@sdk/venue/types";
 import { placeLimit } from "./place-limit";
 import { rpc } from "./execution";
 import type { Hex } from "viem";
+import {
+  decideAtomicity,
+  type Atomicity,
+  type BatchLeg,
+  type LegBlocker,
+  type LegOutcome,
+  type LegPlan,
+  type BatchResult,
+  type UnwindOutcome,
+} from "./atomicity";
 
-export interface BatchLeg {
-  marketId: string;
-  outcome: Outcome;
-  side: "buy" | "sell";
-  /** Contracts. */
-  size: number;
-  /** Probability in (0,1). Omitted crosses the book. */
-  price?: number;
-  /** Shown to the user so a rejected batch names the leg in their terms. */
-  label?: string;
-}
-
-export type LegBlocker =
-  | "MARKET_NOT_FOUND"
-  | "MARKET_UNSTRUCK"
-  | "MARKET_NOT_TRADING"
-  | "MARKET_EXPIRED"
-  | "WITHIN_EXPIRY_HEADROOM"
-  | "NO_BOOK_LIQUIDITY"
-  | "SIZE_BELOW_MINIMUM";
-
-export interface LegPlan {
-  leg: BatchLeg;
-  ok: boolean;
-  blocker?: LegBlocker;
-  detail?: string;
-  /** Price the leg would cross at, from the live book. */
-  price: number | null;
-  cost: number | null;
-  symbol: string | null;
-}
-
-export interface LegOutcome {
-  leg: BatchLeg;
-  status: "FILLED" | "KILLED" | "FAILED" | "NOT_ATTEMPTED";
-  txHash: string | null;
-  blockNumber: number | null;
-  filled: number;
-  evidence: string[];
-}
-
-export interface UnwindOutcome {
-  leg: BatchLeg;
-  status: "UNWOUND" | "UNWIND_FAILED";
-  txHash: string | null;
-  size: number;
-  detail: string | null;
-}
-
-/**
- * The honest name for the guarantee actually delivered. Never "ATOMIC" here.
- *
- *   PREFLIGHT_ALL_OR_NOTHING — nothing was signed; the batch was refused whole
- *   SEQUENTIAL_VERIFIED      — every leg filled, each verified from chain
- *   PARTIAL_UNWOUND          — a leg failed; the filled legs were sold back
- *   PARTIAL_EXPOSED          — a leg failed AND an unwind failed. Read this one.
- */
-export type Atomicity =
-  | "PREFLIGHT_ALL_OR_NOTHING"
-  | "SEQUENTIAL_VERIFIED"
-  | "PARTIAL_UNWOUND"
-  | "PARTIAL_EXPOSED";
-
-export interface BatchResult {
-  atomicity: Atomicity;
-  plans: LegPlan[];
-  outcomes: LegOutcome[];
-  unwinds: UnwindOutcome[];
-  /** What the chain says about EIP-7702 right now, carried for the UI. */
-  eip7702Available: boolean;
-  totalCost: number | null;
-  elapsedMs: number;
-}
+// Re-exported so a caller imports one module, not two.
+export {
+  decideAtomicity,
+  type Atomicity,
+  type BatchLeg,
+  type LegBlocker,
+  type LegOutcome,
+  type LegPlan,
+  type BatchResult,
+  type UnwindOutcome,
+};
 
 /* ------------------------------------------------------------------ */
 /* 1. Plan — the half that IS all-or-nothing                           */
@@ -414,9 +362,7 @@ export async function executeBatch(
 
   return {
     ...base,
-    atomicity: unwinds.every((u) => u.status === "UNWOUND")
-      ? "PARTIAL_UNWOUND"
-      : "PARTIAL_EXPOSED",
+    atomicity: decideAtomicity(outcomes, unwinds),
     outcomes,
     unwinds,
     elapsedMs: Date.now() - started,

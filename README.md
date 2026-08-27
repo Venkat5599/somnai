@@ -90,8 +90,22 @@ guarantee 7702 was wanted for, as far as this chain allows:
 
 Legs go out `FILL_OR_KILL`, so a leg either exists whole or not at all and an
 unwind never faces a partial. **This is not atomic**: between the first fill and
-the unwind there is a real window in which the position is one-sided. The result
-carries which of the four it delivered, and the UI prints it.
+the unwind there is a real window in which the position is one-sided.
+
+It is driven from **Basket** on [`/structures`](https://prism-terminal-cyan.vercel.app/structures)
+— pick two to four routable legs, price them, open them — and the panel renders
+the raw `atomicity` field, never a boolean and never a green tick. `PARTIAL_EXPOSED`
+is styled to be impossible to skim past, because it means size is still on and
+the reader has to act.
+
+> This claim used to be false. `batch.ts` shipped with **no importer at all**
+> while this file said "the UI prints it" — a library nobody called, which
+> typecheck, tests and the build all pass happily. `tests/deploy-config.test.ts`
+> now walks the tree for real `from "…"` clauses and fails any capability module
+> that has no caller, and `tests/batch.test.ts` asserts the grading function
+> never overstates a guarantee — including the case where the unwind loop dies
+> part-way and a naive "every unwind succeeded" check would report flat while a
+> leg is still open.
 
 **Range / Spread / Ladder — the venue cannot express them.**
 Each needs 2+ strikes on one expiry. Re-verified live while writing this: across
@@ -176,7 +190,7 @@ contracts/            addresses + ABIs of the contracts PRISM calls
 sdk/                  venue, dreamdex, quant — shared, React-free
 src/                  the Next.js app
 docs/                 architecture · gotchas · demo
-tests/                62 tests
+tests/                80 tests
 ```
 
 `contracts/` documents the DreamDEX contracts PRISM *talks to* — addresses,
@@ -271,10 +285,11 @@ tests/quant.test.ts         payoff boundaries, PAVA repair, depth limits
 tests/grid.test.ts          reproduces the 18-decimal bug, then proves the fix
 tests/routability.test.ts   expiry headroom, struck/unstruck, status gating
 tests/structures.test.ts    the one-strike constraint, AND that it flips
-tests/deploy-config.test.ts tracing root, route coverage, staging-first gate
+tests/batch.test.ts         the grading function, incl. the unwind-died case
+tests/deploy-config.test.ts tracing root, route coverage, no uncalled modules
 ```
 
-62 tests, all pure — no mocked blockchain. Live behaviour is verified manually
+80 tests, all pure — no mocked blockchain. Live behaviour is verified manually
 against Shannon and recorded above; that is stated separately rather than dressed
 up as integration coverage.
 
