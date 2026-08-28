@@ -66,20 +66,46 @@ export const COLLATERAL = {
 /**
  * Venue scoping.
  *
- * VERIFIED: active binary markets span TWO venue ids on testnet. Pinning the
- * single id published in the bot-kit README silently hides half the live book.
- * The bot-kit itself warns these "moved three times in the first week of
+ * VERIFIED: active binary markets span MORE THAN ONE venue id on testnet, and
+ * the count moves — two when this was written, four when last read. Pinning the
+ * single id published in the bot-kit README silently hides most of the live
+ * book. The bot-kit itself warns these "moved three times in the first week of
  * August" and says to read the venueId off a live row instead.
  *
  * So the default is to accept every venue and report which ones we saw, rather
- * than filter to a constant that rots.
+ * than filter to a constant that rots. Deliberately no number is stated here:
+ * the count is a live fact, and `MarketSnapshot.venues` is the only place it
+ * should ever be read from.
+ */
+/**
+ * LABELS FOR IDS WE HAVE SEEN. NOT A LIST OF THE IDS THAT EXIST.
+ *
+ * This block used to say active markets span "TWO venue ids", dated 2026-08-25.
+ * The live registry now returns FOUR. Nothing broke, because the default is
+ * unfiltered — but the comment had quietly become false, which is the same
+ * failure the `INTERVALS` constant caused and the reason that one now carries
+ * this warning too.
+ *
+ * The authority on which venues exist is `MarketSnapshot.venues`, counted off
+ * the registry on every pull. These two entries survive only to put a readable
+ * name on the ids that have documentation behind them; an id absent from here
+ * is not unknown to PRISM, merely unlabelled. Never iterate this to enumerate
+ * venues, and never filter on it.
  */
 export const KNOWN_VENUE_IDS = {
-  /** Published in the bot-kit README. Still carries active markets. */
+  /** Published in the bot-kit README. */
   primary: "0x679795a0195a1b76cdebb7c51d74e058aee92919b8c3389af86ef24535e8a28c",
-  /** Undocumented, but carrying the only struck markets as of 2026-08-25. */
+  /** Undocumented; observed carrying struck markets. */
   pricefeed: "0x1a1e6821cde7d0159c0d293177871e09677b4e42307c7db3ba94f8648a5a050f",
 } as const;
+
+/** A readable name for a venue id, or a truncation when we have none. */
+export const venueLabel = (id: string): string => {
+  const hit = Object.entries(KNOWN_VENUE_IDS).find(
+    ([, v]) => v.toLowerCase() === id.toLowerCase(),
+  );
+  return hit ? hit[0] : `${id.slice(0, 10)}…${id.slice(-6)}`;
+};
 
 /** On-chain MarketStatus enum. Only Trading accepts orders. */
 export const MARKET_STATUS = {
@@ -179,5 +205,10 @@ export const NETWORK = {
   rpc: "https://api.infra.testnet.somnia.network",
   indexer: "https://dev.smk.somnia.host/v1/graphql",
   collateral: COLLATERAL.symbol,
+  /**
+   * The documented venue id — a LABEL for display, never the set of venues.
+   * Anything that needs to know which venues are live reads
+   * `MarketSnapshot.venues`, which is counted off the registry per pull.
+   */
   venueId: KNOWN_VENUE_IDS.primary,
 } as const;

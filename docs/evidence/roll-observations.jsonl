@@ -1,0 +1,8 @@
+{"at":"2026-08-28T19:54:55.300Z","sweep":1,"network":"testnet","live":0,"planned":0,"rollable":0,"blockers":{}}
+{"at":"2026-08-28T19:55:36.696Z","sweep":2,"network":"testnet","live":2,"planned":4,"rollable":0,"blockers":{"NO_SUCCESSOR_LISTED":4}}
+{"at":"2026-08-28T19:56:23.537Z","sweep":3,"network":"testnet","live":4,"planned":8,"rollable":0,"blockers":{"MARKET_NOT_FOUND":4,"NO_SUCCESSOR_LISTED":4}}
+{"at":"2026-08-28T19:56:59.446Z","sweep":4,"network":"testnet","live":2,"planned":4,"rollable":0,"blockers":{"NO_SUCCESSOR_LISTED":4}}
+{"at":"2026-08-28T19:57:37.416Z","sweep":5,"network":"testnet","live":2,"planned":4,"rollable":0,"blockers":{"NO_SUCCESSOR_LISTED":4}}
+{"at":"2026-08-28T19:58:20.184Z","sweep":6,"network":"testnet","live":4,"planned":8,"rollable":0,"blockers":{"NO_SUCCESSOR_LISTED":6,"MARKET_NOT_FOUND":2}}
+{"at":"2026-08-28T19:58:56.083Z","sweep":7,"network":"testnet","live":2,"planned":4,"rollable":0,"blockers":{"NO_SUCCESSOR_LISTED":4}}
+{"at":"2026-08-28T19:59:27.665Z","sweep":8,"network":"testnet","live":0,"planned":0,"rollable":0,"blockers":{}}

@@ -16,7 +16,7 @@
  * Read-only: no key is used, nothing is signed, nothing is sent.
  */
 
-import { getMarketSnapshot } from "../sdk/venue/markets";
+import { getMarketSnapshot, successionChain } from "../sdk/venue/markets";
 import { resolveVenueConfig } from "../sdk/venue/config";
 import { probeChainCapabilities } from "../sdk/venue/capabilities";
 import { structureMatrix, maxStrikesOnOneExpiry } from "../sdk/venue/structures";
@@ -58,6 +58,21 @@ async function main() {
   console.log(`  venue ids seen          ${Object.keys(snap.venues).length}`);
   for (const [id, n] of Object.entries(snap.venues).sort((a, b) => b[1] - a[1]))
     console.log(`     ${id.slice(0, 18)}…  ${n}`);
+  // Underlyings and discarded rows, both read off the registry. The asset list
+  // used to be a hard-coded pair and a third one would have been dropped in
+  // silence; printing what was actually seen is how that stays visible.
+  console.log(`  underlyings seen        ${Object.keys(snap.assets).length}`);
+  for (const [a, n] of Object.entries(snap.assets).sort((x, y) => y[1] - x[1]))
+    console.log(`     ${a.padEnd(18)}  ${n}`);
+  console.log(`  rows PRISM could not read  ${snap.droppedTotal}`);
+  for (const [reason, n] of Object.entries(snap.dropped).sort((x, y) => y[1] - x[1]))
+    console.log(`     ${reason.padEnd(18)}  ${n}`);
+  check(
+    "no BINARY row was discarded for an unreadable underlying or cadence",
+    (snap.dropped.NO_ASSET ?? 0) === 0 && (snap.dropped.NO_INTERVAL ?? 0) === 0,
+    `NO_ASSET ${snap.dropped.NO_ASSET ?? 0}, NO_INTERVAL ${snap.dropped.NO_INTERVAL ?? 0} ` +
+      "(NOT_BINARY rows are expected — the registry carries spot and perp too)",
+  );
   check(
     "the venue lists one strike per window",
     strikes <= 1,
@@ -78,6 +93,31 @@ async function main() {
       ? `blocked: ${blocked.join(", ")}`
       : "ALL structures are constructible — the venue has changed and the docs are now wrong.",
   );
+
+  /* ---- 4. Successor availability --------------------------------- */
+  //
+  // Reported, never asserted. The README's last open item is that no live roll
+  // has fired, and the reason given is that the venue does not pre-strike
+  // successors. That is a claim about the venue, so it is measured here rather
+  // than repeated: this is NOT a check() — a listed successor is good news, not
+  // a failure — but it puts the number in the same place as everything else.
+  rule("4. Successor availability (reported, not asserted)");
+  {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const liveNow = snap.active.filter((m) => m.expiry > nowSec);
+    let withSuccessor = 0;
+    for (const m of liveNow) {
+      const next = successionChain(snap, m.asset, m.intervalSec).find((x) => x.expiry > m.expiry);
+      if (next) withSuccessor++;
+    }
+    console.log(`  live markets            ${liveNow.length}`);
+    console.log(`  with a listed successor ${withSuccessor}`);
+    console.log(
+      withSuccessor === 0
+        ? "  NO_SUCCESSOR_LISTED — matches the open claim in docs/worklog.md."
+        : `  SUCCESSORS_LISTED — run scripts/roll-watch.ts now; the roll claim can be closed.`,
+    );
+  }
 
   /* ---- Verdict ---------------------------------------------------- */
   rule("Verdict");

@@ -50,8 +50,8 @@ Everything below executes against Somnia and is independently verifiable.
 
 | Capability | Evidence |
 |---|---|
-| Market discovery | 548 binary markets from the Somnia indexer |
-| Normalization | `UnifiedMarket` → typed `EventMarket` at one boundary |
+| Market discovery | 554 binary markets from the Somnia indexer, every underlying it lists |
+| Normalization | `UnifiedMarket` → typed `EventMarket` at one boundary, with every discarded row counted by reason |
 | Routability | struck / unstruck / expired / inside-headroom, from chain fields |
 | Oracle prices | live BTC & ETH from Somnia's on-chain EMA feed |
 | OHLC candles | real 1m/1h/1d, charted with TradingView's `lightweight-charts` |
@@ -130,8 +130,15 @@ PRISM_DRY_RUN=false ROLL_WATCH_MINUTES=120 \
   bun --conditions react-server scripts/roll-watch.ts
 ```
 
-Still open: no successor has appeared during polling, so the receipt does not
-exist yet. That is the venue's behaviour, not a gap in the roll path.
+Still open, and now **measured rather than asserted**. A receipt is written only
+on a verified roll, so an empty `docs/evidence/` could not distinguish *the venue
+never listed a successor* from *nobody ever ran the watcher* — and this file
+claimed the first. Every sweep now appends one timestamped line to
+`docs/evidence/roll-observations.jsonl` whether or not anything was rollable, and
+`scripts/probe-succession.ts` prints a machine-readable verdict on demand. Last
+run: `NO_SUCCESSOR_LISTED`, `exact:NO label:NO` on every live market — so neither
+the exact-seconds match nor the venue's own cadence label finds one, which places
+the absence at the venue rather than in `successionChain`.
 
 ---
 
@@ -190,7 +197,7 @@ contracts/            addresses + ABIs of the contracts PRISM calls
 sdk/                  venue, dreamdex, quant — shared, React-free
 src/                  the Next.js app
 docs/                 architecture · gotchas · demo
-tests/                134 tests
+tests/                167 tests
 ```
 
 `contracts/` documents the DreamDEX contracts PRISM *talks to* — addresses,
@@ -287,9 +294,11 @@ tests/routability.test.ts   expiry headroom, struck/unstruck, status gating
 tests/structures.test.ts    the one-strike constraint, AND that it flips
 tests/batch.test.ts         the grading function, incl. the unwind-died case
 tests/deploy-config.test.ts tracing root, route coverage, no uncalled modules
+tests/discovery.test.ts     a THIRD underlying survives normalization
+tests/wallet-config.test.ts no placeholder credential reaches the relay
 ```
 
-134 tests, all pure — no mocked blockchain. Live behaviour is verified manually
+167 tests, all pure — no mocked blockchain. Live behaviour is verified manually
 against Shannon and recorded above; that is stated separately rather than dressed
 up as integration coverage.
 

@@ -15,6 +15,8 @@ import {
 } from "@/components/ui";
 import { IconArrowOut, IconInfo } from "@/components/icons";
 import { cachedMarketSnapshot } from "@sdk/venue/cache";
+import { assetsInSnapshot } from "@sdk/venue/markets";
+import { intervalLabel } from "@sdk/venue/config";
 import { cachedPriceSnapshot } from "@sdk/venue/cache";
 import { headroomSec, type Asset, type EventMarket } from "@sdk/venue/types";
 
@@ -38,11 +40,17 @@ export const revalidate = 0;
  * the indexer or the on-chain oracle.
  */
 export default async function AnalyticsPage() {
-  const [snap, btc, eth] = await Promise.all([
-    cachedMarketSnapshot().catch(() => null),
-    cachedPriceSnapshot("BTC", "1m", 180).catch(() => null),
-    cachedPriceSnapshot("ETH", "1m", 180).catch(() => null),
-  ]);
+  const snap = await cachedMarketSnapshot().catch(() => null);
+
+  // Underlyings come from the registry, not from a pair written here. This page
+  // used to fetch exactly BTC and ETH and iterate `["BTC", "ETH"]` three times
+  // over; a third underlying would have had rows in the table and no oracle
+  // tile, no chart and no term-structure entry.
+  const assets = snap ? assetsInSnapshot(snap) : [];
+  const feeds = await Promise.all(
+    assets.map(async (a) => [a, await cachedPriceSnapshot(a, "1m", 180).catch(() => null)] as const),
+  );
+  const feed = new Map(feeds);
 
   if (!snap) {
     return (
@@ -57,17 +65,14 @@ export default async function AnalyticsPage() {
   }
 
   const now = Math.floor(Date.now() / 1000);
-  const spot: Record<Asset, number | null> = {
-    BTC: btc?.live?.price ?? null,
-    ETH: eth?.live?.price ?? null,
-  };
+  const spotOf = (a: Asset): number | null => feed.get(a)?.live?.price ?? null;
 
   const byAsset = (a: Asset): EventMarket[] =>
     snap.active.filter((m) => m.asset === a).sort((x, y) => x.intervalSec - y.intervalSec);
 
-  const rows = (["BTC", "ETH"] as Asset[]).flatMap((a) =>
+  const rows = assets.flatMap((a) =>
     byAsset(a).map((m) => {
-      const s = spot[a];
+      const s = spotOf(a);
       const moneyness = s && m.strike ? m.strike / s - 1 : null;
       const left = m.expiry - now;
       return { market: m, asset: a, spot: s, moneyness, left };
@@ -75,6 +80,11 @@ export default async function AnalyticsPage() {
   );
 
   const struck = rows.filter((r) => r.market.strike !== null).length;
+
+  // Cadences were hard-coded as "5 — 5m · 15m · 1h · 4h · 24h". The live board
+  // carries far more than five, including 60s and a tail of one-off windows, so
+  // the constant was simply wrong. Counted off the active rows instead.
+  const cadences = [...new Set(snap.active.map((m) => m.intervalSec))].sort((a, b) => a - b);
 
   return (
     <Page>
@@ -97,32 +107,36 @@ export default async function AnalyticsPage() {
       </Note>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-px bg-line border border-line my-6">
-        <div className="bg-surface p-4">
-          <Stat
-            label="BTC oracle"
-            value={spot.BTC ? spot.BTC.toLocaleString("en-US", { minimumFractionDigits: 2 }) : "—"}
-            sub="on-chain EMA feed"
-            tone="accent"
-          />
-        </div>
-        <div className="bg-surface p-4">
-          <Stat
-            label="ETH oracle"
-            value={spot.ETH ? spot.ETH.toLocaleString("en-US", { minimumFractionDigits: 2 }) : "—"}
-            sub="on-chain EMA feed"
-            tone="accent"
-          />
-        </div>
+        {assets.map((a) => {
+          const s = spotOf(a);
+          return (
+            <div key={a} className="bg-surface p-4">
+              <Stat
+                label={`${a} oracle`}
+                value={s ? s.toLocaleString("en-US", { minimumFractionDigits: 2 }) : "—"}
+                sub={s ? "on-chain EMA feed" : "no oracle feed for this underlying"}
+                tone="accent"
+              />
+            </div>
+          );
+        })}
         <div className="bg-surface p-4">
           <Stat label="Struck windows" value={String(struck)} sub={`of ${rows.length} active`} />
         </div>
         <div className="bg-surface p-4">
-          <Stat label="Cadences" value="5" sub="5m · 15m · 1h · 4h · 24h" mono={false} />
+          <Stat
+            label="Cadences"
+            value={String(cadences.length)}
+            sub={cadences.map((s) => intervalLabel(s)).join(" · ")}
+            mono={false}
+          />
         </div>
       </div>
 
       <div className="grid gap-px bg-line border border-line lg:grid-cols-2 mb-6">
-        {([["BTC", btc], ["ETH", eth]] as const).map(([asset, p]) => (
+        {assets.map((asset) => {
+          const p = feed.get(asset) ?? null;
+          return (
           <section key={asset} className="bg-surface flex flex-col min-w-0">
             <header className="flex items-center justify-between h-11 px-4 border-b border-line">
               <span className="text-label-xs uppercase text-ink-3">{asset} / USD</span>
@@ -142,7 +156,8 @@ export default async function AnalyticsPage() {
               )}
             </div>
           </section>
-        ))}
+          );
+        })}
       </div>
 
       <section className="border border-line bg-surface">

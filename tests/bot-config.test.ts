@@ -154,11 +154,30 @@ describe("tuned parameters", () => {
     expect(ok("STRATEGY=ec-starter").asset).toBeNull();
   });
 
-  it("reads BTC and ETH, and warns on anything else", () => {
+  it("reads BTC and ETH", () => {
     expect(ok("STRATEGY=ec-starter\nTAKE_ASSET=btc").asset).toBe("BTC");
+    expect(ok("STRATEGY=ec-starter\nTAKE_ASSET=eth").asset).toBe("ETH");
+  });
+
+  /**
+   * This test used to assert `asset === null` for an unrecognised underlying,
+   * which encoded the bug rather than the behaviour. `null` does NOT mean
+   * "refused" anywhere downstream — `backend/bot/index.ts` and `quoting.ts`
+   * both read it as `cfg.asset ? filter : true`, i.e. TRADE EVERY ASSET.
+   *
+   * So a config naming an underlying PRISM did not recognise was silently
+   * widened from one market to all of them: the operator asked for less and got
+   * more, on a process that signs. The underlying is now carried through as
+   * written, so an unknown name filters to nothing and the warning is advisory.
+   */
+  it("carries an unrecognised underlying through instead of widening to every market", () => {
     const c = ok("STRATEGY=ec-starter\nTAKE_ASSET=DOGE");
-    expect(c.asset).toBeNull();
+    expect(c.asset).toBe("DOGE");
     expect(c.warnings.join(" ")).toContain("DOGE");
+  });
+
+  it("still reads a blank underlying as no filter at all", () => {
+    expect(ok("STRATEGY=ec-starter\nTAKE_ASSET=").asset).toBeNull();
   });
 
   it("tolerates quotes, export prefixes and trailing comments", () => {

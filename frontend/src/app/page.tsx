@@ -205,7 +205,10 @@ export default async function HomePage() {
         </div>
       </section>
 
-      <MarketingFooter />
+      <MarketingFooter
+        venues={snap ? Object.keys(snap.venues).length : null}
+        assets={snap ? Object.keys(snap.assets).length : null}
+      />
     </div>
   );
 }
@@ -284,7 +287,15 @@ function MarketingNav() {
   );
 }
 
-function MarketingFooter() {
+function MarketingFooter({
+  venues,
+  assets,
+}: {
+  /** Live venue-id count, or null when the registry was unreachable. */
+  venues: number | null;
+  /** Live underlying count, same. */
+  assets: number | null;
+}) {
   return (
     <footer className="relative bg-base">
       <div className="max-w-[1560px] mx-auto px-5 sm:px-8 lg:px-12 pt-16">
@@ -319,8 +330,15 @@ function MarketingFooter() {
           <p className="text-[12px] text-ink-4">
             Testnet build. Educational reference, not financial advice.
           </p>
+          {/* Read off the live registry, not off a constant. The venue-id set
+              has already drifted from two to four; printing one hard-coded id
+              made the footer quietly wrong the day the venue added a third. */}
           <p className="num text-[12px] text-ink-4">
-            venue {NETWORK.venueId.slice(0, 10)}…{NETWORK.venueId.slice(-6)}
+            {venues !== null && assets !== null
+              ? `${venues} venue${venues === 1 ? "" : "s"} · ${assets} underlying${
+                  assets === 1 ? "" : "s"
+                } · chain ${NETWORK.chainId}`
+              : `chain ${NETWORK.chainId}`}
           </p>
         </div>
       </div>

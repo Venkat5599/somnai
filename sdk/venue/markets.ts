@@ -15,14 +15,9 @@ import "server-only";
 
 import { SomniaMarkets, SOMNIA_TESTNET_PRICE_FEED } from "@somnia-chain/markets-sdk";
 import { somniaShannon, somniaMainnet } from "@somnia-chain/markets-sdk/chains";
-import {
-  STRIKE_SCALE,
-  intervalLabel,
-  resolveVenueConfig,
-  type VenueConfig,
-} from "./config";
+import { intervalLabel, resolveVenueConfig, type VenueConfig } from "./config";
 import type { Asset, EventMarket, TermPoint } from "./types";
-import { isRoutable } from "./types";
+import { compareAssets, isRoutable } from "./types";
 
 /* ------------------------------------------------------------------ */
 /* Client                                                              */
@@ -68,99 +63,16 @@ export function exchange(config: VenueConfig = resolveVenueConfig()): SomniaMark
 }
 
 /* ------------------------------------------------------------------ */
-/* Normalisation                                                       */
+/* Normalisation — lives in normalize.ts so vitest can import it        */
 /* ------------------------------------------------------------------ */
 
-const num = (v: unknown, fallback = 0): number => {
-  if (typeof v === "number") return Number.isFinite(v) ? v : fallback;
-  if (typeof v === "bigint") return Number(v);
-  if (typeof v === "string" && v.trim() !== "") {
-    const n = Number(v);
-    return Number.isFinite(n) ? n : fallback;
-  }
-  return fallback;
-};
-
-const str = (v: unknown): string | null =>
-  typeof v === "string" && v !== "" ? v : null;
-
-const isAsset = (v: unknown): v is Asset => v === "BTC" || v === "ETH";
-
-/**
- * Strike comes off the row as an integer string in scaled units.
- *
- * A strike of exactly 0 is NOT a price — it is the venue's way of saying the
- * window has not been struck yet, which was true of eight of the ten live
- * markets at time of writing. Returning null keeps that distinguishable from a
- * genuine zero and forces callers to handle it.
- */
-function parseStrike(raw: unknown): number | null {
-  const scaled = num(raw, 0);
-  if (!Number.isFinite(scaled) || scaled <= 0) return null;
-  return scaled / STRIKE_SCALE;
-}
-
-/** Narrow one SDK row into the PRISM domain type, or null if it isn't usable. */
-export function normalizeMarket(m: unknown): EventMarket | null {
-  const row = m as Record<string, unknown>;
-  if (!row || row.type !== "binary") return null;
-
-  const info = (row.info ?? {}) as Record<string, unknown>;
-  const marketId = str(info.marketId) ?? str(row.id);
-  if (!marketId) return null;
-
-  const asset = info.asset;
-  if (!isAsset(asset)) return null;
-
-  const intervalSec = num(info.intervalSec, 0);
-  if (intervalSec <= 0) return null;
-
-  const precision = (row.precision ?? {}) as Record<string, unknown>;
-  const limits = (row.limits ?? {}) as Record<string, unknown>;
-  const amountLimit = (limits.amount ?? {}) as Record<string, unknown>;
-
-  return {
-    marketId,
-    symbol: str(row.symbol) ?? marketId,
-    asset,
-    strike: parseStrike(info.strike),
-
-    intervalSec,
-    interval: str(info.interval) ?? intervalLabel(intervalSec),
-
-    tradingStart: num(info.tradingStart, 0),
-    expiry: num(info.expiry, 0),
-
-    status: str(info.status) ?? "Unknown",
-    active: row.active === true,
-    finalized: info.finalized === true,
-    voided: info.voided === true,
-
-    venueId: str(info.venueId),
-    operatorId: typeof info.operatorId === "number" ? info.operatorId : null,
-
-    poolAddress: str(info.poolAddress),
-    nonce: info.nonce != null ? num(info.nonce, 0) : null,
-    marketAddress: str(info.marketAddress),
-
-    yesTokenId: str(info.yesTokenId),
-    noTokenId: str(info.noTokenId),
-
-    question: str(info.question),
-    collateral: str(info.collateral),
-    quoteDecimals: num(info.quoteDecimals, 6),
-
-    pricePrecision: num(precision.price, 3),
-    amountPrecision: num(precision.amount, 3),
-    minAmount: num(amountLimit.min, 0.001),
-
-    tradeCount: num(info.tradeCount, 0),
-    quoteVolume: num(info.cumulativeQuoteVolume, 0),
-
-    winningOutcome:
-      info.winningOutcome != null ? num(info.winningOutcome, 0) : null,
-  };
-}
+export {
+  classifyRow,
+  normalizeMarket,
+  type DropReason,
+  type RowVerdict,
+} from "./normalize";
+import { classifyRow } from "./normalize";
 
 /* ------------------------------------------------------------------ */
 /* Queries                                                             */
@@ -175,6 +87,25 @@ export interface MarketSnapshot {
   routable: EventMarket[];
   /** Distinct venue ids seen on binary rows, with counts. */
   venues: Record<string, number>;
+  /**
+   * Distinct underlyings seen, with counts.
+   *
+   * Read off the registry rather than assumed. If DreamDEX lists SOL tomorrow
+   * it appears here without a code change — and if PRISM ever stops seeing ETH,
+   * that shows here too, which a hard-coded pair could never say.
+   */
+  assets: Record<string, number>;
+  /**
+   * Rows the registry returned that PRISM could not read, by reason.
+   *
+   * Non-binary rows dominate and are expected — the registry carries spot and
+   * perp too. The ones that matter are `NO_ASSET` and `NO_INTERVAL`: those are
+   * binary markets PRISM is failing to understand, and before this counter
+   * existed they vanished without trace.
+   */
+  dropped: Record<string, number>;
+  /** Total rows discarded, across every reason. */
+  droppedTotal: number;
   fetchedAt: number;
   network: string;
 }
@@ -183,9 +114,10 @@ export interface MarketSnapshot {
  * Pull the registry and normalise it.
  *
  * Venue filtering is applied only when explicitly configured. The default is
- * deliberately unfiltered: active markets were verified to span TWO venue ids
- * on testnet, so pinning the one published in the bot-kit README silently hides
- * half the live book.
+ * deliberately unfiltered: active markets span more than one venue id, and the
+ * count moves — pinning the one published in the bot-kit README silently hides
+ * most of the live book. `venues` below reports what was actually seen, which
+ * is the only place that count should ever be read from.
  */
 export async function getMarketSnapshot(
   config: VenueConfig = resolveVenueConfig(),
@@ -193,9 +125,15 @@ export async function getMarketSnapshot(
   const ex = exchange(config);
   const raw = Object.values(await ex.loadMarkets(true));
 
-  let all = raw
-    .map(normalizeMarket)
-    .filter((m): m is EventMarket => m !== null);
+  // Classify every row and KEEP the rejections. A row PRISM cannot read is a
+  // fact about the venue, not noise to be filtered away silently.
+  const dropped: Record<string, number> = {};
+  let all: EventMarket[] = [];
+  for (const row of raw) {
+    const v = classifyRow(row);
+    if (v.ok) all.push(v.market);
+    else dropped[v.reason] = (dropped[v.reason] ?? 0) + 1;
+  }
 
   if (config.venueId) {
     const want = config.venueId.toLowerCase();
@@ -203,9 +141,11 @@ export async function getMarketSnapshot(
   }
 
   const venues: Record<string, number> = {};
+  const assets: Record<string, number> = {};
   for (const m of all) {
     const v = m.venueId ?? "unknown";
     venues[v] = (venues[v] ?? 0) + 1;
+    assets[m.asset] = (assets[m.asset] ?? 0) + 1;
   }
 
   const now = Date.now();
@@ -216,10 +156,17 @@ export async function getMarketSnapshot(
     active,
     routable: active.filter((m) => isRoutable(m, now)),
     venues,
+    assets,
+    dropped,
+    droppedTotal: Object.values(dropped).reduce((a, b) => a + b, 0),
     fetchedAt: now,
     network: config.network,
   };
 }
+
+/** Underlyings the registry actually carried, known ones first. */
+export const assetsInSnapshot = (snap: MarketSnapshot): Asset[] =>
+  Object.keys(snap.assets).sort(compareAssets);
 
 /** Active markets for one asset, ascending by window length. */
 export const marketsForAsset = (snap: MarketSnapshot, asset: Asset): EventMarket[] =>

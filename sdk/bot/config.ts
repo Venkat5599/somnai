@@ -35,6 +35,8 @@
  */
 
 /** Strategies the Builder offers on the Event contracts track. */
+import { KNOWN_ASSETS } from "../venue/types";
+
 export const EC_STRATEGIES = [
   "ec-starter",
   "ec-market-maker",
@@ -95,8 +97,15 @@ export interface BotConfig {
   maxPosition: number;
   /** Poll interval in ms. Builder: *_INTERVAL_MS. */
   intervalMs: number;
-  /** Blank in the Builder means "whatever the venue is running". */
-  asset: "BTC" | "ETH" | null;
+  /**
+   * Blank in the Builder means "whatever the venue is running".
+   *
+   * Open, not a `"BTC" | "ETH"` union: this was refusing any other underlying
+   * and silently falling back to trading everything, so a config that named a
+   * third asset would have been honoured as "no filter at all" — the opposite
+   * of what the operator wrote. Whatever the venue lists, the config can name.
+   */
+  asset: string | null;
   /** Width between bid and ask, in probability. Resting strategies only. */
   spread: number;
   /** Levels per side for the ladder. */
@@ -234,9 +243,16 @@ export function parseBotConfig(text: string): ParseResult {
   const rawAsset = (findBySuffix(pairs, "ASSET") ?? findBySuffix(pairs, "UNDERLYING") ?? "")
     .toUpperCase()
     .trim();
-  let asset: "BTC" | "ETH" | null = null;
-  if (rawAsset === "BTC" || rawAsset === "ETH") asset = rawAsset;
-  else if (rawAsset) warn(`Underlying "${rawAsset}" is not BTC or ETH — trading whatever the venue is running.`);
+  // Any underlying the operator names is honoured. Rejecting an unrecognised
+  // one used to set `asset = null`, which does not mean "refused" downstream —
+  // it means "trade EVERY asset", so a typo silently widened the bot's scope
+  // instead of narrowing it. An unknown name now filters to nothing and says so.
+  const asset: string | null = rawAsset === "" ? null : rawAsset;
+  if (asset && !KNOWN_ASSETS.includes(asset))
+    warn(
+      `Underlying "${asset}" is not one PRISM has a price feed for. It will still be ` +
+        `matched against the registry; if the venue does not list it, no market is selected.`,
+    );
 
   const unknownKeys = [...pairs.keys()].filter(
     (k) =>

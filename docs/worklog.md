@@ -247,15 +247,112 @@ bun --conditions react-server scripts/probe-depth.ts      # which leg is buyable
 `verify-claims.ts` exits non-zero if the repository has started saying something
 untrue about the live venue.
 
+---
+
+## 8. The four things that were "still open"
+
+Three were closed. One is the venue's and is now measured instead of asserted.
+
+### The console had a permanent 403, on a healthy deployment
+
+`getDefaultConfig` requires a `projectId`, so `wagmi.ts` satisfied the signature
+with an invented local-looking slug. Reown checks it. Every page load produced
+`[Reown Config] … 403` — which is worse than a missing feature, because a
+permanent error trains the reader to stop looking at the console.
+
+A placeholder credential is a lie told to a service that will verify it. The
+config is now built with `connectorsForWallets` so WalletConnect can be omitted
+entirely, and the id is accepted only if it matches the 32-hex shape Reown
+issues — the shape check, not mere presence, is what stops the next placeholder.
+
+The first attempt at this fix **threw at module load**, and a unit test caught it
+before it shipped: `metaMaskWallet` and `rainbowWallet` are dual-mode and reach
+for a WalletConnect relay on the mobile deep-link path, so listing them without
+an id raises `No projectId found`. Only `injectedWallet` is genuinely
+credential-free. With no id the list is that one entry, which still covers
+MetaMask, Rabby and every other extension wallet; a real id restores the rest
+including the QR flow.
+
+### `Asset` was a two-member union, so a third underlying vanished
+
+`Asset = "BTC" | "ETH"`, and `normalizeMarket` returned `null` for anything else
+— no log, no counter, no test. The same shape as the `INTERVALS` bug: a
+hand-written note of what the venue happened to be running had quietly become a
+filter on what PRISM could see.
+
+The type is open now, and `KNOWN_ASSETS` survives only to order and label the
+two with oracle feeds. But widening the type was the smaller half. **The reason
+the `INTERVALS` bug lasted was that discarding was silent**, so:
+
+- `classifyRow` returns a named `DropReason` instead of a bare `null`
+- `MarketSnapshot` carries `assets`, `dropped` and `droppedTotal`
+- `verify-claims.ts` fails if any BINARY row was dropped for an unreadable
+  underlying or cadence — `NOT_BINARY` is expected and excluded, since the
+  registry legitimately carries spot and perp
+
+First live run after the change: **9 rows discarded, all `NOT_BINARY`, zero
+`NO_ASSET`, zero `NO_INTERVAL`.** Before this, that number was unobservable.
+
+Normalisation moved to `sdk/venue/normalize.ts` for the same reason `grid.ts`
+and `atomicity.ts` live outside their callers: `markets.ts` is `server-only`, so
+while this logic sat inside it, **the function that decides which markets exist
+was the one function in the read path that could not be tested.**
+
+The follow-on hard-coding went too: the `/markets` asset filter and the
+`/analytics` oracle tiles, charts and term-structure rows all derive from the
+snapshot. `/analytics` also stopped printing `Cadences 5` — the live board
+carries far more, so that constant was simply wrong.
+
+`sdk/bot/config.ts` had the sharper version of the same bug. An unrecognised
+underlying was set to `null`, and `null` does not mean "refused" downstream:
+both runners read `cfg.asset ? filter : true`, i.e. **trade every asset**. A
+config naming an unknown underlying was silently widened from one market to all
+of them — the operator asked for less and got more, on a process that signs.
+The old test asserted that behaviour, so it encoded the bug; it now asserts the
+underlying is carried through as written.
+
+### `KNOWN_VENUE_IDS` asserted a count that had already moved
+
+The comment said active markets span "TWO venue ids", dated 2026-08-25. The live
+registry returns **four**. Nothing broke — the default is unfiltered — but the
+repository was stating something false about the venue.
+
+No number is stated there any more. `MarketSnapshot.venues` is the only place
+the count is read from, the constant is documented as labels-for-ids-we-have-seen
+rather than the set that exists, and the landing-page footer prints live venue
+and underlying counts instead of one hard-coded id.
+
+### The roll receipt: still the venue's, but now measured
+
+Reproduced before touching anything — `scripts/probe-succession.ts` reports
+`exact:NO label:NO` for **every** live market, so neither the exact-seconds match
+nor the venue's own cadence label finds a successor. The absence is the venue's,
+not a matching bug in `successionChain`.
+
+The real problem was evidential. `roll-receipt.json` is written only on a
+verified roll, so an empty `docs/evidence/` could not distinguish *the venue
+never listed a successor* from *nobody ever ran the watcher*. The README claimed
+the first; nothing could prove it.
+
+`roll-watch.ts` now appends one line to `docs/evidence/roll-observations.jsonl`
+every sweep, rollable or not. "No successor has appeared during polling" becomes
+a count of timestamped sweeps, and when one does appear the line before the
+receipt shows how long the wait was. `probe-succession.ts` prints a
+machine-readable `VERDICT` line, and `verify-claims.ts` reports successor
+availability alongside everything else — reported, not asserted, because a
+listed successor is good news rather than a failed claim.
+
+---
+
 ## Still open
 
 - **No successor has appeared during polling**, so no roll has fired on a live
-  one. `scripts/roll-watch.ts` sits on the venue and fires the same
-  `planRoll`/`executeRoll` the app uses, writing a receipt when it lands. Venue
-  behaviour, not a gap in the roll path.
-- **`NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID` is still the placeholder** — the
-  console logs `[Reown Config] … 403`. Injected wallets work; the QR flow does
-  not.
-- **`Asset` is `"BTC" | "ETH"`**, and `normalizeMarket` drops any row that is
-  neither. If the venue ever lists another underlying, PRISM discards it
-  silently — the same class of bug as the `INTERVALS` constant.
+  one. This is the venue's behaviour, and it is now *recorded* rather than
+  asserted: `docs/evidence/roll-observations.jsonl` carries one timestamped line
+  per sweep, and `scripts/probe-succession.ts` reproduces the verdict on demand.
+  Arm the watcher with `PRISM_DRY_RUN=false` to close it the moment the venue
+  lists one.
+- **`NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID` is unset**, so the QR flow is
+  genuinely unavailable — but nothing pretends otherwise and the console is
+  clean. Injected wallets cover MetaMask and Rabby. Setting a real 32-hex id
+  from Reown restores the full wallet list with no other change.

@@ -8,7 +8,40 @@
  * a decimal string.
  */
 
-export type Asset = "BTC" | "ETH";
+/**
+ * The underlying, as the venue names it.
+ *
+ * DELIBERATELY OPEN. This was `"BTC" | "ETH"`, and `normalizeMarket` returned
+ * null for anything else — so the day DreamDEX lists a third underlying, PRISM
+ * discards every one of its rows with no log, no counter and no test. That is
+ * the same failure the `INTERVALS` constant already caused: a hand-written list
+ * of what the venue happened to be running became a filter on what PRISM could
+ * see, and the loss was silent by construction.
+ *
+ * A closed union is the wrong shape for a value the venue owns. The type is a
+ * string; `KNOWN_ASSETS` below survives only to ORDER and LABEL the two we have
+ * price feeds for, never to decide which rows exist.
+ */
+export type Asset = string;
+
+/**
+ * Underlyings PRISM has a first-class path for — an oracle feed and a chart.
+ *
+ * A DISPLAY concern, never a filter. Anything the venue lists outside this set
+ * is still discovered, still counted, still routable; it simply sorts last and
+ * has no candle history until Somnia's price feed carries it.
+ */
+export const KNOWN_ASSETS: readonly Asset[] = ["BTC", "ETH"] as const;
+
+/** Sort helper: known underlyings first in declared order, then alphabetical. */
+export const compareAssets = (a: Asset, b: Asset): number => {
+  const ia = KNOWN_ASSETS.indexOf(a);
+  const ib = KNOWN_ASSETS.indexOf(b);
+  if (ia !== -1 && ib !== -1) return ia - ib;
+  if (ia !== -1) return -1;
+  if (ib !== -1) return 1;
+  return a.localeCompare(b);
+};
 
 /** Which side of the binary. The venue labels these YES/NO, not UP/DOWN. */
 export type Outcome = "YES" | "NO";

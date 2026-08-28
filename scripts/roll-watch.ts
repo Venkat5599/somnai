@@ -28,7 +28,7 @@
  *   PRISM_DRY_RUN        "false" to actually sign
  */
 
-import { mkdirSync, writeFileSync } from "node:fs";
+import { appendFileSync, mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { getMarketSnapshot } from "../sdk/venue/markets";
 import { resolveVenueConfig } from "../sdk/venue/config";
@@ -44,7 +44,33 @@ const MINUTES = num("ROLL_WATCH_MINUTES", 60);
 const INTERVAL_SEC = num("ROLL_WATCH_INTERVAL", 12);
 const SIZE = num("ROLL_WATCH_SIZE", 1);
 const MAX_INTERVAL_SEC = num("ROLL_WATCH_MAX_SEC", 900);
-const RECEIPT = join(process.cwd(), "docs", "evidence", "roll-receipt.json");
+const EVIDENCE = join(process.cwd(), "docs", "evidence");
+const RECEIPT = join(EVIDENCE, "roll-receipt.json");
+/**
+ * The NEGATIVE record.
+ *
+ * A receipt is written only when a roll verifies, so an empty `docs/evidence/`
+ * was indistinguishable between "the venue never listed a successor" and
+ * "nobody ever ran the watcher". The README said the former; nothing in the
+ * repository could prove it.
+ *
+ * Every sweep now appends one line here whether or not anything was rollable.
+ * Absence of a roll becomes a dated, countable observation of the venue rather
+ * than a claim in prose — and the day a successor does appear, the line before
+ * the receipt shows exactly how long it took.
+ */
+const OBSERVATIONS = join(EVIDENCE, "roll-observations.jsonl");
+
+/** Append one sweep observation. Never throws: evidence must not break watching. */
+function record(entry: Record<string, unknown>): void {
+  try {
+    mkdirSync(EVIDENCE, { recursive: true });
+    const line = JSON.stringify({ at: new Date().toISOString(), ...entry });
+    appendFileSync(OBSERVATIONS, `${line}\n`);
+  } catch {
+    /* an unwritable disk is not a reason to stop watching */
+  }
+}
 
 const config = resolveVenueConfig();
 const stamp = () => new Date().toISOString().slice(11, 19);
@@ -145,6 +171,17 @@ async function sweep(attempt: number): Promise<boolean> {
 
   const summary = [...blockers].sort((a, b) => b[1] - a[1]).map(([k, n]) => `${k}×${n}`).join("  ");
   log(`sweep ${String(attempt).padStart(3)}  ${live.length} live · ${planned} planned · ${summary || "nothing to plan"}`);
+
+  // The observation that matters is the negative one. Recorded every sweep so
+  // "no successor has ever appeared" is a measurement, not an assertion.
+  record({
+    sweep: attempt,
+    network: config.network,
+    live: live.length,
+    planned,
+    rollable: 0,
+    blockers: Object.fromEntries(blockers),
+  });
   return false;
 }
 
@@ -171,6 +208,7 @@ async function main() {
 
   log("");
   log(`no rollable successor appeared in ${MINUTES} minutes.`);
+  log(`${attempt} sweeps recorded in ${OBSERVATIONS}`);
   log("This is the venue's behaviour, not a failure of the roll path: successors");
   log("are struck only as a window nears close, and often not at all.");
   process.exit(2);

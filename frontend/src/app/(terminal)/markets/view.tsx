@@ -30,9 +30,17 @@ import {
 } from "@/components/ui";
 import { IconArrowOut, IconSearch } from "@/components/icons";
 import type { EventMarket } from "@sdk/venue/types";
-import { headroomSec } from "@sdk/venue/types";
+import { compareAssets, headroomSec } from "@sdk/venue/types";
 
-type AssetFilter = "ALL" | "BTC" | "ETH";
+/**
+ * "ALL", or whatever underlying the venue actually listed.
+ *
+ * Was `"ALL" | "BTC" | "ETH"`, with the two buttons written out by hand. A
+ * third underlying would have been unreachable from this control even though
+ * its rows were in the table — so the filter would have been quietly lying
+ * about what the board contains. The options are derived from the rows now.
+ */
+type AssetFilter = string;
 type StateFilter = "ROUTABLE" | "ACTIVE" | "ALL";
 
 /** mm:ss, or a plain marker once the window has closed. */
@@ -66,6 +74,19 @@ export function MarketsView({
   const [asset, setAsset] = useState<AssetFilter>("ALL");
   const [state, setState] = useState<StateFilter>("ACTIVE");
   const [q, setQ] = useState("");
+
+  // One button per underlying the registry actually returned, known ones first.
+  // Nothing here names BTC or ETH: if the venue lists a third, it gets a button
+  // on its own, and if it drops one the button goes with it.
+  const assetOptions = useMemo(
+    () => [
+      { value: "ALL", label: "All" },
+      ...[...new Set(markets.map((m) => m.asset))]
+        .sort(compareAssets)
+        .map((a) => ({ value: a, label: a })),
+    ],
+    [markets],
+  );
 
   // Windows are short enough that a static countdown would be wrong within
   // seconds. The first frame is already correct, so nothing depends on this
@@ -150,11 +171,7 @@ export function MarketsView({
 
         <Segmented
           label="Asset filter"
-          options={[
-            { value: "ALL" as const, label: "All" },
-            { value: "BTC" as const, label: "BTC" },
-            { value: "ETH" as const, label: "ETH" },
-          ]}
+          options={assetOptions}
           value={asset}
           onChange={setAsset}
         />
