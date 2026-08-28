@@ -6,3 +6,5 @@
 {"at":"2026-08-28T19:58:20.184Z","sweep":6,"network":"testnet","live":4,"planned":8,"rollable":0,"blockers":{"NO_SUCCESSOR_LISTED":6,"MARKET_NOT_FOUND":2}}
 {"at":"2026-08-28T19:58:56.083Z","sweep":7,"network":"testnet","live":2,"planned":4,"rollable":0,"blockers":{"NO_SUCCESSOR_LISTED":4}}
 {"at":"2026-08-28T19:59:27.665Z","sweep":8,"network":"testnet","live":0,"planned":0,"rollable":0,"blockers":{}}
+{"at":"2026-08-28T19:59:58.822Z","sweep":9,"network":"testnet","live":0,"planned":0,"rollable":0,"blockers":{}}
+{"at":"2026-08-28T20:00:35.119Z","sweep":10,"network":"testnet","live":2,"planned":4,"rollable":0,"blockers":{"NO_SUCCESSOR_LISTED":4}}
