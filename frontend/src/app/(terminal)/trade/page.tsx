@@ -107,6 +107,27 @@ export default async function TradePage({
       selected ??= durable.find((m) => isRoutable(m, Date.now())) ?? null;
     }
 
+    /**
+     * NOTHING IS ROUTABLE. That is a real venue state, not an error.
+     *
+     * Windows are minutes long and the board genuinely empties between them, so
+     * this page used to dead-end on "No routable market" with a link out —
+     * which tells the reader nothing about how long to wait or what happens
+     * next, and makes a normal thirty-second gap look like a broken product.
+     *
+     * The registry still knows what is coming. Bind the market that opens
+     * SOONEST — struck but not yet trading, or trading but inside its expiry
+     * headroom — so the ticket renders with a real countdown instead of an
+     * apology. The panel refuses to route it; that refusal is already typed.
+     */
+    if (!selected) {
+      const now = Math.floor(Date.now() / 1000);
+      selected =
+        snap.all
+          .filter((m) => !m.finalized && !m.voided && m.expiry > now)
+          .sort((a, b) => a.expiry - b.expiry)[0] ?? null;
+    }
+
     if (selected) {
       // The succession chain IS the product thesis: what this view rolls into
       // when the window closes.

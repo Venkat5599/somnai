@@ -16,7 +16,7 @@
  * real market, it does not mutate a parallel model.
  */
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { PriceChart } from "@/components/price-chart";
@@ -107,6 +107,20 @@ export function TradeTerminal({
       .sort((a, b) => a[0] - b[0])
       .map(([sec, label]) => ({ sec, label }));
   }, [active]);
+
+  /**
+   * Recover on its own.
+   *
+   * The empty-board state resolves itself the moment the venue strikes the next
+   * window — usually inside a minute. Leaving the reader on a static message
+   * until they think to reload makes a transient gap look permanent, so the
+   * page re-fetches while it has nothing to show and stops as soon as it does.
+   */
+  useEffect(() => {
+    if (market) return;
+    const id = setInterval(() => router.refresh(), 10_000);
+    return () => clearInterval(id);
+  }, [market, router]);
 
   if (!market) {
     return (
