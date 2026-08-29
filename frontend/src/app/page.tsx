@@ -55,7 +55,7 @@ export default async function HomePage() {
                 fold reads with depth instead of as stacked bands. */}
             <div className="relative">
               <Reveal step={0}>
-                <div className="relative w-full lg:w-[87%] h-[38vh] min-h-[240px] lg:h-[44vh] overflow-hidden rounded-[26px] border border-line">
+                <div className="relative w-full lg:w-[87%] h-[52vh] min-h-[380px] lg:h-[62vh] overflow-hidden rounded-[26px] border border-line">
                   <HeroFieldGL intensity={0.95} />
 
                   {/* Inside the panel, on its own layer. Kept to the top so the
@@ -72,6 +72,17 @@ export default async function HomePage() {
                       </Button>
                     </Link>
                   </div>
+
+                  {/* The headline lives INSIDE the panel, anchored to its
+                      bottom-left. Width is capped so it can never run under the
+                      notch on the opposite corner — the cut must never crop a
+                      word. Padding matches the label above it, so both sit on
+                      the panel's own left edge. */}
+                  <h1 className="absolute left-5 sm:left-7 bottom-5 sm:bottom-7 z-20 max-w-[64%] num text-[clamp(30px,5vw,68px)] leading-[0.94] tracking-[-0.055em] font-medium text-ink">
+                    Event Contracts,
+                    <br />
+                    <span className="text-accent">refracted.</span>
+                  </h1>
 
                   {/* The notch. A bespoke silhouette rather than a rectangle:
                       the panel is cut away at the bottom right and the links
@@ -103,16 +114,6 @@ export default async function HomePage() {
                 </div>
               </Reveal>
 
-              {/* The headline, overlapping the panel's bottom-left. Padded well
-                  clear of the panel's rounded corner so no cap is shaved by the
-                  cut — content near an edge has to be cleared deliberately. */}
-              <Reveal step={1}>
-                <h1 className="relative z-20 -mt-[5vh] lg:-mt-[6.5vh] num text-[clamp(34px,6.2vw,86px)] leading-[0.94] tracking-[-0.055em] font-medium text-ink">
-                  Event Contracts,
-                  <br />
-                  <span className="text-accent">refracted.</span>
-                </h1>
-              </Reveal>
             </div>
 
             <Reveal step={3}>
