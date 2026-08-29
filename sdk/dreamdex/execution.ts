@@ -22,6 +22,7 @@ import {
   SomniaMarkets,
   SOMNIA_TESTNET_PRICE_FEED,
   SOMNIA_TESTNET_ADDRESSES,
+  SOMNIA_MAINNET_ADDRESSES,
 } from "@somnia-chain/markets-sdk";
 import { somniaShannon, somniaMainnet } from "@somnia-chain/markets-sdk/chains";
 import { COLLATERAL, resolveVenueConfig, type VenueConfig } from "@sdk/venue/config";
@@ -150,7 +151,14 @@ export function signingExchange(
     priceFeed: SOMNIA_TESTNET_PRICE_FEED,
     // getMarketOnchain resolves markets through the binary module, so the
     // address book is required for any settlement read.
-    addresses: SOMNIA_TESTNET_ADDRESSES,
+    //
+    // Was hard-coded to the TESTNET book on both networks — correct today only
+    // because the deployment is testnet. Pointed at mainnet it would have
+    // resolved markets through testnet module addresses, which is a worse
+    // failure than the missing-book one it was written to fix: not an error, a
+    // wrong address.
+    addresses:
+      config.network === "mainnet" ? SOMNIA_MAINNET_ADDRESSES : SOMNIA_TESTNET_ADDRESSES,
     privateKey: pk as Hex,
   });
 }

@@ -21,6 +21,7 @@ import {
   SomniaMarkets,
   SOMNIA_TESTNET_PRICE_FEED,
   SOMNIA_TESTNET_ADDRESSES,
+  SOMNIA_MAINNET_ADDRESSES,
 } from "@somnia-chain/markets-sdk";
 import { somniaShannon, somniaMainnet } from "@somnia-chain/markets-sdk/chains";
 
@@ -61,7 +62,7 @@ const ex = new SomniaMarkets({
   )!,
   wsRpcUrl: env("PRISM_WS_RPC_URL", "wss://api.infra.testnet.somnia.network/ws"),
   priceFeed: SOMNIA_TESTNET_PRICE_FEED,
-  addresses: SOMNIA_TESTNET_ADDRESSES,
+  addresses: NETWORK === "mainnet" ? SOMNIA_MAINNET_ADDRESSES : SOMNIA_TESTNET_ADDRESSES,
   privateKey: PK as `0x${string}`,
 });
 

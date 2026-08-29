@@ -13,7 +13,12 @@ import "server-only";
  * has no business in a browser bundle.
  */
 
-import { SomniaMarkets, SOMNIA_TESTNET_PRICE_FEED } from "@somnia-chain/markets-sdk";
+import {
+  SomniaMarkets,
+  SOMNIA_TESTNET_PRICE_FEED,
+  SOMNIA_TESTNET_ADDRESSES,
+  SOMNIA_MAINNET_ADDRESSES,
+} from "@somnia-chain/markets-sdk";
 import { somniaShannon, somniaMainnet } from "@somnia-chain/markets-sdk/chains";
 import { intervalLabel, resolveVenueConfig, type VenueConfig } from "./config";
 import type { Asset, EventMarket, TermPoint } from "./types";
@@ -56,6 +61,23 @@ export function exchange(config: VenueConfig = resolveVenueConfig()): SomniaMark
     // Without it fetchPrice/fetchPriceOHLCV reject rather than returning null,
     // which reads like an outage instead of a missing config line.
     priceFeed: SOMNIA_TESTNET_PRICE_FEED,
+    // THE ADDRESS BOOK IS NOT OPTIONAL ON THIS TIER, and leaving it off broke
+    // the wallet-connected path in production:
+    //
+    //   VENUE_UNREADABLE: Nothing was built to sign: getMarketOnchain
+    //   (v2 resolves markets by marketId through the module) — needs
+    //   addresses.binaryModule
+    //
+    // `signingExchange` in dreamdex/execution.ts always passed it, so the
+    // server-signed demo path worked and the failure looked like it belonged to
+    // wallets. It does not: `prepare.ts` builds the UNSIGNED order through THIS
+    // exchange, and `getMarketOnchain` resolves a market through the binary
+    // module, so without the book there is nothing to build a transaction from.
+    //
+    // Read-only does not mean address-free. Anything resolving a market
+    // on-chain needs the module address whether or not it can sign.
+    addresses:
+      config.network === "mainnet" ? SOMNIA_MAINNET_ADDRESSES : SOMNIA_TESTNET_ADDRESSES,
   });
 
   cached = { key, ex };
