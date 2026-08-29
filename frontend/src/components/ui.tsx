@@ -153,8 +153,8 @@ type Tone = "neutral" | "accent" | "up" | "down" | "warn";
 
 const TONE: Record<Tone, string> = {
   neutral: "border-line text-ink-3",
-  accent: "border-[#0b4d54] text-accent",
-  up: "border-[#124c31] text-up",
+  accent: "border-[#2a4470] text-accent",
+  up: "border-[#0f3b28] text-up",
   down: "border-[#4a1c1c] text-down",
   warn: "border-[#4d3b17] text-warn",
 };
@@ -305,7 +305,7 @@ export function Segmented<T extends string>({
             className={cx(
               "h-9 px-3.5 text-[12px] uppercase tracking-[0.05em] transition-colors duration-150",
               on
-                ? "bg-[#04262a] text-accent"
+                ? "bg-[#16233f] text-accent"
                 : "bg-surface text-ink-3 hover:bg-surface-2 hover:text-ink",
             )}
           >
@@ -443,7 +443,7 @@ export function Note({
     <div
       className={cx(
         "flex items-start gap-2.5 border p-3 text-[12px] leading-[17px]",
-        tone === "accent" && "border-[#0b4d54] bg-[#04191c] text-ink-2",
+        tone === "accent" && "border-[#2a4470] bg-[#101a2e] text-ink-2",
         tone === "warn" && "border-[#4d3b17] bg-[#1a1408] text-ink-2",
         tone === "neutral" && "border-line bg-surface-2 text-ink-3",
       )}

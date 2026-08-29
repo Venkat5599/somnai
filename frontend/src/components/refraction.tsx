@@ -21,7 +21,7 @@ export interface RefractionLeg {
   detail: string;
 }
 
-const COLORS = ["#7df4ff", "#00b4ff", "#0072ff"];
+const COLORS = ["#7fa3ff", "#00b4ff", "#0072ff"];
 
 const DEFAULT_LEGS: RefractionLeg[] = [
   { label: "LONG UP", detail: "lower strike" },
@@ -122,7 +122,7 @@ export function Refraction({
           strokeDasharray="3 3"
           style={{ animation: "prism-dash 1.6s linear infinite" }}
         />
-        <rect x={exitX - 2.5} y={exitY - 2.5} width="5" height="5" fill="#7df4ff" />
+        <rect x={exitX - 2.5} y={exitY - 2.5} width="5" height="5" fill="#7fa3ff" />
 
         {/* outgoing legs, all departing from the single exit point */}
         {rows.map((leg, i) => {

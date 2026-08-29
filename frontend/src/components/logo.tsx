@@ -27,7 +27,7 @@ export function PrismMark({ size = 28, className }: MarkProps) {
         <linearGradient id="pm-facet" x1="14" y1="56" x2="52" y2="8" gradientUnits="userSpaceOnUse">
           <stop stopColor="#0072ff" />
           <stop offset="0.55" stopColor="#00b4ff" />
-          <stop offset="1" stopColor="#7df4ff" />
+          <stop offset="1" stopColor="#7fa3ff" />
         </linearGradient>
       </defs>
 
@@ -48,12 +48,12 @@ export function PrismMark({ size = 28, className }: MarkProps) {
       {/* the ascending ray crossing the prism */}
       <path
         d="M14 47l10-11 7 7 12-16"
-        stroke="#eaffff"
+        stroke="#e8efff"
         strokeWidth="2.6"
         strokeLinejoin="miter"
         strokeLinecap="butt"
       />
-      <path d="M35.5 27H43v7.5" stroke="#eaffff" strokeWidth="2.6" strokeLinejoin="miter" />
+      <path d="M35.5 27H43v7.5" stroke="#e8efff" strokeWidth="2.6" strokeLinejoin="miter" />
     </svg>
   );
 }

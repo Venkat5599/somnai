@@ -177,10 +177,33 @@ export default async function HomePage() {
         <Bleed>
           <Reveal step={0}>
             <h1
-              className="mx-auto max-w-[19ch] text-center text-[clamp(34px,6vw,74px)] leading-[1.02] tracking-[-0.045em] font-semibold text-balance"
-              style={{ color: "var(--pg-ink)" }}
+              className="mx-auto max-w-[19ch] text-center text-[clamp(36px,6.4vw,78px)] leading-[1.04] tracking-[-0.025em] font-normal text-balance"
+              style={{ color: "var(--pg-ink)", fontFamily: "var(--font-display)" }}
             >
-              Simply the clearest way to trade Event Contracts
+              Simply the clearest way to trade{" "}
+              <span className="relative inline-block whitespace-nowrap">
+                Event Contracts
+                {/* Drawn, not a border-bottom. A straight rule under a phrase is
+                    a default; this is one stroke with uneven curvature and a
+                    rounded cap, so it reads as marked by hand. It sits BELOW the
+                    descender line with room to spare — an underline that clips a
+                    'y' or a comma is worse than none. */}
+                <svg
+                  aria-hidden
+                  viewBox="0 0 340 18"
+                  preserveAspectRatio="none"
+                  className="absolute left-0 -bottom-[0.18em] w-full h-[0.22em] overflow-visible"
+                >
+                  <path
+                    d="M3 12.5C58 5.5 122 3.2 186 4.6c47 1 96 3.9 151 8.2"
+                    fill="none"
+                    stroke="var(--pg-accent)"
+                    strokeWidth="4"
+                    strokeLinecap="round"
+                    vectorEffect="non-scaling-stroke"
+                  />
+                </svg>
+              </span>
             </h1>
           </Reveal>
 
@@ -314,7 +337,7 @@ export default async function HomePage() {
       </section>
 
       <div className="mt-14">
-        <ClaimMarquee />
+        <ClaimMarquee base="#F4F4F6" accent="#6C4CF1" ink="#3A3A46" />
       </div>
 
       {/* ============================================================
@@ -323,8 +346,8 @@ export default async function HomePage() {
       <section className="py-16 sm:py-24">
         <Bleed>
           <h2
-            className="max-w-[16ch] text-[clamp(28px,4.4vw,54px)] leading-[1.04] tracking-[-0.04em] font-semibold text-balance"
-            style={{ color: "var(--pg-ink)" }}
+            className="max-w-[16ch] text-[clamp(30px,4.6vw,56px)] leading-[1.06] tracking-[-0.02em] font-normal text-balance"
+            style={{ color: "var(--pg-ink)", fontFamily: "var(--font-display)" }}
           >
             Everything the venue actually supports
           </h2>
@@ -480,10 +503,13 @@ export default async function HomePage() {
       <section className="pb-16 sm:pb-24">
         <Bleed>
           <div
-            className="relative overflow-hidden rounded-[24px] p-6 sm:p-11 lg:p-14"
+            className="relative overflow-hidden rounded-[24px]"
             style={{ background: "var(--pg-ink)" }}
           >
-            <h2 className="max-w-[22ch] text-[clamp(26px,3.6vw,46px)] leading-[1.05] tracking-[-0.04em] font-semibold text-balance text-white">
+            <HeroFieldGL intensity={0.9} base="#0B0B10" accent="#6C4CF1" />
+            <div className="relative z-10 p-6 sm:p-11 lg:p-14">
+            <h2 className="max-w-[22ch] text-[clamp(28px,3.8vw,48px)] leading-[1.06] tracking-[-0.02em] font-normal text-balance text-white"
+              style={{ fontFamily: "var(--font-display)" }}>
               Everything here is on chain, or it is not claimed.
             </h2>
             <p className="mt-5 max-w-[54ch] text-[15px] leading-[24px] text-white/70 text-pretty">
@@ -523,6 +549,7 @@ export default async function HomePage() {
                 What is not implemented, and why
                 <IconArrowOut size={14} />
               </Link>
+            </div>
             </div>
           </div>
         </Bleed>

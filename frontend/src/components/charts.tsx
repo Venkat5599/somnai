@@ -101,8 +101,8 @@ export function PayoffChart({
       >
         <defs>
           <linearGradient id={`pf-${uid}`} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stopColor="#00f0ff" stopOpacity="0.16" />
-            <stop offset="1" stopColor="#00f0ff" stopOpacity="0" />
+            <stop offset="0" stopColor="#4d7cfe" stopOpacity="0.16" />
+            <stop offset="1" stopColor="#4d7cfe" stopOpacity="0" />
           </linearGradient>
           <clipPath id={`clip-${uid}`}>
             <rect x={PAD.l} y={PAD.t} width={iw} height={ih} />
@@ -127,14 +127,14 @@ export function PayoffChart({
             y={PAD.t}
             width={Math.max(0, X(band[1]) - X(band[0]))}
             height={ih}
-            fill="#00f0ff"
+            fill="#4d7cfe"
             fillOpacity="0.045"
           />
         ) : null}
 
         <g clipPath={`url(#clip-${uid})`}>
           <path d={areaUp} fill={`url(#pf-${uid})`} />
-          <path d={line} fill="none" stroke="#00f0ff" strokeWidth="1.25" strokeLinejoin="miter" />
+          <path d={line} fill="none" stroke="#4d7cfe" strokeWidth="1.25" strokeLinejoin="miter" />
         </g>
 
         {/* zero line */}
@@ -143,7 +143,7 @@ export function PayoffChart({
           y1={zeroY}
           x2={PAD.l + iw}
           y2={zeroY}
-          stroke="#3a4143"
+          stroke="#2d3a5c"
           strokeWidth="1"
         />
 
@@ -181,11 +181,11 @@ export function PayoffChart({
               y1={PAD.t}
               x2={X(b)}
               y2={PAD.t + ih}
-              stroke="#00f0ff"
+              stroke="#4d7cfe"
               strokeWidth="1"
               strokeOpacity="0.35"
             />
-            <rect x={X(b) - 2} y={zeroY - 2} width="4" height="4" fill="#00f0ff" />
+            <rect x={X(b) - 2} y={zeroY - 2} width="4" height="4" fill="#4d7cfe" />
           </g>
         ))}
 
@@ -197,7 +197,7 @@ export function PayoffChart({
               y1={PAD.t}
               x2={X(hoverPoint.s)}
               y2={PAD.t + ih}
-              stroke="#00f0ff"
+              stroke="#4d7cfe"
               strokeWidth="1"
               strokeOpacity="0.5"
             />
@@ -207,7 +207,7 @@ export function PayoffChart({
               width="6"
               height="6"
               fill="#050505"
-              stroke="#00f0ff"
+              stroke="#4d7cfe"
               strokeWidth="1.25"
             />
           </g>
@@ -309,8 +309,8 @@ export function DensityChart({
     >
       <defs>
         <linearGradient id={`dn-${uid}`} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#00f0ff" stopOpacity="0.18" />
-          <stop offset="1" stopColor="#00f0ff" stopOpacity="0" />
+          <stop offset="0" stopColor="#4d7cfe" stopOpacity="0.18" />
+          <stop offset="1" stopColor="#4d7cfe" stopOpacity="0" />
         </linearGradient>
       </defs>
 
@@ -322,7 +322,7 @@ export function DensityChart({
       </g>
 
       <path d={area} fill={`url(#dn-${uid})`} />
-      <path d={path} fill="none" stroke="#00f0ff" strokeWidth="1.25" />
+      <path d={path} fill="none" stroke="#4d7cfe" strokeWidth="1.25" />
 
       {points.map((p) => (
         <line
@@ -331,7 +331,7 @@ export function DensityChart({
           y1={PAD.t + ih}
           x2={X(p.strike)}
           y2={PAD.t + ih - 4}
-          stroke="#3a4143"
+          stroke="#2d3a5c"
           strokeWidth="1"
         />
       ))}
@@ -456,7 +456,7 @@ export function IVSurface({
       ))}
 
       {/* axes */}
-      <g stroke="#3a4143" strokeWidth="1">
+      <g stroke="#2d3a5c" strokeWidth="1">
         <line x1={ox - 12} y1={oy + 10} x2={ox + (cols - 1) * cellX + 12} y2={oy + 10} />
         <line
           x1={ox - 12}

@@ -205,7 +205,7 @@ export function TradeTerminal({
                     !s.live
                       ? "bg-base text-ink-4 cursor-not-allowed"
                       : s.id === structure
-                        ? "bg-[#04262a] text-accent"
+                        ? "bg-[#16233f] text-accent"
                         : "bg-surface text-ink-3 hover:text-ink hover:bg-surface-2",
                   )}
                 >
@@ -247,7 +247,7 @@ export function TradeTerminal({
                 className={cx(
                   "px-2.5 text-[11px] uppercase tracking-[0.05em] transition-colors",
                   v === view
-                    ? "bg-[#04262a] text-accent"
+                    ? "bg-[#16233f] text-accent"
                     : "text-ink-3 hover:text-ink hover:bg-surface-2",
                 )}
               >
@@ -494,13 +494,13 @@ function BinaryPayoff({
         </g>
 
         {/* zero line */}
-        <line x1={PAD.l} y1={Y(0)} x2={PAD.l + iw} y2={Y(0)} stroke="#3a4143" strokeWidth="1" />
+        <line x1={PAD.l} y1={Y(0)} x2={PAD.l + iw} y2={Y(0)} stroke="#2d3a5c" strokeWidth="1" />
 
         {/* the step */}
         <path
           d={`M${PAD.l} ${Y(leftPnl)} L${X(k)} ${Y(leftPnl)} L${X(k)} ${Y(rightPnl)} L${PAD.l + iw} ${Y(rightPnl)}`}
           fill="none"
-          stroke="#00f0ff"
+          stroke="#4d7cfe"
           strokeWidth="1.5"
           strokeLinejoin="miter"
         />
@@ -511,12 +511,12 @@ function BinaryPayoff({
           y1={PAD.t}
           x2={X(k)}
           y2={PAD.t + ih}
-          stroke="#00f0ff"
+          stroke="#4d7cfe"
           strokeWidth="1"
           strokeOpacity="0.4"
           strokeDasharray="3 3"
         />
-        <text x={X(k)} y={PAD.t - 8} fill="#00f0ff" fontSize="9.5" fontWeight="600" textAnchor="middle" letterSpacing="0.08em">
+        <text x={X(k)} y={PAD.t - 8} fill="#4d7cfe" fontSize="9.5" fontWeight="600" textAnchor="middle" letterSpacing="0.08em">
           STRIKE
         </text>
 
@@ -584,7 +584,7 @@ function Continuity({
               <div
                 className={cx(
                   "w-[146px] border p-2.5 flex flex-col gap-1",
-                  isNow ? "border-[#0b4d54] bg-[#04191c]" : "border-line bg-surface-2",
+                  isNow ? "border-[#2a4470] bg-[#101a2e]" : "border-line bg-surface-2",
                 )}
               >
                 <span className="text-label-xs uppercase text-ink-4">
@@ -672,7 +672,7 @@ function Selector({
               !o.enabled
                 ? "bg-base text-ink-4 cursor-not-allowed"
                 : o.on
-                  ? "bg-[#04262a] text-accent"
+                  ? "bg-[#16233f] text-accent"
                   : "bg-surface text-ink-3 hover:bg-surface-2 hover:text-ink",
             )}
           >

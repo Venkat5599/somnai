@@ -100,7 +100,7 @@ export function RollPanel({ marketId }: { marketId: string }) {
       {plan ? (
         <div className="px-3 pb-3">
           {plan.ok ? (
-            <div className="border border-[#0b4d54] bg-[#04191c] p-2.5">
+            <div className="border border-[#2a4470] bg-[#101a2e] p-2.5">
               <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 num text-[11px]">
                 <span className="text-ink-3">
                   from <span className="text-ink">{plan.from?.strike?.toFixed(2) ?? "—"}</span>
@@ -140,7 +140,7 @@ export function RollPanel({ marketId }: { marketId: string }) {
             className={cx(
               "border p-2.5",
               result.status === "VERIFIED_EXECUTED"
-                ? "border-[#124c31] bg-[#04160e]"
+                ? "border-[#0f3b28] bg-[#08170f]"
                 : result.status === "VERIFIED_FAILED"
                   ? "border-[#4a1c1c] bg-[#1a0a0a]"
                   : "border-[#4d3b17] bg-[#1a1408]",

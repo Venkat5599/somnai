@@ -29,7 +29,7 @@ export function Connect() {
             <button
               type="button"
               onClick={openConnectModal}
-              className={cx(base, "border-[#0b4d54] text-accent hover:bg-[#04262a]")}
+              className={cx(base, "border-[#2a4470] text-accent hover:bg-[#16233f]")}
             >
               Connect wallet
             </button>

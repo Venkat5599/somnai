@@ -1,38 +1,47 @@
 @import "tailwindcss";
+@import url("https://api.fontshare.com/v2/css?f[]=gambarino@400&f[]=supreme@400,500,700&display=swap");
 
 /* ============================================================
    PRISM — design tokens
    Source of truth: DESIGN.md (Professional Minimalist Glassmorphism)
-   Total-dark foundation, 1px structural borders, single accent.
+   NAVY + BLACK foundation, 1px structural borders, single accent.
+
+   The substrate is a near-black with a blue cast rather than a neutral one, and
+   panels lift to a real navy instead of a grey. That is the difference between
+   "dark theme" and a palette: every surface belongs to one hue family, so the
+   accent sits inside the scheme rather than on top of it.
+
+   The accent moved from cyan to blue for the same reason. Cyan was a second hue
+   competing with the navy; this one is the same family, several steps brighter.
    ============================================================ */
 
 @theme {
   /* --- surfaces --- */
-  --color-base: #050505;
-  --color-surface: #121212;
-  --color-surface-2: #1a1a1a;
-  --color-surface-3: #202020;
+  --color-base: #05070e;
+  --color-surface: #0b1120;
+  --color-surface-2: #111a2e;
+  --color-surface-3: #17223c;
 
   /* --- structural borders (the defining element) --- */
-  --color-line: #222222;
-  --color-line-strong: #333333;
-  --color-line-soft: #191919;
+  --color-line: #1e2740;
+  --color-line-strong: #2d3a5c;
+  --color-line-soft: #151d31;
 
   /* --- type --- */
   --color-ink: #ffffff;
-  --color-ink-2: #b8bcbd;
-  --color-ink-3: #888888;
-  --color-ink-4: #6f7678;
+  --color-ink-2: #b9c2d6;
+  --color-ink-3: #7d89a3;
+  --color-ink-4: #5d6880;
 
   /* --- accent: sole primary --- */
-  --color-accent: #00f0ff;
-  --color-accent-dim: #00dbe9;
-  --color-accent-deep: #006970;
-  --color-accent-ink: #050505;
+  --color-accent: #4d7cfe;
+  --color-accent-dim: #3f6ae8;
+  --color-accent-deep: #16233f;
+  --color-accent-ink: #05070e;
 
   /* --- semantic --- */
-  --color-up: #00ff88;
-  --color-down: #ff3b3b;
+  --color-up: #2fd98a;
+  --color-down: #ff5c5c;
   --color-warn: #ffb454;
 
   /* --- type scale (DESIGN.md) --- */
@@ -74,10 +83,11 @@
   --spacing-page: 24px;
 
   /* Chrome: the native stack. Neutral by construction, sharp at 11px, 0 bytes. */
-  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue",
+  --font-display: "Gambarino", Georgia, "Times New Roman", serif;
+  --font-sans: "Supreme", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue",
     Arial, sans-serif;
   /* Signature: the numerals ARE the brand on an instrument. Self-hosted OFL. */
-  --font-mono: var(--font-geist-mono), ui-monospace, "SFMono-Regular", monospace;
+  --font-mono: ui-monospace, "SF Mono", "SFMono-Regular", Menlo, Consolas, monospace;
 }
 
 /* ============================================================

@@ -304,7 +304,7 @@ export function ExecutePanel({
       ) : null}
 
       {selfHash && !busy ? (
-        <div className="border border-[#124c31] bg-[#04160e] p-3">
+        <div className="border border-[#0f3b28] bg-[#08170f] p-3">
           <span className="inline-flex items-center gap-2">
             <IconCheck size={14} className="text-up" />
             <span className="text-label-xs uppercase text-ink">Signed and broadcast</span>
@@ -487,7 +487,7 @@ function Result({ report }: { report: ExecutionReport }) {
     <div
       className={cx(
         "border p-3",
-        ok ? "border-[#124c31] bg-[#04160e]" : bad ? "border-[#4a1c1c] bg-[#1a0a0a]" : "border-[#4d3b17] bg-[#1a1408]",
+        ok ? "border-[#0f3b28] bg-[#08170f]" : bad ? "border-[#4a1c1c] bg-[#1a0a0a]" : "border-[#4d3b17] bg-[#1a1408]",
       )}
     >
       <div className="flex items-center justify-between gap-3">

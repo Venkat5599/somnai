@@ -147,7 +147,7 @@ export function HeroFieldGL({
   /** Substrate the field sits on. Defaults to the terminal's near-black. */
   base = "#050505",
   /** The single hue the noise drives intensity along. */
-  accent = "#00f0ff",
+  accent = "#4d7cfe",
   className,
 }: {
   intensity?: number;

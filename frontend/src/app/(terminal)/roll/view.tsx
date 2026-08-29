@@ -149,7 +149,7 @@ function Chain({ succession, now }: { succession: Succession; now: number }) {
                 className={cx(
                   "w-[170px] border p-3 flex flex-col gap-1.5",
                   isLive
-                    ? "border-[#0b4d54] bg-[#04191c]"
+                    ? "border-[#2a4470] bg-[#101a2e]"
                     : isClosed
                       ? "border-line bg-base"
                       : "border-line bg-surface-2",

@@ -263,8 +263,8 @@ function Handle({
       <svg width="14" height="18" viewBox="0 0 14 18" aria-hidden>
         <path
           d={flip ? "M13 1H4L1 4v10l3 3h9" : "M1 1h9l3 3v10l-3 3H1"}
-          fill={active ? "#00f0ff" : "#050505"}
-          stroke="#00f0ff"
+          fill={active ? "#4d7cfe" : "#050505"}
+          stroke="#4d7cfe"
           strokeWidth="1.25"
           strokeLinejoin="miter"
         />
