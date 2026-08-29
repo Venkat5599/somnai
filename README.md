@@ -17,6 +17,18 @@ EVENT CONTRACT → STRATEGY → RISK → EXECUTION → VERIFICATION → SETTLEME
 - **On-chain proof** — [/proof](https://prism-terminal-cyan.vercel.app/proof), re-read from chain on every request
 - **Network** — Somnia Shannon testnet (chain `50312`)
 
+
+![PRISM landing](docs/screenshots/landing.jpg)
+
+<p align="center">
+  <img src="docs/screenshots/trade.jpg" width="49%" alt="The trading terminal" />
+  <img src="docs/screenshots/agent.jpg" width="49%" alt="Agent access and the spend policy" />
+</p>
+
+<p align="center">
+  <em>The terminal, and the agent surface. Both read the same live registry.</em>
+</p>
+
 ---
 
 ## The problem
@@ -403,6 +415,81 @@ Three rules the quote loop enforces, each one a way to lose money quietly:
 The quote maths is pure and tested in [`tests/quotes.test.ts`](tests/quotes.test.ts)
 — a maker that computes a crossed pair does not throw, it rests, and the venue
 takes whichever side is free money.
+
+
+---
+
+## Agents
+
+An agent can do everything the terminal does. It just cannot spend more than you
+let it.
+
+```bash
+bun run svc:mcp                 # stdio — what Claude Desktop connects to
+MCP_HTTP_TOKEN=<32+> bun run svc:mcp-http   # HTTP, for hosting
+```
+
+Nineteen tools: read the registry, price a book, plan and execute a roll, open a
+multi-leg structure, cancel resting orders, claim settlement, re-verify the
+proof. There is also a plain TypeScript client in
+[`sdk/agent/client.ts`](sdk/agent/client.ts) for anyone who would rather embed
+PRISM than adopt a protocol — MCP is a transport over that surface, not a second
+implementation of it.
+
+### The guardrails are a module, not checks at the call sites
+
+An agent calls tools in a loop, and a limit written where it is used is a limit
+the next tool forgets. [`sdk/agent/policy.ts`](sdk/agent/policy.ts) owns every
+spend decision and the ledger of what has been spent; the write paths have no
+other route to the executor, so a tool that forgets to ask simply cannot spend.
+
+| | |
+|---|---|
+| Budget | per session, charged on **filled** size, never requested size |
+| Per order | contract cap |
+| Trade count | orders, then the session is spent |
+| Cooldown | between orders |
+| Scope | an explicit market allowlist |
+| Default | dry-run — arming is an act by the operator, never the model |
+
+Two of those are less obvious than they look, and both are tested:
+
+**An empty allowlist permits nothing, never everything.** That is the difference
+between a scoping bug and an unscoped agent.
+
+**A `NaN` size is refused before any comparison runs.** NaN is neither above nor
+below a bound, so an unchecked one passes every cap at once — it is the single
+input that would defeat the whole policy.
+
+Dry-run is checked **last**, so a refusal still names the real blocker. An
+operator testing a policy learns it is broken before arming it, not after.
+
+### Credentials a copy cannot use
+
+Stated narrowly, because the loose version is marketing: there is no enclave
+here and the credential file can be copied. What it cannot be is *used twice*.
+
+Redeeming a grant mints a fence — a strictly increasing integer — and rewrites
+the lease. Every write presents the current fence. A second process redeeming
+the same grant mints a higher one and takes the lease, so the first is
+invalidated and finds out on its next write rather than quietly double-trading
+against one budget. Clone-ineffective and clone-evident, which is the honest
+version of the claim.
+
+The hmac covers the budget, the caps and the allowlist, so a copied grant cannot
+be edited into a larger one without the operator's secret. And a grant only ever
+*narrows*: `clampToGrant` takes the minimum of each cap and the intersection of
+the allowlists.
+
+### Try it
+
+```bash
+bun --conditions react-server scripts/agent-demo.ts   # the SDK, live
+node scripts/mcp-demo.mjs                             # the MCP server, live
+```
+
+Both print a transcript rather than a claim. Neither signs anything — the
+session is dry-run, so the refusals are the part worth reading.
 
 ---
 
