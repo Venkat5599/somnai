@@ -55,7 +55,7 @@ export default async function HomePage() {
                 fold reads with depth instead of as stacked bands. */}
             <div className="relative">
               <Reveal step={0}>
-                <div className="relative w-full lg:w-[78%] h-[42vh] min-h-[280px] lg:h-[54vh] overflow-hidden rounded-[26px] border border-line">
+                <div className="relative w-full lg:w-[87%] h-[38vh] min-h-[240px] lg:h-[44vh] overflow-hidden rounded-[26px] border border-line">
                   <HeroFieldGL intensity={0.95} />
 
                   {/* Inside the panel, on its own layer. Kept to the top so the
@@ -79,21 +79,6 @@ export default async function HomePage() {
                       reads as one continuous edge. Hidden below lg, where the
                       panel is too narrow for a cut to be legible. */}
                   <div className="hidden lg:block absolute bottom-0 right-0 w-[19rem] h-[7.5rem] bg-base rounded-tl-[26px]">
-                    {/* The two inverse corners. Without them the notch is a
-                        rectangle laid on top; with them the panel edge appears
-                        to curve INTO the cut and back out, which is the whole
-                        point of cutting a bespoke silhouette rather than
-                        stacking boxes. */}
-                    <span
-                      aria-hidden
-                      className="absolute -top-[18px] right-0 w-[18px] h-[18px]"
-                      style={{ background: "radial-gradient(circle at 0 0, transparent 18px, var(--color-base) 18px)" }}
-                    />
-                    <span
-                      aria-hidden
-                      className="absolute bottom-0 -left-[18px] w-[18px] h-[18px]"
-                      style={{ background: "radial-gradient(circle at 0 0, transparent 18px, var(--color-base) 18px)" }}
-                    />
                     {/* The links live inside the notch, so they are positioned
                         against IT rather than the outer wrapper — which is
                         taller than the panel, and was dropping them below it. */}
@@ -122,7 +107,7 @@ export default async function HomePage() {
                   clear of the panel's rounded corner so no cap is shaved by the
                   cut — content near an edge has to be cleared deliberately. */}
               <Reveal step={1}>
-                <h1 className="relative z-20 -mt-[6vh] lg:-mt-[8vh] pl-1 num text-[clamp(34px,6.2vw,86px)] leading-[0.94] tracking-[-0.055em] font-medium text-ink">
+                <h1 className="relative z-20 -mt-[5vh] lg:-mt-[6.5vh] num text-[clamp(34px,6.2vw,86px)] leading-[0.94] tracking-[-0.055em] font-medium text-ink">
                   Event Contracts,
                   <br />
                   <span className="text-accent">refracted.</span>
@@ -131,14 +116,14 @@ export default async function HomePage() {
             </div>
 
             <Reveal step={3}>
-              <div className="mt-8 flex flex-col gap-4 lg:flex-row lg:items-end lg:gap-10">
-                <p className="lg:w-[46ch] shrink-0 text-[15px] leading-[24px] text-ink-2">
+              <div className="mt-6 max-w-[46ch]">
+                <p className="text-[15px] leading-[24px] text-ink-2">
                   A DreamDEX Event Contract is a digital option that expires every
                   few minutes. PRISM states your view once and carries it across
                   window succession, so a stream of short binaries becomes a
                   position with a real tenor.
                 </p>
-                <span className="text-label-xs uppercase text-ink-4 flex items-center gap-2">
+                <span className="mt-4 text-label-xs uppercase text-ink-4 flex items-center gap-2">
                   <span className="pip-live inline-block w-[5px] h-[5px] bg-up" />
                   Live on {NETWORK.chainName}
                 </span>
