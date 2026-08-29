@@ -1,57 +1,154 @@
-# Demo script - 2:30
+# Demo script — 2:30
 
-Lead with `/proof`. It works regardless of market conditions.
+Verified against production immediately before writing: all routes 200, 560
+registry rows, 4 venue ids, 2 routable markets.
 
-| Time | Screen | Say |
-|---|---|---|
-| 0:00 | `/` | DreamDEX Event Contracts expire every few minutes. That makes a position impossible to hold. |
-| 0:20 | `/markets` | 548 real markets. Routable vs unstruck, live countdowns. One strike per window, so there is no ladder to spread across. |
-| 0:45 | `/trade` | Bind a real market. Payoff, max loss, liquidity-aware size. Everything derives from one market object. |
-| 1:10 | **`/proof`** | **The anchor.** Buy, resolve, redeem: +0.114 tUSDC. Every field re-read from chain on load. Click *Verify independently* for the explorer. |
-| 1:50 | `/roll` | Real succession chains. This is the product: one view carried across windows. |
-| 2:10 | `/activity` | Real wallet history from the explorer. Every hash resolves. |
-| 2:20 | close | DreamDEX provides the primitive. PRISM makes it composable across time. |
+**The one thing to check before you hit record.** Windows are minutes long and
+the board empties between them. Open `/trade` first and confirm a market is
+routable with more than 90 seconds left. If the board is empty, wait — the page
+now binds the next window and counts down to it, so it never dead-ends, but a
+live countdown films better than a pending one.
 
-## The verified round trip
+---
 
-```
-buy     0xd6f0a3e2831b5fdea150e9d026234f9dfc5bd62e33064510117e114f9ffef65e
-        1 YES at 0.886 tUSDC
-resolve market settled YES
-redeem  0x1b21a41150cd019ca1fdc1472f416563de7e3a6158499e4b1844aa0cfc793206
-        block 471513467, receipt 0x1
+## 0:00 — The problem (20s)
 
-tUSDC   499.114000 -> 500.114000    net +0.114000
-```
+Land on `prism-terminal-cyan.vercel.app`.
 
-## If a judge asks
+> "A DreamDEX Event Contract is a digital option that expires every few minutes.
+> That is too short to be a position. To hold a view you have to rediscover,
+> re-strike and re-enter, by hand, forever."
 
-**Show me the transaction.** Go to `/proof`, then the explorer link.
+Scroll to the live board.
 
-**Is this live or cached?** `/proof` re-reads receipts per request, and the
-collateral delta is decoded from the transfer logs rather than stored. Only the
-two hashes are constants.
+> "These are real markets, read from Somnia on this request. Strike, cadence,
+> countdown. Nothing here is fixture data."
 
-**Why no Range or Spread?** One strike per window. They are locked with the
-reason shown, not faked.
+---
 
-**Does the roll work?** The planner and daemon are real and share the verified
-execution path. It has **not** fired on a live successor, because the venue does
-not pre-strike them. That is an honest gap, not a hidden one -
-`scripts/roll-watch.ts` sits on the venue waiting for one and fires the same
-`executeRoll` the app fires, writing a receipt when it lands.
+## 0:20 — What the venue actually allows (25s)
 
-**Where is EIP-7702?** Unavailable on this chain, not merely unbuilt. Shannon is
-pre-Prague - no EIP-2935 or EIP-7002 system contracts - and `/settings` probes
-that live rather than asserting it. Multi-leg execution instead refuses whole
-before signing, sends each leg FILL_OR_KILL, and unwinds what filled if a later
-leg fails. It reports which of the four guarantees it delivered and never claims
-atomicity.
+Scroll to **Everything the venue actually supports**.
 
-## Fallback
+> "The venue lists one strike per window. That kills composition across strike —
+> no range, no spread, no ladder. So PRISM composes across time instead."
 
-If nothing is routable, `/trade` correctly shows *no depth* and disables Buy.
-That is the honest state - do not apologise for it, point at `/proof` instead.
+Open `/structures`.
 
-A demo that depends on catching a five-minute window with resting liquidity is a
-demo that fails in front of a judge. This one does not depend on it.
+> "And it does not just say that. It counts. 560 markets, most distinct strikes
+> on any single expiry: one. Range, Spread and Ladder report as unconstructible
+> from live data, and the test asserts they turn back **on** the day a second
+> strike appears."
+
+**Why this lands:** most projects hide what they cannot do. This one computes it.
+
+---
+
+## 0:45 — Execution and verification (35s)
+
+Open `/trade`. Pick the routable market.
+
+> "One strike, one leg, real book."
+
+Point at the ticket.
+
+> "Price and size snap to the venue's own integer tick and lot grid before
+> anything is signed. A float reaching an 18-decimal venue lands off-grid and
+> reverts — and that bug is invisible on a 6-decimal testnet, which is why the
+> tests reproduce the failure before proving the fix."
+
+Open `/proof`.
+
+> "The SDK can resolve without throwing on a transaction that reverted. So the
+> outcome is never read from the SDK. It is re-derived from the receipt, the
+> nonce, and the collateral delta — and it is allowed to answer UNKNOWN. UNKNOWN
+> is never rendered as success."
+
+> "Buy, then redeem. Both re-read from chain on every page load. Only the two
+> hashes are constants."
+
+---
+
+## 1:20 — The evidence that is worth showing (30s)
+
+This is the strongest 30 seconds in the video. Do not skip it.
+
+> "Three things ran live today."
+
+**The batch.**
+
+> "Two legs, both quoting. The book moved between them — the first filled, the
+> second failed. The already-open leg was sold back and the sale verified. It
+> reports PARTIAL_UNWOUND, not success. A clean fill would have proved less than
+> this did."
+
+**The oracle strategy.**
+
+> "ec-oracle-follow took two fills from three signals. The third cleared the edge
+> and reverted with ImmediateOrCancelNoFill — the offer moved between the book
+> read and the fill, and IOC took nothing rather than resting size in a window
+> about to settle. It is logged beside the two successes. Two of three, not three
+> of three."
+
+**The cancel.**
+
+> "Placed post-only, then pulled. What was still resting was re-read from chain,
+> not inferred from the receipt — a green receipt says the transaction executed,
+> not that every id in it was cancelled."
+
+---
+
+## 1:50 — The agent (30s)
+
+Back to the landing page. Click **Copy MCP config**.
+
+> "PRISM runs as an MCP server. Everything this terminal does, a model can do."
+
+Paste into Claude Desktop, restart, ask it: *"what can you trade on PRISM?"*
+
+> "Nineteen tools. It reads the registry, prices a book, plans a roll, opens a
+> structure, claims settlement."
+
+Then ask it to place an order.
+
+> "And it is refused. Budget, per-order cap, trade count, cooldown, market
+> allowlist — and an empty allowlist permits nothing, never everything. The
+> policy is fixed at process start; no tool can raise it. Dry-run is the default,
+> so arming is an explicit act by the operator, never the model."
+
+Open `/agent` briefly.
+
+> "Copying the credential does not help either. Redeeming a grant mints a higher
+> fence and invalidates the earlier holder, so two clones can never both spend."
+
+---
+
+## 2:20 — Close (10s)
+
+> "Everything shown is on chain, or it is reported as not done. The roll receipt
+> is still open — the venue has never listed a successor in nearly three hundred
+> recorded sweeps, and that is logged as a measurement rather than claimed as a
+> feature."
+
+---
+
+## Do not show
+
+- **The `/settings` page** if `PRIVATE_KEY` is unset in Vercel — it will report
+  no signer, which is true but reads as broken on camera.
+- **A market inside its expiry headroom.** The Buy button is correctly disabled
+  and it looks like a bug to someone who does not know why.
+- **The hosted MCP endpoint.** The transport works and is tested, but the VPS
+  deploy is unfinished. The copy-config flow is the stronger story anyway: a
+  judge can run it themselves in a minute.
+
+## If asked "what is not done"
+
+Answer plainly, it is the strongest thing in the repo:
+
+- No live roll — the venue has not listed a successor. Recorded in
+  `docs/evidence/roll-observations.jsonl`, one timestamped line per sweep.
+- EIP-7702 batching is unavailable on this chain — probed at runtime from
+  Prague's system contracts, not asserted in prose.
+- Mainnet is untested. The 18-decimal grid work exists *because* testnet cannot
+  reveal that class of bug.
