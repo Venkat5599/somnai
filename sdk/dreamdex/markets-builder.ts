@@ -31,6 +31,7 @@ import {
   SOMNIA_MAINNET_ADDRESSES,
 } from "@somnia-chain/markets-sdk";
 import { somniaShannon, somniaMainnet } from "@somnia-chain/markets-sdk/chains";
+import { createWalletClient, http } from "viem";
 import { resolveVenueConfig, type VenueConfig } from "@sdk/venue/config";
 
 /** Cached per (network, owner): the SDK opens a socket and holds a store. */
@@ -50,15 +51,31 @@ export function builderExchange(
   const key = `${config.network}|${owner.toLowerCase()}`;
   if (cached?.key === key) return cached.ex;
 
+  const chain = config.network === "mainnet" ? somniaMainnet : somniaShannon;
   const ex = new SomniaMarkets({
-    chain: config.network === "mainnet" ? somniaMainnet : somniaShannon,
+    chain,
     indexerUrl: config.indexer,
     wsRpcUrl: config.wsRpc,
     priceFeed: SOMNIA_TESTNET_PRICE_FEED,
     addresses:
       config.network === "mainnet" ? SOMNIA_MAINNET_ADDRESSES : SOMNIA_TESTNET_ADDRESSES,
-    // An ADDRESS, never a key. This is what unlocks the builder tier.
-    account: owner as `0x${string}`,
+    // A WALLET CLIENT, not an address.
+    //
+    // The SDK's error names "privateKey / account / walletClient", but
+    // `resolveSigner` actually checks for a viem Account OBJECT or a wallet
+    // client — an address string satisfies neither, so passing `account: owner`
+    // still threw. A probe caught that; the error text was misleading and the
+    // code is the authority.
+    //
+    // This client is bound to the user's address over plain HTTP and holds NO
+    // key, so it can encode a transaction for that owner and is structurally
+    // unable to sign one. Any attempt to send through it fails at viem, which
+    // is the property we want: build yes, sign never.
+    walletClient: createWalletClient({
+      account: owner as `0x${string}`,
+      chain,
+      transport: http(config.rpc),
+    }),
   } as never);
 
   cached = { key, ex };

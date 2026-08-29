@@ -255,14 +255,23 @@ export function ExecutePanel({
       {funds.connected ? <WalletBalance /> : null}
 
       {/*
-        EVERY ORDER IS SIGNED BY PRISM, NOT BY THE VISITOR'S WALLET.
-        Say so plainly. This is custodial, and a UI that lets someone click Buy
-        without understanding whose funds moved is the dishonest version of this
-        feature — the whole repository exists to avoid that shape.
+        WHO SIGNS IS NEVER AMBIGUOUS. A connected wallet signs for itself; with
+        no wallet the demo burner signs and the collateral is the platform's.
+        Those are opposite custody models, so the panel names the one in force
+        rather than letting someone click Buy without knowing whose funds move.
       */}
       <p className="text-[11px] text-ink-4 text-center -mb-1">
-        PRISM signs this order from its own wallet — no signature is requested
-        from you, and the collateral is the platform&rsquo;s.
+        {canSign ? (
+          <>
+            Signing as{" "}
+            <span className="num text-ink-3">
+              {address?.slice(0, 6)}…{address?.slice(-4)}
+            </span>{" "}
+            — your key, your funds
+          </>
+        ) : (
+          <>PRISM signs from its own wallet — the collateral is the platform&rsquo;s.</>
+        )}
       </p>
 
       <Button
@@ -270,8 +279,16 @@ export function ExecutePanel({
         size="lg"
         block
         leading={<IconBolt size={15} />}
-        disabled={blocked || busy || !quote || !quote.fillable}
-        onClick={run}
+        disabled={
+          blocked ||
+          busy ||
+          !quote ||
+          !quote.fillable ||
+          // A connected wallet with no funds cannot sign a valid order. Refuse
+          // here rather than letting MetaMask open and fail on-chain.
+          (canSign && !funds.canTrade)
+        }
+        onClick={canSign ? runSelfCustody : run}
       >
         {busy
           ? (selfState ?? "Submitting…")
@@ -279,7 +296,11 @@ export function ExecutePanel({
             ? "Market expired"
             : phase === "imminent"
               ? "Too close to expiry"
-              : `Buy ${outcome}`}
+              : canSign && funds.blocker === "NO_COLLATERAL"
+                ? "No tUSDC in wallet"
+                : canSign && funds.blocker === "NO_GAS"
+                  ? "No STT for gas"
+                  : `Buy ${outcome}`}
       </Button>
 
       {phase === "imminent" && !busy ? (
