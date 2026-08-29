@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Refraction } from "@/components/refraction";
-import { HeroField } from "@/components/hero-field";
+import { HeroFieldGL } from "@/components/hero-field-gl";
 import { PrismMark, PrismWordmark } from "@/components/logo";
 import { Button, cx } from "@/components/ui";
 import { IconArrowOut, IconArrowRight } from "@/components/icons";
@@ -44,9 +44,11 @@ export default async function HomePage() {
           text-column-plus-object-column skeleton.
           ============================================================ */}
       <section className="relative flex-1 min-h-[calc(100dvh-56px)] flex flex-col">
-        {/* Atmosphere. Purely decorative and mounted after paint — every
-            element below renders complete if it never arrives. */}
-        <HeroField />
+        {/* Atmosphere: a single-hue noise field lit from the upper left.
+            Purely decorative and strictly below the content — if WebGL is
+            missing, the context is lost, or reduced-motion is set, the fold
+            renders exactly as it does now, minus the light. */}
+        <HeroFieldGL />
 
         <div className="relative z-10 flex-1 flex flex-col [justify-content:safe_end]">
           <div className="w-full max-w-[1560px] mx-auto px-5 sm:px-8 lg:px-12 pt-10 pb-0">
