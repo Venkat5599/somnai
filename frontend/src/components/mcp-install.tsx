@@ -17,10 +17,13 @@
 import { useState } from "react";
 import { cx } from "./ui";
 
-export function McpInstall({ repoPath }: { repoPath: string }) {
-  const [copied, setCopied] = useState<string | null>(null);
-
-  const config = JSON.stringify(
+/**
+ * The config, as one string. Shared by the full panel and the hero button so
+ * the two can never drift — a landing page that copies a different config from
+ * the one the docs show is worse than having no button.
+ */
+export function mcpConfigJson(repoPath = "/absolute/path/to/prism-terminal") {
+  return JSON.stringify(
     {
       mcpServers: {
         prism: {
@@ -29,7 +32,6 @@ export function McpInstall({ repoPath }: { repoPath: string }) {
           cwd: repoPath,
           env: {
             PRISM_NETWORK: "testnet",
-            // Reading the venue needs no key. Only signing does.
             PRISM_DRY_RUN: "true",
             AGENT_DRY_RUN: "true",
             AGENT_BUDGET: "5",
@@ -45,6 +47,40 @@ export function McpInstall({ repoPath }: { repoPath: string }) {
     null,
     2,
   );
+}
+
+/**
+ * One-click copy for the hero. Same JSON as the docs panel, by construction.
+ */
+export function McpCopyButton({ className }: { className?: string }) {
+  const [state, setState] = useState<"idle" | "copied" | "failed">("idle");
+
+  const onClick = async () => {
+    try {
+      await navigator.clipboard.writeText(mcpConfigJson());
+      setState("copied");
+    } catch {
+      // Clipboard access is permission-gated and can simply refuse. Never show
+      // a success state for something that did not happen.
+      setState("failed");
+    }
+    setTimeout(() => setState("idle"), 2000);
+  };
+
+  return (
+    <button type="button" onClick={onClick} className={className}>
+      {state === "copied"
+        ? "Copied — paste into Claude"
+        : state === "failed"
+          ? "Clipboard blocked"
+          : "Copy MCP config"}
+    </button>
+  );
+}
+
+export function McpInstall({ repoPath }: { repoPath: string }) {
+  const [copied, setCopied] = useState<string | null>(null);
+  const config = mcpConfigJson(repoPath);
 
   const copy = async (label: string, text: string) => {
     try {

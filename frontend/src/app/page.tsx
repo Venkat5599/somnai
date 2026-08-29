@@ -9,6 +9,7 @@ import { getLivePrice } from "@sdk/venue/prices";
 import { headroomSec } from "@sdk/venue/types";
 import { Reveal } from "@/components/reveal";
 import { ClaimMarquee } from "@/components/marquee";
+import { McpCopyButton } from "@/components/mcp-install";
 import { cx } from "@/components/ui";
 
 /** Live venue state; nothing here can be prerendered. */
@@ -225,10 +226,18 @@ export default async function HomePage() {
                 Open the terminal
                 <IconArrowRight size={15} />
               </Cta>
-              <Cta href="/proof" tone="quiet">
-                See the on-chain proof
-                <IconArrowOut size={14} />
-              </Cta>
+              {/* The agent entry point, one click. A visitor can paste this
+                  straight into Claude Desktop and drive PRISM from there —
+                  which is the thing worth showing, and it was previously
+                  buried three pages deep on /agents. */}
+              <span
+                style={{
+                  ["--btn-bg" as string]: "var(--pg-card)",
+                  ["--btn-ink" as string]: "var(--pg-ink)",
+                }}
+              >
+                <McpCopyButton className="inline-flex items-center gap-2 h-11 px-5 rounded-[10px] text-[14px] font-medium transition-opacity hover:opacity-85 bg-[var(--pg-card)] text-[var(--pg-ink)] border border-[var(--pg-line)]" />
+              </span>
             </div>
           </Reveal>
         </Bleed>
