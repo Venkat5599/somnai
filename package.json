@@ -14,10 +14,12 @@
     "svc:market-data": "bun --conditions react-server backend/market-data/index.ts",
     "svc:roll": "bun --conditions react-server backend/roll/index.ts",
     "svc:bot": "bun --conditions react-server backend/bot/index.ts",
-    "deploy": "bun scripts/deploy-verify.ts"
+    "deploy": "bun scripts/deploy-verify.ts",
+    "svc:mcp": "bun --conditions react-server backend/mcp/index.ts"
   },
   "dependencies": {
     "@designcodeio/threeui": "^1.0.0",
+    "@modelcontextprotocol/sdk": "^1.30.0",
     "@rainbow-me/rainbowkit": "^2.2.11",
     "@somnia-chain/markets-sdk": "^0.28.1",
     "@tanstack/react-query": "^5.102.5",

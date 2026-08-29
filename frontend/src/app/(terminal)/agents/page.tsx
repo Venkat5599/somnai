@@ -4,6 +4,8 @@ import { Chip, Note, PageHead, cx } from "@/components/ui";
 import { IconArrowOut, IconInfo } from "@/components/icons";
 import { LIFECYCLE } from "@sdk/dreamdex/proof";
 import { VENUE_CONFIG } from "@sdk/venue/config";
+import { McpInstall } from "@/components/mcp-install";
+import { DEFAULT_POLICY } from "@sdk/agent/policy";
 
 export const metadata: Metadata = { title: "Integration — PRISM" };
 
@@ -86,6 +88,62 @@ export default function IntegrationPage() {
       >
         <Chip tone="neutral">Module reference</Chip>
       </PageHead>
+
+      {/* ============================================================
+          THE AGENT SURFACE. Everything the terminal can do, behind a
+          budget the model cannot argue with.
+          ============================================================ */}
+      <section className="border border-line bg-surface mb-8">
+        <header className="flex flex-wrap items-center justify-between gap-3 h-11 px-4 border-b border-line">
+          <span className="text-label-xs uppercase text-ink-3">
+            Agent access · Model Context Protocol
+          </span>
+          <span className="num text-[11px] text-ink-4">backend/mcp/index.ts</span>
+        </header>
+
+        <div className="p-4 sm:p-5 grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,32rem)]">
+          <div className="min-w-0">
+            <p className="text-[14px] leading-[22px] text-ink-2">
+              PRISM runs as an MCP server, so an agent can do everything this
+              terminal does — read the registry, price a book, plan and execute a
+              roll, open a multi-leg structure, cancel resting orders, claim
+              settlement — under a spend policy it has no way to raise.
+            </p>
+
+            <ul className="mt-4 grid gap-px bg-line border border-line">
+              {[
+                ["Budget", `${DEFAULT_POLICY.budget} tUSDC per session, charged on FILLED size`],
+                ["Per order", `${DEFAULT_POLICY.maxOrderContracts} contract maximum`],
+                ["Trade count", `${DEFAULT_POLICY.maxTrades} orders, then the session is spent`],
+                ["Cooldown", `${DEFAULT_POLICY.cooldownMs / 1000}s between orders`],
+                ["Scope", "an explicit market allowlist; empty permits nothing"],
+                ["Default", "dry-run — arming is an explicit act by the operator"],
+              ].map(([k, v]) => (
+                <li key={k} className="bg-surface px-3 py-2 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                  <span className="text-label-xs uppercase text-ink-3 w-[6.5rem] shrink-0">{k}</span>
+                  <span className="text-[12px] text-ink-2">{v}</span>
+                </li>
+              ))}
+            </ul>
+
+            <p className="mt-4 text-[12px] leading-[19px] text-ink-3">
+              The policy is fixed at process start from the operator&rsquo;s
+              environment and no tool mutates it, so the model cannot raise its
+              own budget, widen its allowlist, arm a dry-run session or reverse a
+              revoke. It also gains nothing by trying: orders still pass through
+              the same <span className="num text-ink-2">validateOrder</span> →{" "}
+              <span className="num text-ink-2">submitOrder</span> →{" "}
+              <span className="num text-ink-2">verifyExecution</span> path the UI
+              uses, so expiry headroom, the integer tick grid and chain
+              verification apply unchanged.
+            </p>
+          </div>
+
+          <div className="min-w-0">
+            <McpInstall repoPath="/absolute/path/to/prism-terminal" />
+          </div>
+        </div>
+      </section>
 
       <Note icon={<IconInfo size={14} />}>
         <span className="font-medium text-ink">PRISM does not serve a public API.</span>{" "}
