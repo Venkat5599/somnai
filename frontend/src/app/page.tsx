@@ -222,7 +222,13 @@ export default async function HomePage() {
 
           <Reveal step={2}>
             <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
-              <Cta href="/trade">
+              {/* /markets, not /trade. Most windows are unstruck at any given
+                  moment — 10 of 14 when last measured — so a first-time visitor
+                  landing on the ticket sees "no strike yet" and reads the whole
+                  product as empty. The board is never empty: it shows the full
+                  registry, and routable rows are marked. Let them choose a live
+                  market and arrive at the ticket with something in it. */}
+              <Cta href="/markets">
                 Open the terminal
                 <IconArrowRight size={15} />
               </Cta>
@@ -625,8 +631,9 @@ function MarketingNav() {
             />
             {NETWORK.name}
           </span>
+          {/* The board, not the ticket — see the note on the hero CTA. */}
           <Link
-            href="/trade"
+            href="/markets"
             className="inline-flex items-center h-9 px-4 rounded-[9px] text-[13.5px] font-medium transition-opacity hover:opacity-85"
             style={{ background: "var(--pg-ink)", color: "var(--pg-card)" }}
           >
