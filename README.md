@@ -197,7 +197,7 @@ contracts/            addresses + ABIs of the contracts PRISM calls
 sdk/                  venue, dreamdex, quant — shared, React-free
 src/                  the Next.js app
 docs/                 architecture · gotchas · demo
-tests/                167 tests
+tests/                195 tests
 ```
 
 `contracts/` documents the DreamDEX contracts PRISM *talks to* — addresses,
@@ -296,9 +296,10 @@ tests/batch.test.ts         the grading function, incl. the unwind-died case
 tests/deploy-config.test.ts tracing root, route coverage, no uncalled modules
 tests/discovery.test.ts     a THIRD underlying survives normalization
 tests/wallet-config.test.ts no placeholder credential reaches the relay
+tests/bot-kit.test.ts       the kit's six strategy names, and the Builder's
 ```
 
-167 tests, all pure — no mocked blockchain. Live behaviour is verified manually
+195 tests, all pure — no mocked blockchain. Live behaviour is verified manually
 against Shannon and recorded above; that is stated separately rather than dressed
 up as integration coverage.
 
@@ -346,15 +347,35 @@ carries a `PRIVATE_KEY` line; the parser reports only whether a usable key is
 serialised into errors. PRISM reads the key from its own environment, in the one
 place that already does.
 
-| Builder strategy | PRISM | runner |
-|---|---|---|
-| **EC Starter** | crosses the spread on the verified IOC path | `runStarter` |
-| **EC Settlement** | `findClaimable` + fee-aware `claim` | `runSettlement` |
-| **EC Market Maker** | post-only bid and ask around fair, re-quoted as it moves | `runQuoting` |
-| **EC Passive Bid** | one post-only bid, never pays the spread | `runQuoting` |
-| **EC Ladder** | post-only grid each side, flattened inside expiry headroom | `runQuoting` |
+| Kit `STRATEGY` | Builder label | PRISM | runner |
+|---|---|---|---|
+| `ec-starter` | EC Starter | crosses the spread on the verified IOC path | `runStarter` |
+| `ec-settlement` | EC Settlement | `findClaimable` + fee-aware `claim` | `runSettlement` |
+| `ec-maker` | EC Market Maker | post-only bid and ask around fair, re-quoted as it moves | `runQuoting` |
+| `ec-passive` | EC Passive Bid | one post-only bid, never pays the spread | `runQuoting` |
+| `ec-laddering-bot` | EC Ladder | post-only grid each side, flattened inside expiry headroom | `runQuoting` |
+| `ec-oracle-follow` | — | takes the side Somnia's EMA oracle implies, past an edge threshold | `runOracleFollow` |
 
-All five run. The three resting ones were refused until PRISM had
+**All six run, under either spelling.** The left column is the kit's own
+`STRATEGY` value; the middle is the Builder's UI label. PRISM used to accept
+*only* the middle column, so a config carrying the kit's documented
+`STRATEGY=ec-maker` was rejected with "not an Event Contracts strategy" — an
+integration that claimed to run the kit's strategies while refusing three of its
+names. Both parse now; `canonicalStrategy` is the single place they map.
+
+`ec-oracle-follow` was missing outright, and the sentence here used to read "all
+five run" about a set of six. The list had been transcribed from the Builder's
+dropdown and never compared to anything — the same defect as the `INTERVALS` and
+`KNOWN_VENUE_IDS` constants. [`scripts/probe-bot-kit.ts`](scripts/probe-bot-kit.ts)
+now reads the kit's own docs from GitHub and exits non-zero if PRISM's list has
+drifted in either direction; `tests/bot-kit.test.ts` is the offline half.
+
+The kit documents that `ec-oracle-follow` needs an underlying spot price and
+**exits at startup on mainnet** unless you wire an external ticker. PRISM reads
+Somnia's on-chain EMA oracle — the feed these contracts actually settle against,
+not a correlated third-party ticker — so on testnet it follows the settlement
+source itself. The mainnet limitation is the kit's, and is printed at startup
+rather than papered over. The three resting ones were refused until PRISM had
 **order cancellation** — each must *manage* a quote after placing it, and a
 post-only order that can never be pulled leaves escrow locked in a market that
 settles, which the bot kit calls the easiest way to lose track of collateral.

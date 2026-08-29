@@ -15,17 +15,23 @@
  * key and sends strictly one order at a time. Never run two of these on one
  * key: nonces are sequential and the loser dies with "nonce too low".
  *
- * ALL FIVE EC STRATEGIES RUN. The three resting ones — maker, passive bid,
+ * ALL SIX EC STRATEGIES RUN. The three resting ones — maker, passive bid,
  * ladder — were refused until PRISM had order cancellation, because each must
  * manage a quote after placing it and a post-only order that can never be
  * pulled leaves escrow locked in a market that settles. sdk/dreamdex/cancel.ts
  * closed that; backend/bot/quoting.ts is the loop they share.
  *
- *   ec-starter      taker, crosses the spread          runStarter
- *   ec-settlement   claims what already settled        runSettlement
- *   ec-market-maker post-only bid and ask around fair  runQuoting
- *   ec-passive-bid  one post-only bid                  runQuoting
- *   ec-ladder       post-only grid, flattened on exit  runQuoting
+ *   ec-starter       taker, crosses the spread          runStarter
+ *   ec-settlement    claims what already settled        runSettlement
+ *   ec-maker         post-only bid and ask around fair  runQuoting
+ *   ec-passive       one post-only bid                  runQuoting
+ *   ec-laddering-bot post-only grid, flattened on exit  runQuoting
+ *   ec-oracle-follow takes the side the EMA implies     runOracleFollow
+ *
+ * Those are the KIT's names. PRISM used to carry the Builder's UI labels
+ * (ec-market-maker, ec-passive-bid, ec-ladder) as its only accepted values, so
+ * a config emitted with the kit's own documented names was REJECTED. Both
+ * spellings parse now; see canonicalStrategy in sdk/bot/config.ts.
  */
 
 import { readFileSync } from "node:fs";
@@ -37,6 +43,7 @@ import { placeLimit } from "../../sdk/dreamdex/place-limit";
 import { rpc, readBalances } from "../../sdk/dreamdex/execution";
 import { findClaimable, claim } from "../../sdk/dreamdex/settlement";
 import { runQuoting } from "./quoting";
+import { runOracleFollow } from "./oracle-follow";
 import type { Hex } from "viem";
 
 const log = (s: string) => console.log(`${new Date().toISOString()} ${s}`);
@@ -297,10 +304,34 @@ async function main() {
     }
   }
 
-  if (cfg.strategy === "ec-settlement") await runSettlement(cfg, venue);
-  else if (cfg.strategy === "ec-starter") await runStarter(cfg, venue);
-  // maker, passive bid and ladder all share one quote-and-flatten loop.
-  else await runQuoting(cfg, venue);
+  // EXHAUSTIVE ON PURPOSE. This was `else await runQuoting(...)`, so any
+  // strategy the dispatcher did not recognise silently became a market maker —
+  // it would have rested quotes for `ec-oracle-follow` rather than following
+  // anything. A trailing `else` on a signing dispatcher is not a default, it is
+  // a wrong strategy running with real size. The `never` check below makes the
+  // compiler refuse to build if a seventh strategy is added without a branch.
+  switch (cfg.strategy) {
+    case "ec-settlement":
+      await runSettlement(cfg, venue);
+      break;
+    case "ec-starter":
+      await runStarter(cfg, venue);
+      break;
+    case "ec-oracle-follow":
+      await runOracleFollow(cfg, venue);
+      break;
+    // maker, passive and laddering-bot all share one quote-and-flatten loop.
+    case "ec-maker":
+    case "ec-passive":
+    case "ec-laddering-bot":
+      await runQuoting(cfg, venue);
+      break;
+    default: {
+      const unreachable: never = cfg.strategy;
+      log(`FATAL: no runner wired for strategy "${String(unreachable)}". Refusing to trade.`);
+      process.exit(1);
+    }
+  }
 }
 
 await main();

@@ -34,18 +34,58 @@
  * Pure and dependency-free, so the tests can exercise it without a venue.
  */
 
-/** Strategies the Builder offers on the Event contracts track. */
 import { KNOWN_ASSETS } from "../venue/types";
 
+/**
+ * The kit's canonical STRATEGY values — its names, not ours.
+ *
+ * THIS LIST WAS WRONG, and wrong in the way that matters: PRISM invented
+ * `ec-market-maker`, `ec-passive-bid` and `ec-ladder` from the Builder's UI
+ * labels, and `parseBotConfig` REJECTED anything else. So a config carrying the
+ * kit's own documented value — `STRATEGY=ec-maker` — failed to load with
+ * "not an Event Contracts strategy". The integration claimed to run the kit's
+ * strategies while refusing three of the kit's strategy names.
+ *
+ * Source of truth: dreamdex-bot-kit `docs/event-contracts.md`, which tabulates
+ * the STRATEGY value for each. Verified against the repo's `strategies/`
+ * directory names, which agree. `scripts/probe-bot-kit.ts` re-reads that list
+ * from GitHub and fails if it has moved — because a hand-written list checked
+ * against nothing is exactly how this drifted in the first place.
+ */
 export const EC_STRATEGIES = [
   "ec-starter",
-  "ec-market-maker",
-  "ec-passive-bid",
-  "ec-ladder",
+  "ec-maker",
+  "ec-passive",
+  "ec-laddering-bot",
+  "ec-oracle-follow",
   "ec-settlement",
 ] as const;
 
 export type EcStrategy = (typeof EC_STRATEGIES)[number];
+
+/**
+ * The Builder's UI labels, mapped onto the kit's canonical values.
+ *
+ * Both are real. The no-code Builder emits names that read well in a dropdown;
+ * the kit's docs and directories use terser ones. A config is portable only if
+ * PRISM accepts either, so these are aliases rather than a correction — and
+ * `canonicalStrategy` is the one place the mapping happens.
+ */
+export const STRATEGY_ALIASES: Readonly<Record<string, EcStrategy>> = {
+  "ec-market-maker": "ec-maker",
+  "ec-passive-bid": "ec-passive",
+  "ec-ladder": "ec-laddering-bot",
+  // Seen in the wild on older Builder exports and in the kit's own prose.
+  "ec-ladder-bot": "ec-laddering-bot",
+  "ec-oracle": "ec-oracle-follow",
+};
+
+/** Resolve any accepted spelling to the kit's canonical value, or null. */
+export function canonicalStrategy(raw: string): EcStrategy | null {
+  const k = raw.toLowerCase().trim();
+  if ((EC_STRATEGIES as readonly string[]).includes(k)) return k as EcStrategy;
+  return STRATEGY_ALIASES[k] ?? null;
+}
 
 /**
  * What PRISM can run, and why.
@@ -59,7 +99,11 @@ export type EcStrategy = (typeof EC_STRATEGIES)[number];
  *
  * `sdk/dreamdex/cancel.ts` closed that gap: cancelOrder / cancelOrders through
  * the raw trader tier, with what is STILL resting re-read from chain rather
- * than inferred from a receipt. All five now run.
+ * than inferred from a receipt.
+ *
+ * All SIX run. The sixth — `ec-oracle-follow` — was not refused; it was simply
+ * absent, because this list was written from the Builder's dropdown and never
+ * checked against the kit.
  */
 export const STRATEGY_SUPPORT: Record<EcStrategy, { supported: boolean; reason: string }> = {
   // A taker that crosses the spread — exactly what placeLimit(type:"ioc") does,
@@ -72,17 +116,40 @@ export const STRATEGY_SUPPORT: Record<EcStrategy, { supported: boolean; reason: 
     supported: true,
     reason: "Claims finalized markets through findClaimable + claim, fee-aware.",
   },
-  "ec-market-maker": {
+  "ec-maker": {
     supported: true,
     reason: "Rests a post-only bid and ask around fair, re-quoting as it moves.",
   },
-  "ec-passive-bid": {
+  "ec-passive": {
     supported: true,
     reason: "Rests one post-only bid, repriced as fair moves. Never pays the spread.",
   },
-  "ec-ladder": {
+  "ec-laddering-bot": {
     supported: true,
     reason: "A post-only grid each side of the mid, flattened inside expiry headroom.",
+  },
+  /**
+   * The sixth strategy, and the one PRISM did not know existed.
+   *
+   * It was missing because the strategy list was hand-written from the Builder
+   * UI and never checked against the kit — the same defect shape as the
+   * `INTERVALS` and `KNOWN_VENUE_IDS` constants. The README said "all five
+   * run", which read as completeness of a set that has six members.
+   *
+   * PRISM is unusually well placed for this one: the kit documents that
+   * `ec-oracle-follow` needs an underlying spot price and EXITS AT STARTUP on
+   * mainnet unless you wire an external exchange ticker. PRISM already reads
+   * Somnia's own on-chain EMA oracle in `sdk/venue/prices.ts` — the same feed
+   * these contracts settle against, not a third-party ticker that would merely
+   * look similar. On testnet that feed is live, so the strategy runs on the
+   * settlement source itself. The mainnet limitation is the kit's and is
+   * reported honestly at startup rather than papered over.
+   */
+  "ec-oracle-follow": {
+    supported: true,
+    reason:
+      "Compares Somnia's on-chain EMA oracle against the strike and takes the side " +
+      "the oracle implies, once past an edge threshold.",
   },
 };
 
@@ -112,6 +179,28 @@ export interface BotConfig {
   levels: number;
   /** Distance between ladder levels, in probability. */
   step: number;
+
+  /**
+   * Venue scoping. The kit lists `VENUE_ID` as REQUIRED and publishes a
+   * different id per network; PRISM was ignoring the key entirely, so a config
+   * that scoped itself to one venue silently traded across all of them.
+   * Null means unscoped, which is PRISM's default and stays valid.
+   */
+  venueId: string | null;
+
+  /** `AUTO_CLAIM` — sweep settled winnings alongside the strategy. Kit default true. */
+  autoClaim: boolean;
+  /** `AUTO_CLAIM_INTERVAL_MS`. Kit default 600000. */
+  autoClaimIntervalMs: number;
+  /** `CLAIM_SCAN` — how many finalized markets to scan. Kit default 25. */
+  claimScan: number;
+
+  /**
+   * `EDGE` — minimum |oracle-implied probability − book price| before
+   * `ec-oracle-follow` will cross. Below it the oracle disagrees with the book
+   * by less than the spread costs to take, so trading is negative-edge.
+   */
+  edge: number;
   /** Whether the block carried a syntactically valid key. NEVER the key itself. */
   hasKey: boolean;
   /** Keys present in the block that this parser did not recognise. */
@@ -176,8 +265,27 @@ const RECOGNISED_SUFFIXES = [
   "SPREAD",
   "LEVELS",
   "STEP",
+  // ec-oracle-follow: how far the oracle must disagree with the book to trade.
+  "EDGE",
 ];
-const RECOGNISED_EXACT = ["NETWORK", "DRY_RUN", "STRATEGY", "PRIVATE_KEY"];
+/**
+ * Exact keys the kit documents as common to every EC strategy.
+ *
+ * `VENUE_ID`, `AUTO_CLAIM`, `AUTO_CLAIM_INTERVAL_MS` and `CLAIM_SCAN` were all
+ * missing, so a kit-shaped config reported four "unrecognised keys" and PRISM
+ * ignored settings the operator had deliberately set — including the venue
+ * scope, which the kit marks REQUIRED.
+ */
+const RECOGNISED_EXACT = [
+  "NETWORK",
+  "DRY_RUN",
+  "STRATEGY",
+  "PRIVATE_KEY",
+  "VENUE_ID",
+  "AUTO_CLAIM",
+  "AUTO_CLAIM_INTERVAL_MS",
+  "CLAIM_SCAN",
+];
 
 const num = (v: string | undefined, fallback: number, warn: (s: string) => void, label: string) => {
   if (v === undefined) return fallback;
@@ -209,15 +317,20 @@ export function parseBotConfig(text: string): ParseResult {
   const rawStrategy = (pairs.get("STRATEGY") ?? "").toLowerCase().trim();
   if (!rawStrategy)
     return { ok: false, error: "No STRATEGY line. The Builder always emits one, e.g. STRATEGY=ec-starter." };
-  if (!(EC_STRATEGIES as readonly string[]).includes(rawStrategy))
+  // Accept the kit's canonical value OR the Builder's UI label. Rejecting
+  // `ec-maker` — the kit's own documented value — is what this used to do.
+  const strategy = canonicalStrategy(rawStrategy);
+  if (!strategy)
     return {
       ok: false,
       error:
         `STRATEGY "${rawStrategy}" is not an Event Contracts strategy. ` +
         `PRISM trades binaries only; the Builder's Spot track is a different venue surface. ` +
-        `Expected one of: ${EC_STRATEGIES.join(", ")}.`,
+        `Expected one of: ${EC_STRATEGIES.join(", ")} ` +
+        `(Builder labels ${Object.keys(STRATEGY_ALIASES).join(", ")} are accepted too).`,
     };
-  const strategy = rawStrategy as EcStrategy;
+  if (strategy !== rawStrategy)
+    warn(`STRATEGY "${rawStrategy}" is the Builder's label for "${strategy}" — running that.`);
 
   const rawNetwork = (pairs.get("NETWORK") ?? "testnet").toLowerCase().trim();
   if (rawNetwork !== "testnet" && rawNetwork !== "mainnet")
@@ -270,6 +383,13 @@ export function parseBotConfig(text: string): ParseResult {
       maxPosition: num(findBySuffix(pairs, "MAX_POSITION"), 10, warn, "MAX_POSITION"),
       intervalMs: num(findBySuffix(pairs, "INTERVAL_MS"), 8000, warn, "INTERVAL_MS"),
       spread: num(findBySuffix(pairs, "SPREAD"), 0.04, warn, "SPREAD"),
+      edge: num(findBySuffix(pairs, "EDGE"), 0.03, warn, "EDGE"),
+      venueId: pairs.get("VENUE_ID")?.trim() || null,
+      // Kit default is ON. Only an explicit "false" turns claiming off, so a
+      // typo leaves winnings being swept rather than silently abandoned.
+      autoClaim: (pairs.get("AUTO_CLAIM") ?? "true").toLowerCase().trim() !== "false",
+      autoClaimIntervalMs: num(pairs.get("AUTO_CLAIM_INTERVAL_MS"), 600_000, warn, "AUTO_CLAIM_INTERVAL_MS"),
+      claimScan: num(pairs.get("CLAIM_SCAN"), 25, warn, "CLAIM_SCAN"),
       levels: num(findBySuffix(pairs, "LEVELS"), 3, warn, "LEVELS"),
       step: num(findBySuffix(pairs, "STEP"), 0.01, warn, "STEP"),
       asset,

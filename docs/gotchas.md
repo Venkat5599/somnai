@@ -1,6 +1,8 @@
 # Venue behaviour PRISM designs around
 
-Every item here was reproduced live on Shannon, not read from a doc.
+Every item in the numbered sections was reproduced live on Shannon, not read
+from a doc. The table at the end reconciles them with the twelve the bot kit
+publishes, so the two lists can be compared rather than assumed to agree.
 
 ## 1. One strike per window
 
@@ -78,13 +80,64 @@ Offered 0.953, paid 0.886. Seeing that delta is corroboration a fill was real.
 ## 8. Smaller edges
 
 - `strike: 0` means *not struck yet*, not a price.
-- Active markets span **two venue ids**; pinning the documented one hides half
-  the book.
+- Active markets span **more than one venue id**, and the count moves - two when
+  this was written, four when last read. Pinning the documented one hides most of
+  the book. No number is asserted here on purpose; `MarketSnapshot.venues` counts
+  it live.
 - Pools are recycled across windows - key state by `marketId`, never by pool
   address.
 - Expiry headroom must scale to the interval. A flat 300s rule rejects every
   market on a venue running 5-minute windows.
 - `getMarketOnchain` resolves through the binary module, so the address book
-  must be supplied or every settlement read throws `NotConfiguredError`.
+  must be supplied or every settlement read throws. **This was written down here
+  and then not applied**: `signingExchange` passed the book, the read-only
+  `exchange()` in `sdk/venue/markets.ts` did not, and the wallet-connected path -
+  which builds its unsigned order through that exchange - failed in production
+  with `VENUE_UNREADABLE: Nothing was built to sign`. A gotcha in a document is
+  not a gotcha in the code. `scripts/probe-prepare.ts` now checks it.
 - The testnet Portfolio query times out often. The explorer account API is the
   reliable source for wallet history.
+
+---
+
+## Reconciliation with the bot kit's own list
+
+The kit publishes twelve sharp edges in
+[`docs/event-contracts.md`](https://github.com/somnia-chain/dreamdex-bot-kit/blob/main/docs/event-contracts.md).
+This file had eight, arrived at independently by reproducing them live. Mapping
+the two lists is how you find the ones nobody hit yet.
+
+| # | Kit's sharp edge | Where PRISM handles it |
+|---|---|---|
+| 1 | Only status 1 (Trading) accepts orders; don't trust the indexer | `isRoutable`, and `validateOrder` rejects `MARKET_NOT_TRADING` |
+| 2 | SDK writes skip simulation — check the receipt with `assertTxOk` | `assertTxOk` in `place-limit.ts`; `verifyExecution` re-derives from chain (gotcha 5) |
+| 3 | Float prices misalign the tick grid on 18-decimal venues; use `placeLimit` | `sdk/dreamdex/grid.ts` + `place-limit.ts` (gotcha 4) |
+| 4 | Unfilled limits rest with escrow locked — be explicit about IOC vs resting | IOC by default; `cancel.ts` pulls resting quotes; quote loop flattens on exit |
+| 5 | Every order needs `expireTimestampNs`, capped at market expiry | `place-limit.ts` — mandatory, `Math.min(wanted, onchain.expiry)` |
+| 6 | Use `quantize`; the SDK's `amountToPrecision` floors small sizes to zero | `toSteps(..., "floor")` in `grid.ts`, in lot units |
+| 7 | Escrow leaves and returns to the wallet — verify funding before signing | `readBalances` + `checkSpend`; `INSUFFICIENT_COLLATERAL` gated pre-signature |
+| 8 | Expiry headroom scales to the interval, not a fixed threshold | `headroomSec()` — 8% of interval, floored at 5s (gotcha 8) |
+| 9 | Indexer lags; treat on-chain state as authoritative | `verifyExecution` and `cancel.ts` read chain, never the indexer's view |
+| 10 | Markets recycle — key state by `marketId`, never pool address | `EventMarket.marketId` is the stable key (gotcha 8) |
+| 11 | `loadMarkets()` cannot find finalized binaries; use `listBinaryMarkets` | `findClaimable` in `settlement.ts` (gotcha 3) |
+| 12 | Don't parse the question text; read `strike` and `intervalSec` | `normalize.ts` reads the fields; `question` is carried but never parsed |
+
+**All twelve are covered.** Four of PRISM's eight are not on the kit's list at
+all — one strike per window, the indexer/RPC host confusion, successors not being
+pre-struck, and a taker paying the fill price rather than the offer. Those came
+from running against the venue rather than reading about it, which is the point
+of this file.
+
+**One was covered on paper and not in code.** The kit's edge 2 and this file's
+address-book note were both written down while `sdk/venue/markets.ts` still
+constructed its client without an address book — see the note under *Smaller
+edges*. Documentation is not a control.
+
+### The funding model
+
+The kit flags that `placeOrder` became `payable` with **auto-pull**: it draws
+collateral from the wallet directly, with no separate deposit step, and
+`placeTakerOrderWithoutVault` is removed. PRISM is on the correct side of this by
+construction — it routes through `trader.placeOrder` on SDK 0.28.1 and has no
+vault, deposit or withdraw code anywhere in the tree. Verified by grep, not by
+assumption; there is nothing to migrate.

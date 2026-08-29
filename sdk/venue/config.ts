@@ -93,10 +93,20 @@ export const COLLATERAL = {
  * venues, and never filter on it.
  */
 export const KNOWN_VENUE_IDS = {
-  /** Published in the bot-kit README. */
+  /** Testnet. Published in the bot-kit README and its docs/event-contracts.md. */
   primary: "0x679795a0195a1b76cdebb7c51d74e058aee92919b8c3389af86ef24535e8a28c",
-  /** Undocumented; observed carrying struck markets. */
+  /** Testnet. Undocumented; observed carrying struck markets. */
   pricefeed: "0x1a1e6821cde7d0159c0d293177871e09677b4e42307c7db3ba94f8648a5a050f",
+  /**
+   * MAINNET, from the kit's docs/event-contracts.md.
+   *
+   * PRISM had no mainnet venue id at all, which mattered because the kit marks
+   * `VENUE_ID` REQUIRED and publishes a different one per network — so a
+   * mainnet config had nothing to scope itself to. Carried as a label only;
+   * the kit's own note that "these values change frequently" is exactly why
+   * nothing here filters on it.
+   */
+  mainnet: "0x458b30c2d72bfd2c6317304a4594ecbafe5f729d3111b65fdc3a33bd48e5432d",
 } as const;
 
 /** A readable name for a venue id, or a truncation when we have none. */
