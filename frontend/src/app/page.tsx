@@ -44,11 +44,7 @@ export default async function HomePage() {
           text-column-plus-object-column skeleton.
           ============================================================ */}
       <section className="relative flex-1 min-h-[calc(100dvh-56px)] flex flex-col">
-        {/* Atmosphere: a single-hue noise field lit from the upper left.
-            Purely decorative and strictly below the content — if WebGL is
-            missing, the context is lost, or reduced-motion is set, the fold
-            renders exactly as it does now, minus the light. */}
-        <HeroFieldGL />
+
 
         <div className="relative z-10 flex-1 flex flex-col [justify-content:safe_end]">
           <div className="w-full max-w-[1560px] mx-auto px-5 sm:px-8 lg:px-12 pt-10 pb-0">
@@ -67,8 +63,10 @@ export default async function HomePage() {
                 eyebrow-headline-subtext-buttons column every landing page ships.
                 A single action, too: a filled primary beside an outlined ghost
                 is a preset, and the secondary link was carrying no weight. */}
+            <div className="mt-7 grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,26rem)] lg:gap-12 lg:items-start">
+            <div>
             <Reveal step={1}>
-              <div className="mt-7 flex flex-col gap-6 lg:flex-row lg:items-end lg:gap-14">
+              <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:gap-14">
                 <p className="lg:w-[46ch] shrink-0 text-[15px] leading-[24px] text-ink-2">
                   A DreamDEX Event Contract is a digital option that expires every
                   few minutes. PRISM states your view once and carries it across
@@ -124,6 +122,21 @@ export default async function HomePage() {
                 />
               </div>
             </Reveal>
+            </div>
+
+            {/* THE SHADER, AS AN OBJECT. Not a page background — a real element
+                with its own edge, sitting in the layout beside the content. The
+                board opposite it is live data; this is the light. */}
+            <Reveal step={2}>
+              <div className="relative aspect-[4/5] lg:aspect-auto lg:h-[26rem] w-full overflow-hidden rounded-[14px] border border-line">
+                <HeroFieldGL intensity={0.95} />
+                <div className="pointer-events-none absolute inset-0 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.07)] rounded-[14px]" />
+                <span className="absolute left-4 bottom-4 text-label-xs uppercase tracking-[0.05em] text-ink-2/80">
+                  Refraction field
+                </span>
+              </div>
+            </Reveal>
+            </div>
           </div>
         </div>
 
