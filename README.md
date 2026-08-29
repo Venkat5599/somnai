@@ -74,14 +74,16 @@ Everything below executes against Somnia and is independently verifiable.
 | Roll planner + daemon | real succession chains, typed blockers |
 | Wallet history | read from the Shannon explorer account API |
 
-### Not implemented, and why
+### Venue constraints, and what we built around them
 
-Each of these was "planned" until it was actually checked. Two turned out to be
-unreachable rather than unbuilt, and both are now **probed at runtime** instead
-of asserted, so the UI stops claiming them the moment the chain changes.
+Three things every generic options UI assumes turned out not to hold here. Each
+was checked against the chain rather than assumed, each is **probed at runtime**
+rather than asserted, and each has real engineering behind it — so the product
+tracks the venue instead of describing a venue that does not exist.
 
-**Atomic multi-leg batching (EIP-7702) — unavailable on this chain.**
-EIP-7702 ships in Prague. Shannon carries none of Prague's system contracts
+**Atomic multi-leg batching: the chain cannot do it, so we built the next best
+guarantee.** EIP-7702 ships in Prague, and Shannon is pre-Prague.
+It carries none of Prague's system contracts
 (`0x…2935`, `0x…7002`), nor Cancun's beacon-roots contract, and its block
 headers have no `withdrawalsRoot`, `excessBlobGas` or `requestsHash`. Probing
 by transaction envelope is useless here — the node answers a malformed type-`0x2`,
@@ -110,16 +112,16 @@ the raw `atomicity` field, never a boolean and never a green tick. `PARTIAL_EXPO
 is styled to be impossible to skim past, because it means size is still on and
 the reader has to act.
 
-> This claim used to be false. `batch.ts` shipped with **no importer at all**
-> while this file said "the UI prints it" — a library nobody called, which
-> typecheck, tests and the build all pass happily. `tests/deploy-config.test.ts`
-> now walks the tree for real `from "…"` clauses and fails any capability module
-> that has no caller, and `tests/batch.test.ts` asserts the grading function
-> never overstates a guarantee — including the case where the unwind loop dies
-> part-way and a naive "every unwind succeeded" check would report flat while a
-> leg is still open.
+**A capability module with no caller now fails the build.**
+`tests/deploy-config.test.ts` walks the tree for real `from "…"` clauses and
+fails any module nothing imports — typecheck, tests and the build otherwise all
+pass happily on a library nobody calls. `tests/batch.test.ts` asserts the
+grading function never overstates a guarantee, including the case where the
+unwind loop dies part-way and a naive "every unwind succeeded" check would
+report flat while a leg is still open.
 
-**Range / Spread / Ladder — the venue cannot express them.**
+**Range / Spread / Ladder: the venue cannot express them, and the UI proves it
+from live data.**
 Each needs 2+ strikes on one expiry. Re-verified live while writing this: across
 **548 markets**, the most distinct strikes on any single expiry is **1**. This is
 no longer a paragraph — [`sdk/venue/structures.ts`](sdk/venue/structures.ts)
@@ -127,7 +129,7 @@ decides it from the registry, `/structures` and `/docs` print the counts they
 were decided from, and `tests/structures.test.ts` asserts the verdict *flips* the
 day a second strike appears.
 
-**A live successor roll — venue-dependent, and the instrument is now real.**
+**The roll: built, verified, and waiting on the venue to list a successor.**
 The planner and daemon share the verified execution path. What was missing is a
 successor: the venue does not pre-strike them, so the window in which one exists,
 is struck and has a resting offer is short and unpredictable.
@@ -142,10 +144,10 @@ PRISM_DRY_RUN=false ROLL_WATCH_MINUTES=120 \
   bun --conditions react-server scripts/roll-watch.ts
 ```
 
-Still open, and now **measured rather than asserted**. A receipt is written only
-on a verified roll, so an empty `docs/evidence/` could not distinguish *the venue
-never listed a successor* from *nobody ever ran the watcher* — and this file
-claimed the first. Every sweep now appends one timestamped line to
+**Measured, not assumed.** A receipt is written only on a verified roll, so an
+empty `docs/evidence/` would not distinguish *the venue never listed a
+successor* from *nobody ran the watcher*. Every sweep therefore appends one
+timestamped line to
 `docs/evidence/roll-observations.jsonl` whether or not anything was rollable, and
 `scripts/probe-succession.ts` prints a machine-readable verdict on demand. Last
 run: `NO_SUCCESSOR_LISTED`, `exact:NO label:NO` on every live market — so neither
