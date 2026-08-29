@@ -61,6 +61,7 @@ export function TradeTerminal({
   prices,
   requestedId,
   venueError,
+  openingOutcome,
 }: {
   market: EventMarket | null;
   routable: EventMarket[];
@@ -70,10 +71,14 @@ export function TradeTerminal({
   prices: PriceSnapshot | null;
   requestedId: string | null;
   venueError: string | null;
+  /** Which side actually has resting depth, decided server-side. */
+  openingOutcome: Outcome;
 }) {
   const router = useRouter();
   const [structure, setStructure] = useState<StructureId>("DIRECTIONAL");
-  const [outcome, setOutcome] = useState<Outcome>("YES");
+  // Seeded from the server's read of real depth, not hard-coded to YES. See
+  // page.tsx: landing on a side with no book is a dead end the data can avoid.
+  const [outcome, setOutcome] = useState<Outcome>(openingOutcome);
   const [view, setView] = useState<"payoff" | "market">("payoff");
 
   const now = useCountdown();

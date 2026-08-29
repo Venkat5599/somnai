@@ -142,9 +142,24 @@ export default async function TradePage({
     venueError = e instanceof Error ? e.message : String(e);
   }
 
+  /**
+   * Land on the side that is actually quoting.
+   *
+   * Books on this venue are frequently ONE-SIDED, so defaulting to YES drops the
+   * reader on "no resting offer, nothing to price against" with a dead Buy
+   * button — while the page itself prints that NO is quoting. Knowing which side
+   * has depth and opening the other one is the whole defect: the data was
+   * already here, nothing acted on it.
+   *
+   * Depth decides, and YES only wins a tie because the venue quotes in YES terms.
+   */
+  const openingOutcome: Outcome =
+    book.YES.depth > 0 || book.NO.depth === 0 ? "YES" : "NO";
+
   return (
     <TradeTerminal
       market={selected}
+      openingOutcome={openingOutcome}
       routable={routable}
       active={active}
       succession={succession}
