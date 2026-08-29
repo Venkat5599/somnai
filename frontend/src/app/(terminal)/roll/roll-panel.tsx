@@ -55,7 +55,7 @@ export function RollPanel({ marketId }: { marketId: string }) {
               className={cx(
                 "px-3 text-[11px] uppercase tracking-[0.05em] transition-colors",
                 o === outcome
-                  ? o === "YES" ? "bg-[#06251a] text-up" : "bg-[#250d0d] text-down"
+                  ? o === "YES" ? "bg-[#262220] text-up" : "bg-[#262220] text-down"
                   : "text-ink-3 hover:text-ink hover:bg-surface-2",
               )}
             >
@@ -100,7 +100,7 @@ export function RollPanel({ marketId }: { marketId: string }) {
       {plan ? (
         <div className="px-3 pb-3">
           {plan.ok ? (
-            <div className="border border-[#2a4470] bg-[#101a2e] p-2.5">
+            <div className="border border-[#3f3a35] bg-[#1f1a13] p-2.5">
               <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 num text-[11px]">
                 <span className="text-ink-3">
                   from <span className="text-ink">{plan.from?.strike?.toFixed(2) ?? "—"}</span>
@@ -140,10 +140,10 @@ export function RollPanel({ marketId }: { marketId: string }) {
             className={cx(
               "border p-2.5",
               result.status === "VERIFIED_EXECUTED"
-                ? "border-[#0f3b28] bg-[#08170f]"
+                ? "border-[#2a2724] bg-[#1f1d1a]"
                 : result.status === "VERIFIED_FAILED"
-                  ? "border-[#4a1c1c] bg-[#1a0a0a]"
-                  : "border-[#4d3b17] bg-[#1a1408]",
+                  ? "border-[#2a2a2a] bg-[#1f1d1a]"
+                  : "border-[#2a2a2a] bg-[#1f1d1a]",
             )}
           >
             <span className="inline-flex items-center gap-2">

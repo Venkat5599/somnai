@@ -145,9 +145,9 @@ export function HeroFieldGL({
   /** Ceiling on how far toward the accent the brightest point travels. */
   intensity = 0.34,
   /** Substrate the field sits on. Defaults to the terminal's near-black. */
-  base = "#050505",
+  base = "#0c0b0a",
   /** The single hue the noise drives intensity along. */
-  accent = "#4d7cfe",
+  accent = "#e0a33f",
   className,
 }: {
   intensity?: number;

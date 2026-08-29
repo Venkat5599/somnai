@@ -31,9 +31,9 @@ const CLAIMS = [
 
 export function ClaimMarquee({
   /** Substrate behind the field. Defaults to the terminal's near-black. */
-  base = "#05070e",
+  base = "#0c0b0a",
   /** The single hue the field is lit in. */
-  accent = "#4d7cfe",
+  accent = "#e0a33f",
   /** Ink for the claims themselves. Must clear the field by a real value gap. */
   ink = "var(--color-ink-2)",
 }: {

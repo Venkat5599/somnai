@@ -21,7 +21,7 @@ export interface RefractionLeg {
   detail: string;
 }
 
-const COLORS = ["#7fa3ff", "#00b4ff", "#0072ff"];
+const COLORS = ["#eab765", "#e0a33f", "#0072ff"];
 
 const DEFAULT_LEGS: RefractionLeg[] = [
   { label: "LONG UP", detail: "lower strike" },
@@ -75,8 +75,8 @@ export function Refraction({
       >
         <defs>
           <linearGradient id="rf-in" x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0" stopColor="#ffffff" stopOpacity="0.18" />
-            <stop offset="1" stopColor="#ffffff" stopOpacity="0.95" />
+            <stop offset="0" stopColor="#e0a33f" stopOpacity="0.18" />
+            <stop offset="1" stopColor="#e0a33f" stopOpacity="0.95" />
           </linearGradient>
           {rows.map((_, i) => (
             <linearGradient key={i} id={`rf-out-${i}`} x1="0" y1="0" x2="1" y2="0">
@@ -95,7 +95,7 @@ export function Refraction({
           stroke="url(#rf-in)"
           strokeWidth="1.5"
         />
-        <rect x={entryX - 2.5} y={entryY - 2.5} width="5" height="5" fill="#ffffff" />
+        <rect x={entryX - 2.5} y={entryY - 2.5} width="5" height="5" fill="#e0a33f" />
 
         {/* prism body — the bespoke silhouette */}
         <path
@@ -122,7 +122,7 @@ export function Refraction({
           strokeDasharray="3 3"
           style={{ animation: "prism-dash 1.6s linear infinite" }}
         />
-        <rect x={exitX - 2.5} y={exitY - 2.5} width="5" height="5" fill="#7fa3ff" />
+        <rect x={exitX - 2.5} y={exitY - 2.5} width="5" height="5" fill="#eab765" />
 
         {/* outgoing legs, all departing from the single exit point */}
         {rows.map((leg, i) => {
@@ -168,7 +168,7 @@ export function Refraction({
                   x={endX + 14}
                   y={y + 13}
                   dominantBaseline="middle"
-                  fill="#6f7677"
+                  fill="#625b53"
                   fontSize="9.5"
                   letterSpacing="0.02em"
                   fontFamily="var(--font-geist-mono), ui-monospace, monospace"
@@ -184,7 +184,7 @@ export function Refraction({
         <text
           x="10"
           y={entryY - 13}
-          fill="#6f7677"
+          fill="#625b53"
           fontSize="9.5"
           fontWeight="600"
           letterSpacing="0.1em"

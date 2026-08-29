@@ -68,7 +68,17 @@ export function ExecutePanel({
     setSelfHash(null);
     start(async () => {
       setSelfState("Preparing");
-      const prep = await prepareForWallet({ marketId: market.marketId, outcome, amount });
+      if (!address) {
+        setSelfError("Connect a wallet first — the order is built for its address.");
+        setSelfState(null);
+        return;
+      }
+      const prep = await prepareForWallet({
+        marketId: market.marketId,
+        outcome,
+        amount,
+        owner: address,
+      });
       if (!prep.ok) {
         setSelfError(`${prep.reason}: ${prep.detail}`);
         setSelfState(null);
@@ -152,8 +162,8 @@ export function ExecutePanel({
                 "h-10 text-[13px] uppercase tracking-[0.05em] transition-colors disabled:opacity-50",
                 o === outcome
                   ? o === "YES"
-                    ? "bg-[#06251a] text-up"
-                    : "bg-[#250d0d] text-down"
+                    ? "bg-[#262220] text-up"
+                    : "bg-[#262220] text-down"
                   : "bg-surface text-ink-3 hover:text-ink hover:bg-surface-2",
               )}
             >
@@ -304,7 +314,7 @@ export function ExecutePanel({
       ) : null}
 
       {selfHash && !busy ? (
-        <div className="border border-[#0f3b28] bg-[#08170f] p-3">
+        <div className="border border-[#2a2724] bg-[#1f1d1a] p-3">
           <span className="inline-flex items-center gap-2">
             <IconCheck size={14} className="text-up" />
             <span className="text-label-xs uppercase text-ink">Signed and broadcast</span>
@@ -395,7 +405,7 @@ function SizeField({
       <div
         className={cx(
           "flex items-stretch border transition-colors",
-          over ? "border-[#4a1c1c]" : "border-line focus-within:border-accent",
+          over ? "border-[#2a2a2a]" : "border-line focus-within:border-accent",
         )}
       >
         <input
@@ -487,7 +497,7 @@ function Result({ report }: { report: ExecutionReport }) {
     <div
       className={cx(
         "border p-3",
-        ok ? "border-[#0f3b28] bg-[#08170f]" : bad ? "border-[#4a1c1c] bg-[#1a0a0a]" : "border-[#4d3b17] bg-[#1a1408]",
+        ok ? "border-[#2a2724] bg-[#1f1d1a]" : bad ? "border-[#2a2a2a] bg-[#1f1d1a]" : "border-[#2a2a2a] bg-[#1f1d1a]",
       )}
     >
       <div className="flex items-center justify-between gap-3">

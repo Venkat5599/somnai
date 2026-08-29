@@ -4,45 +4,57 @@
 /* ============================================================
    PRISM — design tokens
    Source of truth: DESIGN.md (Professional Minimalist Glassmorphism)
-   NAVY + BLACK foundation, 1px structural borders, single accent.
+   WARM CHARCOAL foundation, 1px structural borders, one amber accent.
 
-   The substrate is a near-black with a blue cast rather than a neutral one, and
-   panels lift to a real navy instead of a grey. That is the difference between
-   "dark theme" and a palette: every surface belongs to one hue family, so the
-   accent sits inside the scheme rather than on top of it.
+   Pure greyscale was flat: with no hue anywhere, every surface sat at the same
+   temperature and the eye had nothing to rank. Depth in a dark UI comes from
+   value AND warmth, not value alone.
 
-   The accent moved from cyan to blue for the same reason. Cyan was a second hue
-   competing with the navy; this one is the same family, several steps brighter.
+   The substrate is a warm near-black rather than the cool blue-charcoal every
+   dark product defaults to — that slate-indigo base is the night-mode twin of
+   the blue-purple gradient, and it signals a theme nobody chose. Panels warm
+   further as they lift, so a raised surface reads as closer rather than merely
+   lighter.
+
+   The accent is amber. It belongs to the same warm family as the substrate
+   instead of sitting on top of it, it is not one of the three hues every
+   crypto interface reaches for, and at this weight it reads as brass on dark
+   rather than as a highlighter.
+
+   UP AND DOWN keep hue, deliberately. Direction is the one thing a trading
+   surface must never make ambiguous, so they are a muted green and a warm
+   terracotta — both desaturated enough to belong here, both separated in VALUE
+   as well as hue so they survive greyscale and colour blindness.
    ============================================================ */
 
 @theme {
   /* --- surfaces --- */
-  --color-base: #05070e;
-  --color-surface: #0b1120;
-  --color-surface-2: #111a2e;
-  --color-surface-3: #17223c;
+  --color-base: #0c0b0a;
+  --color-surface: #161412;
+  --color-surface-2: #1e1b18;
+  --color-surface-3: #262220;
 
   /* --- structural borders (the defining element) --- */
-  --color-line: #1e2740;
-  --color-line-strong: #2d3a5c;
-  --color-line-soft: #151d31;
+  --color-line: #2a2724;
+  --color-line-strong: #3f3a35;
+  --color-line-soft: #1f1d1a;
 
   /* --- type --- */
-  --color-ink: #ffffff;
-  --color-ink-2: #b9c2d6;
-  --color-ink-3: #7d89a3;
-  --color-ink-4: #5d6880;
+  --color-ink: #f6f4f1;
+  --color-ink-2: #b6afa6;
+  --color-ink-3: #877f75;
+  --color-ink-4: #625b53;
 
-  /* --- accent: sole primary --- */
-  --color-accent: #4d7cfe;
-  --color-accent-dim: #3f6ae8;
-  --color-accent-deep: #16233f;
-  --color-accent-ink: #05070e;
+  /* --- accent: sole primary. Brass, not highlighter. --- */
+  --color-accent: #e0a33f;
+  --color-accent-dim: #c98d2e;
+  --color-accent-deep: #2b2115;
+  --color-accent-ink: #0c0b0a;
 
-  /* --- semantic --- */
-  --color-up: #2fd98a;
-  --color-down: #ff5c5c;
-  --color-warn: #ffb454;
+  /* --- semantic: hue AND value, so direction is never ambiguous --- */
+  --color-up: #6cc08a;
+  --color-down: #d97757;
+  --color-warn: #d9a441;
 
   /* --- type scale (DESIGN.md) --- */
   --text-display-lg: 32px;

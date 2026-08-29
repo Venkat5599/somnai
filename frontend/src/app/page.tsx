@@ -82,7 +82,7 @@ function Card({
         {stat ? (
           <span
             className="num text-[13px] shrink-0 tabular-nums"
-            style={{ color: "var(--pg-accent)" }}
+            style={{ color: "var(--pg-ink-2)" }}
           >
             {stat}
           </span>
@@ -97,7 +97,7 @@ function Card({
       {href ? (
         <span
           className="mt-3 inline-flex items-center gap-2 text-[13px] transition-opacity group-hover:opacity-70"
-          style={{ color: "var(--pg-accent)" }}
+          style={{ color: "var(--pg-ink)" }}
         >
           Open
           <IconArrowOut size={13} />
@@ -137,7 +137,7 @@ function Cta({
       style={
         tone === "solid"
           ? { background: "var(--pg-ink)", color: "var(--pg-card)" }
-          : { background: "var(--pg-accent-soft)", color: "var(--pg-accent)" }
+          : { background: "var(--pg-card)", color: "var(--pg-ink)", border: "1px solid var(--pg-line)" }
       }
     >
       {children}
@@ -322,7 +322,7 @@ export default async function HomePage() {
                         </span>
                         <span
                           className="num text-[13px] tabular-nums w-[5rem] text-right"
-                          style={{ color: live ? "var(--pg-accent)" : "var(--pg-ink-3)" }}
+                          style={{ color: live ? "var(--pg-ink)" : "var(--pg-ink-3)" }}
                         >
                           {left <= 0 ? "closed" : `${Math.floor(left / 60)}m ${left % 60}s`}
                         </span>
@@ -537,7 +537,7 @@ export default async function HomePage() {
               <Link
                 href="/proof"
                 className="inline-flex items-center gap-2 h-11 px-5 rounded-[10px] text-[14px] font-medium transition-opacity hover:opacity-85"
-                style={{ background: "var(--pg-accent)", color: "#fff" }}
+                style={{ background: "#ffffff", color: "var(--pg-ink)" }}
               >
                 Read the proof
                 <IconArrowRight size={15} />
@@ -604,18 +604,22 @@ function MarketingNav() {
         <div className="ml-auto flex items-center gap-2.5 shrink-0">
           <span
             className="hidden sm:inline-flex items-center gap-2 h-9 px-3 rounded-[9px] text-label-xs uppercase"
-            style={{ background: "var(--pg-accent-soft)", color: "var(--pg-accent)" }}
+            style={{
+              background: "var(--pg-card)",
+              color: "var(--pg-ink-2)",
+              border: "1px solid var(--pg-line)",
+            }}
           >
             <span
               className="pip-live inline-block w-[5px] h-[5px] rounded-full"
-              style={{ background: "var(--pg-accent)" }}
+              style={{ background: "var(--pg-ink)" }}
             />
             {NETWORK.name}
           </span>
           <Link
             href="/trade"
             className="inline-flex items-center h-9 px-4 rounded-[9px] text-[13.5px] font-medium transition-opacity hover:opacity-85"
-            style={{ background: "var(--pg-accent)", color: "#fff" }}
+            style={{ background: "var(--pg-ink)", color: "var(--pg-card)" }}
           >
             Launch
           </Link>

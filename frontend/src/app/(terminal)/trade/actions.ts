@@ -176,6 +176,8 @@ export async function prepareForWallet(input: {
   marketId: string;
   outcome: Outcome;
   amount: number;
+  /** The connected wallet. The builder tier is bound to it; see prepare.ts. */
+  owner: string;
 }) {
   const config = resolveVenueConfig();
   const rate = checkRate(await callerKey());
@@ -195,7 +197,13 @@ export async function prepareForWallet(input: {
     const market = snap.all.find((m) => m.marketId === input.marketId) ?? null;
     const { prepareOrder } = await import("@sdk/dreamdex/prepare");
     return await prepareOrder(
-      { marketId: input.marketId, outcome: input.outcome, side: "buy", amount: input.amount },
+      {
+        marketId: input.marketId,
+        outcome: input.outcome,
+        side: "buy",
+        amount: input.amount,
+        owner: input.owner,
+      },
       market,
       config,
     );

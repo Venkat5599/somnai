@@ -100,7 +100,7 @@ const VARIANT: Record<Variant, string> = {
   quiet:
     "bg-transparent text-ink-3 hover:text-ink hover:bg-surface-2 active:bg-surface-3",
   danger:
-    "bg-transparent text-down border border-[#4a1c1c] hover:bg-[#1c0d0d] hover:border-[#6a2626]",
+    "bg-transparent text-down border border-[#2a2a2a] hover:bg-[#1f1d1a] hover:border-[#6a2626]",
 };
 
 const SIZE: Record<Size, string> = {
@@ -153,10 +153,10 @@ type Tone = "neutral" | "accent" | "up" | "down" | "warn";
 
 const TONE: Record<Tone, string> = {
   neutral: "border-line text-ink-3",
-  accent: "border-[#2a4470] text-accent",
-  up: "border-[#0f3b28] text-up",
-  down: "border-[#4a1c1c] text-down",
-  warn: "border-[#4d3b17] text-warn",
+  accent: "border-[#3f3a35] text-accent",
+  up: "border-[#2a2724] text-up",
+  down: "border-[#2a2a2a] text-down",
+  warn: "border-[#2a2a2a] text-warn",
 };
 
 export function Chip({
@@ -305,7 +305,7 @@ export function Segmented<T extends string>({
             className={cx(
               "h-9 px-3.5 text-[12px] uppercase tracking-[0.05em] transition-colors duration-150",
               on
-                ? "bg-[#16233f] text-accent"
+                ? "bg-[#2b2115] text-accent"
                 : "bg-surface text-ink-3 hover:bg-surface-2 hover:text-ink",
             )}
           >
@@ -443,8 +443,8 @@ export function Note({
     <div
       className={cx(
         "flex items-start gap-2.5 border p-3 text-[12px] leading-[17px]",
-        tone === "accent" && "border-[#2a4470] bg-[#101a2e] text-ink-2",
-        tone === "warn" && "border-[#4d3b17] bg-[#1a1408] text-ink-2",
+        tone === "accent" && "border-[#3f3a35] bg-[#1f1a13] text-ink-2",
+        tone === "warn" && "border-[#2a2a2a] bg-[#1f1d1a] text-ink-2",
         tone === "neutral" && "border-line bg-surface-2 text-ink-3",
       )}
     >

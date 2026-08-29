@@ -136,7 +136,7 @@ function RailContent({ pathname }: { pathname: string }) {
                   "relative flex items-center gap-3 h-10 pl-4 pr-3",
                   "text-[13px] transition-colors duration-150",
                   active
-                    ? "bg-[#16233f] text-accent font-medium"
+                    ? "bg-[#2b2115] text-accent font-medium"
                     : "text-ink-3 hover:text-ink hover:bg-surface-2",
                 )}
               >

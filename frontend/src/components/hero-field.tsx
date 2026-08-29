@@ -29,7 +29,7 @@
  *    error boundary. Delete it and the hero still reads in full — the
  *    headline, the actions and the live ladder never depend on it.
  * 2. NO SEAM. The library paints its own dark ground; `screen` blending drops
- *    that to nothing over PRISM's #050505 so no band appears at either edge,
+ *    that to nothing over PRISM's #0c0b0a so no band appears at either edge,
  *    and a long, finely-stepped mask eases the field out well before the
  *    section boundary.
  * 3. IT COSTS THE COPY NOTHING. The mask is anchored low and right, holding
@@ -166,7 +166,7 @@ export function HeroField() {
       aria-hidden
       className="pointer-events-none absolute inset-0 z-0 overflow-hidden"
       style={{
-        // Drops the library's own dark ground so PRISM's #050505 carries
+        // Drops the library's own dark ground so PRISM's #0c0b0a carries
         // straight through and the fold gains no horizontal band.
         mixBlendMode: "screen",
         maskImage: MASK,

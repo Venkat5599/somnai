@@ -17,8 +17,8 @@ import { wagmiConfig } from "@/lib/wagmi";
 import "@rainbow-me/rainbowkit/styles.css";
 
 const prismTheme = darkTheme({
-  accentColor: "#4d7cfe",
-  accentColorForeground: "#050505",
+  accentColor: "#e0a33f",
+  accentColorForeground: "#0c0b0a",
   borderRadius: "none",
   overlayBlur: "none",
   fontStack: "system",

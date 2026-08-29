@@ -32,6 +32,7 @@ import { headroomSec, type EventMarket, type Outcome } from "@sdk/venue/types";
 import { exchange } from "@sdk/venue/markets";
 import { ORDER_TYPE } from "@somnia-chain/markets-sdk";
 import { gridFor, toSteps } from "./grid";
+import { builderExchange } from "./markets-builder";
 
 export interface UnsignedCallDTO {
   to: string;
@@ -67,6 +68,11 @@ export async function prepareOrder(
     amount: number;
     /** Probability in (0,1). Omitted crosses the book. */
     price?: number;
+    /**
+     * The wallet that will sign. Required: the SDK's builder tier is gated
+     * behind an account, and the approval it encodes is owner-specific.
+     */
+    owner: string;
   },
   market: EventMarket | null,
   config: VenueConfig = resolveVenueConfig(),
@@ -142,7 +148,12 @@ export async function prepareOrder(
   const priceYes = args.outcome === "YES" ? priceOwn : one - priceOwn;
   const expiresAt = Math.min(Math.floor(Date.now() / 1000) + 120, Number(oc.expiry));
 
-  const trader = (ex as unknown as {
+  // Read through the read-only client above; BUILD through one bound to the
+  // user's address. Neither can sign — see markets-builder.ts.
+  if (!/^0x[0-9a-fA-F]{40}$/.test(args.owner))
+    return { ok: false, reason: "BUILD_FAILED", detail: "No connected wallet address was supplied." };
+
+  const trader = (builderExchange(args.owner, config) as unknown as {
     trader: { buildPlaceOrder: (p: unknown) => Promise<Record<string, unknown>> };
   }).trader;
 

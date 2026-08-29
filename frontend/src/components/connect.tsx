@@ -29,7 +29,7 @@ export function Connect() {
             <button
               type="button"
               onClick={openConnectModal}
-              className={cx(base, "border-[#2a4470] text-accent hover:bg-[#16233f]")}
+              className={cx(base, "border-[#3f3a35] text-accent hover:bg-[#2b2115]")}
             >
               Connect wallet
             </button>
@@ -40,7 +40,7 @@ export function Connect() {
             <button
               type="button"
               onClick={openChainModal}
-              className={cx(base, "border-[#4a1c1c] text-down hover:bg-[#1c0d0d]")}
+              className={cx(base, "border-[#2a2a2a] text-down hover:bg-[#1f1d1a]")}
             >
               Wrong network
             </button>

@@ -25,12 +25,12 @@ import {
 import type { Candle, LivePrice, Timeframe } from "@sdk/venue/prices";
 import { cx } from "./ui";
 
-const ACCENT = "#4d7cfe";
+const ACCENT = "#e0a33f";
 const UP = "#00ff88";
 const DOWN = "#ff3b3b";
-const LINE = "#222222";
-const INK3 = "#888888";
-const BASE = "#050505";
+const LINE = "#2a2724";
+const INK3 = "#877f75";
+const BASE = "#0c0b0a";
 
 export function PriceChart({
   candles,
@@ -78,8 +78,8 @@ export function PriceChart({
       crosshair: {
         // Sharp 1px crosshair, no rounded label pills.
         mode: 0,
-        vertLine: { color: ACCENT, width: 1, style: 2, labelBackgroundColor: "#16233f" },
-        horzLine: { color: ACCENT, width: 1, style: 2, labelBackgroundColor: "#16233f" },
+        vertLine: { color: ACCENT, width: 1, style: 2, labelBackgroundColor: "#2b2115" },
+        horzLine: { color: ACCENT, width: 1, style: 2, labelBackgroundColor: "#2b2115" },
       },
       handleScale: { axisPressedMouseMove: false },
     });
@@ -181,7 +181,7 @@ export function PriceChart({
                 className={cx(
                   "px-2.5 text-[11px] uppercase tracking-[0.05em] transition-colors",
                   t === timeframe
-                    ? "bg-[#16233f] text-accent"
+                    ? "bg-[#2b2115] text-accent"
                     : "text-ink-3 hover:text-ink hover:bg-surface-2",
                 )}
               >

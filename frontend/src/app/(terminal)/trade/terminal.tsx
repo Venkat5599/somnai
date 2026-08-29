@@ -205,7 +205,7 @@ export function TradeTerminal({
                     !s.live
                       ? "bg-base text-ink-4 cursor-not-allowed"
                       : s.id === structure
-                        ? "bg-[#16233f] text-accent"
+                        ? "bg-[#2b2115] text-accent"
                         : "bg-surface text-ink-3 hover:text-ink hover:bg-surface-2",
                   )}
                 >
@@ -247,7 +247,7 @@ export function TradeTerminal({
                 className={cx(
                   "px-2.5 text-[11px] uppercase tracking-[0.05em] transition-colors",
                   v === view
-                    ? "bg-[#16233f] text-accent"
+                    ? "bg-[#2b2115] text-accent"
                     : "text-ink-3 hover:text-ink hover:bg-surface-2",
                 )}
               >
@@ -338,7 +338,7 @@ function ExpiryBlock({
 
   if (phase === "expired") {
     return (
-      <div className="border border-[#4a1c1c] bg-[#1a0a0a] p-3">
+      <div className="border border-[#2a2a2a] bg-[#1f1d1a] p-3">
         <p className="text-label-xs uppercase text-down">Market expired</p>
         <p className="text-[12px] leading-[17px] text-ink-2 mt-1.5">
           This window is no longer executable.
@@ -365,9 +365,9 @@ function ExpiryBlock({
       className={cx(
         "border p-3",
         phase === "imminent"
-          ? "border-[#4a1c1c] bg-[#1a0a0a]"
+          ? "border-[#2a2a2a] bg-[#1f1d1a]"
           : phase === "closing"
-            ? "border-[#4d3b17] bg-[#1a1408]"
+            ? "border-[#2a2a2a] bg-[#1f1d1a]"
             : "border-line bg-surface-2",
       )}
     >
@@ -487,20 +487,20 @@ function BinaryPayoff({
         role="img"
         aria-label={`Payoff for ${outcome} at strike ${k}: ${win.toFixed(3)} per contract if it resolves ${outcome}, ${lose.toFixed(3)} otherwise.`}
       >
-        <g stroke="#222222" strokeWidth="1" strokeDasharray="2 4">
+        <g stroke="#2a2724" strokeWidth="1" strokeDasharray="2 4">
           {[0, 0.5, 1].map((f) => (
             <line key={f} x1={PAD.l} y1={PAD.t + ih * f} x2={PAD.l + iw} y2={PAD.t + ih * f} />
           ))}
         </g>
 
         {/* zero line */}
-        <line x1={PAD.l} y1={Y(0)} x2={PAD.l + iw} y2={Y(0)} stroke="#2d3a5c" strokeWidth="1" />
+        <line x1={PAD.l} y1={Y(0)} x2={PAD.l + iw} y2={Y(0)} stroke="#3f3a35" strokeWidth="1" />
 
         {/* the step */}
         <path
           d={`M${PAD.l} ${Y(leftPnl)} L${X(k)} ${Y(leftPnl)} L${X(k)} ${Y(rightPnl)} L${PAD.l + iw} ${Y(rightPnl)}`}
           fill="none"
-          stroke="#4d7cfe"
+          stroke="#e0a33f"
           strokeWidth="1.5"
           strokeLinejoin="miter"
         />
@@ -511,26 +511,26 @@ function BinaryPayoff({
           y1={PAD.t}
           x2={X(k)}
           y2={PAD.t + ih}
-          stroke="#4d7cfe"
+          stroke="#e0a33f"
           strokeWidth="1"
           strokeOpacity="0.4"
           strokeDasharray="3 3"
         />
-        <text x={X(k)} y={PAD.t - 8} fill="#4d7cfe" fontSize="9.5" fontWeight="600" textAnchor="middle" letterSpacing="0.08em">
+        <text x={X(k)} y={PAD.t - 8} fill="#e0a33f" fontSize="9.5" fontWeight="600" textAnchor="middle" letterSpacing="0.08em">
           STRIKE
         </text>
 
         {/* live oracle */}
         {live !== null && live > x0 && live < x1 ? (
           <>
-            <line x1={X(live)} y1={PAD.t} x2={X(live)} y2={PAD.t + ih} stroke="#888888" strokeWidth="1" strokeDasharray="2 3" />
-            <text x={X(live)} y={PAD.t + ih + 22} fill="#888888" fontSize="9" textAnchor="middle" fontFamily="var(--font-geist-mono), monospace">
+            <line x1={X(live)} y1={PAD.t} x2={X(live)} y2={PAD.t + ih} stroke="#877f75" strokeWidth="1" strokeDasharray="2 3" />
+            <text x={X(live)} y={PAD.t + ih + 22} fill="#877f75" fontSize="9" textAnchor="middle" fontFamily="var(--font-geist-mono), monospace">
               {live.toFixed(2)}
             </text>
           </>
         ) : null}
 
-        <g fill="#888888" fontSize="9.5" fontFamily="var(--font-geist-mono), monospace">
+        <g fill="#877f75" fontSize="9.5" fontFamily="var(--font-geist-mono), monospace">
           <text x={PAD.l - 8} y={Y(win) + 3} textAnchor="end">+{win.toFixed(2)}</text>
           <text x={PAD.l - 8} y={Y(lose) + 3} textAnchor="end">{lose.toFixed(2)}</text>
         </g>
@@ -584,7 +584,7 @@ function Continuity({
               <div
                 className={cx(
                   "w-[146px] border p-2.5 flex flex-col gap-1",
-                  isNow ? "border-[#2a4470] bg-[#101a2e]" : "border-line bg-surface-2",
+                  isNow ? "border-[#3f3a35] bg-[#1f1a13]" : "border-line bg-surface-2",
                 )}
               >
                 <span className="text-label-xs uppercase text-ink-4">
@@ -672,7 +672,7 @@ function Selector({
               !o.enabled
                 ? "bg-base text-ink-4 cursor-not-allowed"
                 : o.on
-                  ? "bg-[#16233f] text-accent"
+                  ? "bg-[#2b2115] text-accent"
                   : "bg-surface text-ink-3 hover:bg-surface-2 hover:text-ink",
             )}
           >
