@@ -254,31 +254,24 @@ export function ExecutePanel({
 
       {funds.connected ? <WalletBalance /> : null}
 
-      {canSign && funds.canTrade ? (
-        <p className="text-[11px] text-ink-4 text-center -mb-1">
-          Signing as{" "}
-          <span className="num text-ink-3">
-            {address?.slice(0, 6)}…{address?.slice(-4)}
-          </span>{" "}
-          — your key, your funds
-        </p>
-      ) : null}
+      {/*
+        EVERY ORDER IS SIGNED BY PRISM, NOT BY THE VISITOR'S WALLET.
+        Say so plainly. This is custodial, and a UI that lets someone click Buy
+        without understanding whose funds moved is the dishonest version of this
+        feature — the whole repository exists to avoid that shape.
+      */}
+      <p className="text-[11px] text-ink-4 text-center -mb-1">
+        PRISM signs this order from its own wallet — no signature is requested
+        from you, and the collateral is the platform&rsquo;s.
+      </p>
 
       <Button
         variant="primary"
         size="lg"
         block
         leading={<IconBolt size={15} />}
-        disabled={
-          blocked ||
-          busy ||
-          !quote ||
-          !quote.fillable ||
-          // A connected wallet with no funds cannot sign a valid order. Block
-          // here rather than letting the wallet pop and fail.
-          (canSign && !funds.canTrade)
-        }
-        onClick={canSign ? runSelfCustody : run}
+        disabled={blocked || busy || !quote || !quote.fillable}
+        onClick={run}
       >
         {busy
           ? (selfState ?? "Submitting…")
@@ -286,11 +279,7 @@ export function ExecutePanel({
             ? "Market expired"
             : phase === "imminent"
               ? "Too close to expiry"
-              : canSign && funds.blocker === "NO_COLLATERAL"
-                ? "No tUSDC in wallet"
-                : canSign && funds.blocker === "NO_GAS"
-                  ? "No STT for gas"
-                  : `Buy ${outcome}`}
+              : `Buy ${outcome}`}
       </Button>
 
       {phase === "imminent" && !busy ? (
