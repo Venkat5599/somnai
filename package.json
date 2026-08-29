@@ -15,7 +15,8 @@
     "svc:roll": "bun --conditions react-server backend/roll/index.ts",
     "svc:bot": "bun --conditions react-server backend/bot/index.ts",
     "deploy": "bun scripts/deploy-verify.ts",
-    "svc:mcp": "bun --conditions react-server backend/mcp/index.ts"
+    "svc:mcp": "bun --conditions react-server backend/mcp/index.ts",
+    "svc:mcp-http": "bun --conditions react-server backend/mcp/http.ts"
   },
   "dependencies": {
     "@designcodeio/threeui": "^1.0.0",

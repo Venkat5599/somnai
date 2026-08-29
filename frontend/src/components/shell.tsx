@@ -45,6 +45,10 @@ const NAV = [
   { href: "/settlement", label: "Settlement", Icon: IconSettlement },
   { href: "/proof", label: "Proof", Icon: IconCheck },
   { href: "/activity", label: "Activity", Icon: IconActivity },
+  // Agent is its OWN destination, not a subsection of Integration. Driving
+  // PRISM from a model is a different job from reading its module reference,
+  // and burying it cost it every visitor who did not already know it existed.
+  { href: "/agent", label: "Agent", Icon: IconAgents },
   { href: "/agents", label: "Integration", Icon: IconAgents },
   { href: "/docs", label: "Documentation", Icon: IconDocs },
 ] as const;
