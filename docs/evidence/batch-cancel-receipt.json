@@ -1,0 +1,114 @@
+{
+  "recordedAt": "2026-08-29T08:51:09.226Z",
+  "network": "testnet",
+  "batch": {
+    "plans": [
+      {
+        "leg": {
+          "marketId": "0x000000000000000000000000000000000000000000000000000000000000cac5",
+          "outcome": "YES",
+          "side": "buy",
+          "size": 1,
+          "label": "ETH-243228-29AUG26-0855/tUSDC#YES"
+        },
+        "ok": true,
+        "price": 0.687,
+        "cost": 0.687,
+        "symbol": "ETH-243228-29AUG26-0855/tUSDC"
+      },
+      {
+        "leg": {
+          "marketId": "0x000000000000000000000000000000000000000000000000000000000000cac4",
+          "outcome": "YES",
+          "side": "buy",
+          "size": 1,
+          "label": "BTC-7758150-29AUG26-0855/tUSDC#YES"
+        },
+        "ok": true,
+        "price": 0.719,
+        "cost": 0.719,
+        "symbol": "BTC-7758150-29AUG26-0855/tUSDC"
+      }
+    ],
+    "eip7702Available": false,
+    "totalCost": 1.4060000000000001,
+    "atomicity": "PARTIAL_UNWOUND",
+    "outcomes": [
+      {
+        "leg": {
+          "marketId": "0x000000000000000000000000000000000000000000000000000000000000cac5",
+          "outcome": "YES",
+          "side": "buy",
+          "size": 1,
+          "label": "ETH-243228-29AUG26-0855/tUSDC#YES"
+        },
+        "status": "FILLED",
+        "txHash": "0x88143073c903cedbfe6d995678079160b72683af150b234246f17bbaeaf77f84",
+        "blockNumber": 474205067,
+        "filled": 1,
+        "evidence": [
+          "placeLimit filled 1 of 1 (not trusted)",
+          "receipt.status=success block=474205067"
+        ]
+      },
+      {
+        "leg": {
+          "marketId": "0x000000000000000000000000000000000000000000000000000000000000cac4",
+          "outcome": "YES",
+          "side": "buy",
+          "size": 1,
+          "label": "BTC-7758150-29AUG26-0855/tUSDC#YES"
+        },
+        "status": "FAILED",
+        "txHash": null,
+        "blockNumber": null,
+        "filled": 0,
+        "evidence": [
+          "leg threw: @somnia-chain/markets-sdk: placeBinaryOrder reverted: FillOrKillNotFillable()"
+        ]
+      }
+    ],
+    "unwinds": [
+      {
+        "leg": {
+          "marketId": "0x000000000000000000000000000000000000000000000000000000000000cac5",
+          "outcome": "YES",
+          "side": "buy",
+          "size": 1,
+          "label": "ETH-243228-29AUG26-0855/tUSDC#YES"
+        },
+        "status": "UNWOUND",
+        "txHash": "0xb3b6bbbda76d7ee83312abb95535c172c504e6abc87d3c3d944e7fdeea48ac6c",
+        "size": 1,
+        "detail": null
+      }
+    ],
+    "elapsedMs": 18667
+  },
+  "cancel": {
+    "placed": {
+      "hash": "0xf38a40c7e365d607635435759c9a1ad5bdec8399d89eceac60f81e4831f1812f",
+      "orderId": "92233720368547791592",
+      "filled": 0,
+      "size": 1,
+      "price": 0.05,
+      "rested": true
+    },
+    "cancel": {
+      "orderIds": [
+        "92233720368547791592"
+      ],
+      "txHash": "0x3cb368aa8aeefe045439230895087f07a68fa899945b1d66b551b81c3b8eca79",
+      "status": "VERIFIED_CANCELLED",
+      "blockNumber": 474205273,
+      "stillResting": [],
+      "evidence": [
+        "sdk returned hash 0x3cb368aa8aeefe045439230895087f07a68fa899945b1d66b551b81c3b8eca79 (not trusted)",
+        "receipt.status=success block=474205273",
+        "none of the 1 targeted orders are resting any more"
+      ]
+    },
+    "restingBefore": 1,
+    "restingAfter": 0
+  }
+}

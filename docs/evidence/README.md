@@ -96,3 +96,60 @@ what it is for — took nothing rather than resting size in a window minutes fro
 expiry. Three signals, two fills: the strategy is **not** reported as 3/3, and
 the miss is in the log next to the successes. A runner that counted its own
 intent as a fill would have claimed three.
+
+---
+
+## `executeBatch` and `cancelOrders` — live, and the batch failed usefully
+
+Both were fully written, unit-tested, and had **never sent a transaction**. A
+library nobody has run is a claim, not a capability.
+`scripts/prove-batch-cancel.ts` drove both against the live venue;
+`batch-cancel-receipt.json` is its output.
+
+### The batch graded itself `PARTIAL_UNWOUND`
+
+Two legs, both with a resting offer at plan time:
+
+```
+leg ETH-243228-29AUG26-0855#YES  ask 0.687
+leg BTC-7758150-29AUG26-0855#YES ask 0.719
+
+atomicity  PARTIAL_UNWOUND        cost 1.406   18.7s
+leg FILLED   filled 1  0x88143073c903cedbfe6d995678079160b72683af150b234246f17bbaeaf77f84
+leg FAILED   filled 0  (none)
+unwind UNWOUND        0xb3b6bbbda76d7ee83312abb95535c172c504e6abc87d3c3d944e7fdeea48ac6c
+```
+
+**This is better evidence than a clean fill.** The book moved between two
+sequential transactions — exactly the window `batch.ts` documents as the reason
+this is *not* atomic — the first leg was already on, and the unwind sold it back
+and verified the sale from chain. The result is reported as `PARTIAL_UNWOUND`,
+never as success. Had the unwind also failed it would read `PARTIAL_EXPOSED`,
+and the position would still be one-sided.
+
+### The cancel re-read the book rather than trusting the receipt
+
+```
+post-only ETH-243228-29AUG26-0855#YES @ 0.05
+  orderId 92233720368547791592   0xf38a40c7e365d607635435759c9a1ad5bdec8399d89eceac60f81e4831f1812f
+  resting before cancel: 1
+  cancel VERIFIED_CANCELLED      0x3cb368aa8aeefe045439230895087f07a68fa899945b1d66b551b81c3b8eca79
+         receipt.status=success block=474205273
+         none of the 1 targeted orders are resting any more
+  resting after cancel: 0        (re-read from chain)
+```
+
+The last two lines are the point. A green receipt says the transaction executed,
+not that every id in it was pulled — a batch cancel skips stale ids silently. So
+what is still resting comes from `getOwnOpenOrdersOnchain`, not from the receipt
+and not from the indexer, whose order view lags chain head.
+
+### Reproduce
+
+```bash
+PRISM_DRY_RUN=false bun --conditions react-server scripts/prove-batch-cancel.ts
+```
+
+It waits for a routable window rather than concluding from an empty board —
+reporting "skipped" between windows would record the venue's schedule as if it
+were a limitation of these paths.
