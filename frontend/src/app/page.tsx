@@ -8,6 +8,8 @@ import { NETWORK } from "@sdk/venue/config";
 import { cachedMarketSnapshot } from "@sdk/venue/cache";
 import { getLivePrice } from "@sdk/venue/prices";
 import { headroomSec } from "@sdk/venue/types";
+import { Reveal } from "@/components/reveal";
+import { HeroInstrument } from "@/components/hero-instrument";
 
 /** Live venue state; nothing here can be prerendered. */
 export const dynamic = "force-dynamic";
@@ -46,25 +48,37 @@ export default async function HomePage() {
             element below renders complete if it never arrives. */}
         <HeroField />
 
-        <div className="relative z-10 flex-1 flex flex-col [justify-content:safe_center]">
-          <div className="w-full max-w-[1560px] mx-auto px-5 sm:px-8 lg:px-12 py-8">
-            <h1 className="num text-[clamp(34px,6vw,84px)] leading-[0.96] tracking-[-0.055em] font-medium text-ink">
-              Event Contracts,
-              <br />
-              <span className="text-accent">refracted.</span>
-            </h1>
+        <div className="relative z-10 flex-1 flex flex-col [justify-content:safe_end]">
+          <div className="w-full max-w-[1560px] mx-auto px-5 sm:px-8 lg:px-12 pt-10 pb-0">
+            {/* The headline owns the full width. Two lines, never a stacked
+                staircase, and the one accented word sits INSIDE the phrase it
+                belongs to rather than stranded at the foot of a wrap. */}
+            <Reveal step={0}>
+              <h1 className="num text-[clamp(34px,6vw,84px)] leading-[0.96] tracking-[-0.055em] font-medium text-ink">
+                Event Contracts,
+                <br />
+                <span className="text-accent">refracted.</span>
+              </h1>
+            </Reveal>
 
-            <div className="mt-8 lg:mt-10 grid gap-x-12 gap-y-8 lg:grid-cols-[minmax(0,24rem)_minmax(0,1fr)] lg:items-start">
-              <div className="min-w-0">
-                <p className="text-[15px] leading-[24px] text-ink-2">
-                  A DreamDEX Event Contract is a digital option that expires
-                  every few minutes. PRISM states your view once and carries it
-                  across window succession, so a stream of five-minute binaries
-                  becomes a position with a real tenor. Live markets are read
-                  from Somnia; execution and settlement are being integrated.
+            {/* Lede and action share ONE baseline instead of stacking into the
+                eyebrow-headline-subtext-buttons column every landing page ships.
+                A single action, too: a filled primary beside an outlined ghost
+                is a preset, and the secondary link was carrying no weight. */}
+            <Reveal step={1}>
+              <div className="mt-7 flex flex-col gap-6 lg:flex-row lg:items-end lg:gap-14">
+                <p className="lg:w-[46ch] shrink-0 text-[15px] leading-[24px] text-ink-2">
+                  A DreamDEX Event Contract is a digital option that expires every
+                  few minutes. PRISM states your view once and carries it across
+                  window succession, so a stream of short binaries becomes a
+                  position with a real tenor.
                 </p>
 
-                <div className="mt-7 flex flex-wrap items-center gap-x-7 gap-y-4">
+                <div className="flex items-center gap-6 shrink-0">
+                  <span className="text-label-xs uppercase text-ink-4 flex items-center gap-2">
+                    <span className="pip-live inline-block w-[5px] h-[5px] bg-up" />
+                    Live on {NETWORK.chainName}
+                  </span>
                   <Link href="/trade">
                     <Button
                       variant="primary"
@@ -74,104 +88,65 @@ export default async function HomePage() {
                       Open the terminal
                     </Button>
                   </Link>
-                  <Link
-                    href="/analytics"
-                    className="text-[13px] text-ink-3 hover:text-accent transition-colors inline-flex items-center gap-2"
-                  >
-                    See the volatility surface
-                    <IconArrowOut size={14} />
-                  </Link>
                 </div>
-
-                <p className="mt-6 text-label-xs uppercase text-ink-4 flex items-center gap-2">
-                  <span className="pip-live inline-block w-[5px] h-[5px] bg-up" />
-                  Live on {NETWORK.chainName}
-                </p>
               </div>
+            </Reveal>
 
-              {/* The artifact, unboxed. It is the page's own diagram.
-                  Capped so its proportions hold on a wide viewport instead of
-                  stretching until the beam reads as a stray line. */}
-              <div className="min-w-0 lg:pt-1 max-w-[620px]">
-                <p className="text-label-xs uppercase text-ink-4 mb-4">
-                  One view, carried across successive windows
-                </p>
-                <Refraction
-                  legs={[
-                    { label: "WINDOW N", detail: "fill" },
-                    { label: "WINDOW N+1", detail: "re-strike" },
-                    { label: "WINDOW N+2", detail: "carry" },
-                  ]}
+            {/* The artifact, anchored to the bottom edge of the fold and clipped
+                by it — the board continues past the screen rather than sitting
+                in a box that ends politely above it. Real registry rows; if the
+                venue is unreachable it says so instead of drawing a board. */}
+            <Reveal step={2}>
+              {/* Full container width. Capped at 820px it stranded half the fold
+                  as dead space beside it, which reads as an unfinished layout
+                  rather than as breathing room. The artifact owns the width. */}
+              <div className="mt-10 lg:mt-12">
+                <HeroInstrument
+                  rows={board.slice(0, 6).map((m) => ({
+                    marketId: m.marketId,
+                    asset: m.asset,
+                    interval: m.interval,
+                    strike: m.strike,
+                    expiry: m.expiry,
+                    routable:
+                      m.strike !== null &&
+                      m.status === "Trading" &&
+                      m.expiry - nowSec > headroomSec(m.intervalSec),
+                  }))}
+                  fetchedAt={snap?.fetchedAt ?? Date.now()}
+                  routableCount={routableCount}
+                  venueCount={snap ? Object.keys(snap.venues).length : 0}
+                  oracle={[btc, eth]
+                    .filter((p): p is NonNullable<typeof p> => Boolean(p))
+                    .map((p) => ({ asset: p.asset, price: p.price }))}
                 />
               </div>
+            </Reveal>
+          </div>
+        </div>
+
+        {/* The diagram, given its own band below the fold.
+            It used to sit beside the headline as a second artifact competing
+            with the board for the same glance — the left-text / right-panel
+            skeleton on a thousand landing pages. One artifact owns the fold;
+            this one explains it, on its own line, after the scroll begins. */}
+        <div className="relative z-10 border-t border-line bg-surface/40 backdrop-blur-md">
+          <div className="max-w-[1560px] mx-auto px-5 sm:px-8 lg:px-12 py-7">
+            <p className="text-label-xs uppercase text-ink-4 mb-4">
+              One view, carried across successive windows
+            </p>
+            <div className="max-w-[620px]">
+              <Refraction
+                legs={[
+                  { label: "WINDOW N", detail: "fill" },
+                  { label: "WINDOW N+1", detail: "re-strike" },
+                  { label: "WINDOW N+2", detail: "carry" },
+                ]}
+              />
             </div>
           </div>
         </div>
 
-        {/* Live board, flush to the fold's bottom edge. Real markets read from
-            the Somnia indexer at request time — one strike per window, which is
-            exactly why PRISM composes across succession rather than a ladder. */}
-        <div className="relative z-10 border-y border-line bg-surface/60 backdrop-blur-md">
-          <div className="max-w-[1560px] mx-auto px-5 sm:px-8 lg:px-12">
-            <div className="flex items-stretch overflow-x-auto">
-              <div className="flex items-center gap-3 pr-6 py-3 shrink-0 border-r border-line">
-                <span className="text-label-xs uppercase text-ink-3">Live board</span>
-                <span className="num text-[13px] text-ink">
-                  {routableCount} routable
-                </span>
-              </div>
-
-              {btc || eth ? (
-                <div className="flex items-center gap-5 px-5 py-3 shrink-0 border-r border-line">
-                  {[btc, eth].filter(Boolean).map((p) => (
-                    <span key={p!.asset} className="flex flex-col justify-center">
-                      <span className="text-label-xs uppercase text-ink-4">
-                        {p!.asset} oracle
-                      </span>
-                      <span className="num text-[13px] text-ink mt-0.5">
-                        {p!.price.toLocaleString("en-US", { minimumFractionDigits: 2 })}
-                      </span>
-                    </span>
-                  ))}
-                </div>
-              ) : null}
-
-              {board.length === 0 ? (
-                <div className="flex items-center px-5 py-3 text-[12px] text-ink-3">
-                  Venue returned no active markets right now.
-                </div>
-              ) : (
-                board.map((m) => {
-                  const left = m.expiry - nowSec;
-                  const routable =
-                    m.strike !== null &&
-                    m.status === "Trading" &&
-                    left > headroomSec(m.intervalSec);
-                  return (
-                    <div
-                      key={m.marketId}
-                      className="flex flex-col justify-center px-5 py-3 shrink-0 border-r border-line-soft last:border-r-0"
-                    >
-                      <span className="num text-[11px] text-ink-4">
-                        {m.asset} {m.interval}
-                      </span>
-                      <span
-                        className={cx(
-                          "num text-[13px] mt-0.5",
-                          routable ? "text-up" : "text-ink-3",
-                        )}
-                      >
-                        {m.strike !== null
-                          ? m.strike.toLocaleString("en-US", { minimumFractionDigits: 2 })
-                          : "unstruck"}
-                      </span>
-                    </div>
-                  );
-                })
-              )}
-            </div>
-          </div>
-        </div>
       </section>
 
       {/* ============================================================
