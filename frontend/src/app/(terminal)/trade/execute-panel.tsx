@@ -23,7 +23,7 @@ import type { ExpiryPhase } from "./use-countdown";
 import { useSendTransaction } from "wagmi";
 import { useSelfCustody } from "@/components/connect";
 import { WalletBalance, useWalletFunds } from "@/components/wallet-balance";
-import { executeOrder, prepareForWallet, type ExecutionReport } from "./actions";
+import { prepareForWallet, type ExecutionReport } from "./actions";
 
 const UNIT = COLLATERAL.symbol;
 const EXPLORER = VENUE_CONFIG.explorer;
@@ -128,19 +128,11 @@ export function ExecutePanel({
   const blocked =
     phase === "expired" || phase === "imminent" || price === null || market.strike === null;
 
-  const run = () => {
-    setReport(null);
-    start(async () => {
-      setReport(
-        await executeOrder({
-          marketId: market.marketId,
-          outcome,
-          side: "buy",
-          amount,
-        }),
-      );
-    });
-  };
+  // The server-signed path is GONE from this panel, not merely unreachable.
+  // PRISM is non-custodial here: a visitor spends their own collateral or
+  // nothing. Leaving a dead function that can spend the operator's funds would
+  // be a loaded gun one edit away from firing — `executeOrder` still exists as
+  // a server action for the bot and daemon, which have their own key by design.
 
   const v = report?.verification;
   const busy = pending;
@@ -270,7 +262,7 @@ export function ExecutePanel({
             — your key, your funds
           </>
         ) : (
-          <>PRISM signs from its own wallet — the collateral is the platform&rsquo;s.</>
+          <>Connect a wallet to trade. PRISM never signs on your behalf.</>
         )}
       </p>
 
@@ -284,21 +276,27 @@ export function ExecutePanel({
           busy ||
           !quote ||
           !quote.fillable ||
+          // NON-CUSTODIAL ONLY. Without a connected wallet there is no signer,
+          // and the server key is deliberately not a fallback: a visitor must
+          // never be able to spend the operator's collateral by clicking Buy.
+          !canSign ||
           // A connected wallet with no funds cannot sign a valid order. Refuse
           // here rather than letting MetaMask open and fail on-chain.
-          (canSign && !funds.canTrade)
+          !funds.canTrade
         }
-        onClick={canSign ? runSelfCustody : run}
+        onClick={runSelfCustody}
       >
         {busy
           ? (selfState ?? "Submitting…")
-          : phase === "expired"
+          : !canSign
+            ? "Connect a wallet"
+            : phase === "expired"
             ? "Market expired"
             : phase === "imminent"
               ? "Too close to expiry"
-              : canSign && funds.blocker === "NO_COLLATERAL"
+              : funds.blocker === "NO_COLLATERAL"
                 ? "No tUSDC in wallet"
-                : canSign && funds.blocker === "NO_GAS"
+                : funds.blocker === "NO_GAS"
                   ? "No STT for gas"
                   : `Buy ${outcome}`}
       </Button>
