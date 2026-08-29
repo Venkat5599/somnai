@@ -151,10 +151,24 @@ export default async function TradePage({
      */
     if (!selected) {
       const now = Math.floor(Date.now() / 1000);
-      selected =
-        snap.all
-          .filter((m) => !m.finalized && !m.voided && m.expiry > now)
-          .sort((a, b) => a.expiry - b.expiry)[0] ?? null;
+      const live = snap.all.filter((m) => !m.finalized && !m.voided && m.expiry > now);
+
+      // A STRUCK window first, always. Sorting purely by expiry landed the page
+      // on unstruck markets — "this window has no strike yet, so it has no
+      // payoff" — which is accurate and useless: there is no strike to draw a
+      // curve from and nothing to price. A struck window closing later is a far
+      // better thing to show than an unstruck one closing sooner, because the
+      // reader can at least see the instrument.
+      const struck = live
+        .filter((m) => m.strike !== null)
+        .sort((a, b) => a.expiry - b.expiry);
+
+      // Only if the venue genuinely has not struck ANYTHING does an unstruck
+      // window get bound — it still beats a dead end, and it counts down to the
+      // moment it becomes real.
+      const unstruck = live.sort((a, b) => a.expiry - b.expiry);
+
+      selected = struck[0] ?? unstruck[0] ?? null;
     }
 
     if (selected) {
