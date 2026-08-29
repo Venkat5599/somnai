@@ -46,97 +46,131 @@ export default async function HomePage() {
       <section className="relative flex-1 min-h-[calc(100dvh-56px)] flex flex-col">
 
 
-        <div className="relative z-10 flex-1 flex flex-col [justify-content:safe_end]">
-          <div className="w-full max-w-[1560px] mx-auto px-5 sm:px-8 lg:px-12 pt-10 pb-0">
-            {/* The headline owns the full width. Two lines, never a stacked
-                staircase, and the one accented word sits INSIDE the phrase it
-                belongs to rather than stranded at the foot of a wrap. */}
-            <Reveal step={0}>
-              <h1 className="num text-[clamp(34px,6vw,84px)] leading-[0.96] tracking-[-0.055em] font-medium text-ink">
-                Event Contracts,
-                <br />
-                <span className="text-accent">refracted.</span>
-              </h1>
-            </Reveal>
+        <div className="relative z-10 flex-1 flex flex-col justify-center">
+          <div className="w-full max-w-[1560px] mx-auto px-5 sm:px-8 lg:px-12 py-8">
 
-            {/* Lede and action share ONE baseline instead of stacking into the
-                eyebrow-headline-subtext-buttons column every landing page ships.
-                A single action, too: a filled primary beside an outlined ghost
-                is a preset, and the secondary link was carrying no weight. */}
-            <div className="mt-7 grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,26rem)] lg:gap-12 lg:items-start">
-            <div>
-            <Reveal step={1}>
-              <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:gap-14">
+            {/* THE PANEL OWNS THE FOLD, and the headline crosses its bottom
+                edge rather than sitting politely above it. That crossing is the
+                composition: foreground type over a midground object, so the
+                fold reads with depth instead of as stacked bands. */}
+            <div className="relative">
+              <Reveal step={0}>
+                <div className="relative w-full lg:w-[78%] h-[42vh] min-h-[280px] lg:h-[54vh] overflow-hidden rounded-[26px] border border-line">
+                  <HeroFieldGL intensity={0.95} />
+
+                  {/* Inside the panel, on its own layer. Kept to the top so the
+                      headline crossing the bottom edge has clear air. */}
+                  <div className="absolute inset-0 flex items-start justify-between p-5 sm:p-7">
+                    <p className="num text-[13px] leading-[18px] text-ink/85">
+                      PRISM
+                      <br />
+                      <span className="text-ink/55">Event Contracts</span>
+                    </p>
+                    <Link href="/trade" className="shrink-0">
+                      <Button variant="primary" size="md" trailing={<IconArrowRight size={14} />}>
+                        Open the terminal
+                      </Button>
+                    </Link>
+                  </div>
+
+                  {/* The notch. A bespoke silhouette rather than a rectangle:
+                      the panel is cut away at the bottom right and the links
+                      block nests into it, with two inverse corners so the seam
+                      reads as one continuous edge. Hidden below lg, where the
+                      panel is too narrow for a cut to be legible. */}
+                  <div className="hidden lg:block absolute bottom-0 right-0 w-[19rem] h-[7.5rem] bg-base rounded-tl-[26px]">
+                    {/* The two inverse corners. Without them the notch is a
+                        rectangle laid on top; with them the panel edge appears
+                        to curve INTO the cut and back out, which is the whole
+                        point of cutting a bespoke silhouette rather than
+                        stacking boxes. */}
+                    <span
+                      aria-hidden
+                      className="absolute -top-[18px] right-0 w-[18px] h-[18px]"
+                      style={{ background: "radial-gradient(circle at 0 0, transparent 18px, var(--color-base) 18px)" }}
+                    />
+                    <span
+                      aria-hidden
+                      className="absolute bottom-0 -left-[18px] w-[18px] h-[18px]"
+                      style={{ background: "radial-gradient(circle at 0 0, transparent 18px, var(--color-base) 18px)" }}
+                    />
+                    {/* The links live inside the notch, so they are positioned
+                        against IT rather than the outer wrapper — which is
+                        taller than the panel, and was dropping them below it. */}
+                    <ul className="absolute inset-0 flex flex-col items-end justify-center gap-1.5 pr-5">
+                      {[
+                        { href: "/markets", label: "Live markets" },
+                        { href: "/structures", label: "Structures" },
+                        { href: "/proof", label: "On-chain proof" },
+                      ].map((l) => (
+                        <li key={l.href}>
+                          <Link
+                            href={l.href}
+                            className="text-[13px] text-ink-2 hover:text-accent transition-colors inline-flex items-center gap-2"
+                          >
+                            {l.label}
+                            <IconArrowOut size={13} />
+                          </Link>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              </Reveal>
+
+              {/* The headline, overlapping the panel's bottom-left. Padded well
+                  clear of the panel's rounded corner so no cap is shaved by the
+                  cut — content near an edge has to be cleared deliberately. */}
+              <Reveal step={1}>
+                <h1 className="relative z-20 -mt-[6vh] lg:-mt-[8vh] pl-1 num text-[clamp(34px,6.2vw,86px)] leading-[0.94] tracking-[-0.055em] font-medium text-ink">
+                  Event Contracts,
+                  <br />
+                  <span className="text-accent">refracted.</span>
+                </h1>
+              </Reveal>
+            </div>
+
+            <Reveal step={3}>
+              <div className="mt-8 flex flex-col gap-4 lg:flex-row lg:items-end lg:gap-10">
                 <p className="lg:w-[46ch] shrink-0 text-[15px] leading-[24px] text-ink-2">
                   A DreamDEX Event Contract is a digital option that expires every
                   few minutes. PRISM states your view once and carries it across
                   window succession, so a stream of short binaries becomes a
                   position with a real tenor.
                 </p>
-
-                <div className="flex items-center gap-6 shrink-0">
-                  <span className="text-label-xs uppercase text-ink-4 flex items-center gap-2">
-                    <span className="pip-live inline-block w-[5px] h-[5px] bg-up" />
-                    Live on {NETWORK.chainName}
-                  </span>
-                  <Link href="/trade">
-                    <Button
-                      variant="primary"
-                      size="lg"
-                      trailing={<IconArrowRight size={16} />}
-                    >
-                      Open the terminal
-                    </Button>
-                  </Link>
-                </div>
-              </div>
-            </Reveal>
-
-            {/* The artifact, anchored to the bottom edge of the fold and clipped
-                by it — the board continues past the screen rather than sitting
-                in a box that ends politely above it. Real registry rows; if the
-                venue is unreachable it says so instead of drawing a board. */}
-            <Reveal step={2}>
-              {/* Full container width. Capped at 820px it stranded half the fold
-                  as dead space beside it, which reads as an unfinished layout
-                  rather than as breathing room. The artifact owns the width. */}
-              <div className="mt-10 lg:mt-12">
-                <HeroInstrument
-                  rows={board.slice(0, 6).map((m) => ({
-                    marketId: m.marketId,
-                    asset: m.asset,
-                    interval: m.interval,
-                    strike: m.strike,
-                    expiry: m.expiry,
-                    routable:
-                      m.strike !== null &&
-                      m.status === "Trading" &&
-                      m.expiry - nowSec > headroomSec(m.intervalSec),
-                  }))}
-                  fetchedAt={snap?.fetchedAt ?? Date.now()}
-                  routableCount={routableCount}
-                  venueCount={snap ? Object.keys(snap.venues).length : 0}
-                  oracle={[btc, eth]
-                    .filter((p): p is NonNullable<typeof p> => Boolean(p))
-                    .map((p) => ({ asset: p.asset, price: p.price }))}
-                />
-              </div>
-            </Reveal>
-            </div>
-
-            {/* THE SHADER, AS AN OBJECT. Not a page background — a real element
-                with its own edge, sitting in the layout beside the content. The
-                board opposite it is live data; this is the light. */}
-            <Reveal step={2}>
-              <div className="relative aspect-[4/5] lg:aspect-auto lg:h-[26rem] w-full overflow-hidden rounded-[14px] border border-line">
-                <HeroFieldGL intensity={0.95} />
-                <div className="pointer-events-none absolute inset-0 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.07)] rounded-[14px]" />
-                <span className="absolute left-4 bottom-4 text-label-xs uppercase tracking-[0.05em] text-ink-2/80">
-                  Refraction field
+                <span className="text-label-xs uppercase text-ink-4 flex items-center gap-2">
+                  <span className="pip-live inline-block w-[5px] h-[5px] bg-up" />
+                  Live on {NETWORK.chainName}
                 </span>
               </div>
             </Reveal>
-            </div>
+          </div>
+        </div>
+
+        {/* The live board, moved below the fold. The panel is the fold's one
+            artifact now; two competing for the same glance was the problem with
+            the previous arrangement. */}
+        <div className="relative z-10 border-t border-line">
+          <div className="w-full max-w-[1560px] mx-auto px-5 sm:px-8 lg:px-12 py-8">
+            <HeroInstrument
+              rows={board.slice(0, 6).map((m) => ({
+                marketId: m.marketId,
+                asset: m.asset,
+                interval: m.interval,
+                strike: m.strike,
+                expiry: m.expiry,
+                routable:
+                  m.strike !== null &&
+                  m.status === "Trading" &&
+                  m.expiry - nowSec > headroomSec(m.intervalSec),
+              }))}
+              fetchedAt={snap?.fetchedAt ?? Date.now()}
+              routableCount={routableCount}
+              venueCount={snap ? Object.keys(snap.venues).length : 0}
+              oracle={[btc, eth]
+                .filter((p): p is NonNullable<typeof p> => Boolean(p))
+                .map((p) => ({ asset: p.asset, price: p.price }))}
+            />
           </div>
         </div>
 
