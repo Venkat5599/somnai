@@ -28,6 +28,27 @@ export interface MarketBook {
 
 const emptySide = (): BookSide => ({ levels: [], best: null, depth: 0 });
 
+/**
+ * Total resting depth across both outcomes.
+ *
+ * Replaces a boolean "has a book". A market with one lot on one side satisfied
+ * that check and rendered as "nothing to price against" a second later, so the
+ * useful question is how much is resting, not whether anything is.
+ */
+async function totalDepth(m: EventMarket, config: ReturnType<typeof resolveVenueConfig>) {
+  const ex = exchange(config);
+  let depth = 0;
+  for (const o of ["YES", "NO"] as Outcome[]) {
+    try {
+      const ob = await ex.fetchOrderBook(`${m.symbol}#${o}`);
+      depth += ((ob.asks ?? []) as [number, number][]).reduce((n, [, s]) => n + s, 0);
+    } catch {
+      /* an unreadable book contributes nothing */
+    }
+  }
+  return depth;
+}
+
 /** Does either outcome have a resting offer? Cheap enough to scan a few. */
 async function hasBook(m: EventMarket, config: ReturnType<typeof resolveVenueConfig>) {
   const ex = exchange(config);
@@ -94,12 +115,20 @@ export default async function TradePage({
         .filter((m) => isRoutable(m, Date.now()))
         .sort((a, b) => b.expiry - a.expiry);
 
+      // Prefer the market with the MOST resting depth, not merely the first one
+      // that had any. A book with a single lot passes "hasBook" and is empty by
+      // the time the page renders — which is exactly how /trade kept opening on
+      // "no resting offer" while other windows were quoting.
+      let best: { market: EventMarket; depth: number } | null = null;
       for (const m of durable) {
-        if (await hasBook(m, config)) {
-          // The scan took real time; the window may have closed inside it.
-          if (isRoutable(m, Date.now())) { selected = m; break; }
-        }
+        const depth = await totalDepth(m, config);
+        if (depth <= 0) continue;
+        if (!best || depth > best.depth) best = { market: m, depth };
+        // Enough to be worth trading; stop paying for book reads.
+        if (best.depth >= 50) break;
       }
+      // The scan took real time; the window may have closed inside it.
+      if (best && isRoutable(best.market, Date.now())) selected = best.market;
 
       // Nothing has depth: bind the longest-lived market that is STILL open, so
       // the context renders and the UI can say plainly that no book exists.
