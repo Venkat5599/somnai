@@ -61,3 +61,38 @@ It prints a machine-readable verdict line. As of the last run, every live market
 reported `exact:NO label:NO` — no successor by either the exact-seconds match or
 the venue's own cadence label, so the absence is the venue's, not a matching bug
 in `successionChain`.
+
+---
+
+## `ec-oracle-follow` — chain-verified fills
+
+`oracle-follow-run.log` holds the signal and fill lines from an armed run:
+246 ticks, 3 signals past the 0.03 edge, 2 fills verified from chain.
+
+| | leg | oracle vs strike | fair | ask | edge | tx |
+|---|---|---|---|---|---|---|
+| tick 210 | BTC 5m NO | 77622.98 vs 77624.25 | 0.496 | 0.435 | 0.0691 | [`0x40c5e0…`](https://shannon-explorer.somnia.network/tx/0x40c5e012f48342c55501735c7ca203aa915a88330e7de75b4cb05250dcdd2381) |
+| tick 237 | ETH 5m YES | 2436.62 vs 2436.61 | 0.500 | 0.398 | 0.1022 | [`0xa70ddb…`](https://shannon-explorer.somnia.network/tx/0xa70ddb8f77705380505b336c1fd84f37bbbaa20da89f51b4ac4bb0fc2f170535) |
+
+Blocks 474,163,034 and 474,169,231, both `status success`.
+Re-derive them yourself, without the bot or the SDK:
+
+```bash
+bun --conditions react-server scripts/verify-oracle-fills.ts
+```
+
+### The third signal is the one worth reading
+
+At tick 19 the edge cleared (0.0336) and the order **reverted**:
+
+```
+tick 19  SIGNAL  BTC 5m NO  spot 77412.68 vs strike 77417.99
+         fair 0.480  ask 0.486  edge 0.0336
+tick 19  failed: placeBinaryOrder reverted: ImmediateOrCancelNoFill()
+```
+
+The resting offer moved between the book read and the fill, and IOC did exactly
+what it is for — took nothing rather than resting size in a window minutes from
+expiry. Three signals, two fills: the strategy is **not** reported as 3/3, and
+the miss is in the log next to the successes. A runner that counted its own
+intent as a fill would have claimed three.
