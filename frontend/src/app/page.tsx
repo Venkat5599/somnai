@@ -2,23 +2,152 @@ import Link from "next/link";
 import { Refraction } from "@/components/refraction";
 import { HeroFieldGL } from "@/components/hero-field-gl";
 import { PrismMark, PrismWordmark } from "@/components/logo";
-import { Button, cx } from "@/components/ui";
 import { IconArrowOut, IconArrowRight } from "@/components/icons";
 import { NETWORK } from "@sdk/venue/config";
 import { cachedMarketSnapshot } from "@sdk/venue/cache";
 import { getLivePrice } from "@sdk/venue/prices";
 import { headroomSec } from "@sdk/venue/types";
 import { Reveal } from "@/components/reveal";
-import { HeroInstrument } from "@/components/hero-instrument";
+import { ClaimMarquee } from "@/components/marquee";
+import { cx } from "@/components/ui";
 
 /** Live venue state; nothing here can be prerendered. */
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
+/**
+ * THE LANDING PAGE RUNS A LIGHT PALETTE; THE TERMINAL STAYS DARK.
+ *
+ * Asked for directly, against this project's own default. Deliberate, and worth
+ * stating: the marketing surface and the instrument are two different jobs. The
+ * instrument is dark because it is stared at for hours; the landing page is read
+ * once, and a light surface carries long-form reading better.
+ *
+ * The palette is scoped HERE rather than in globals.css, so `/trade` and every
+ * other terminal route is untouched. Nothing below reads `--color-base` and its
+ * siblings — it reads these.
+ */
+const LIGHT = {
+  "--pg-bg": "#F4F4F6",
+  "--pg-card": "#FFFFFF",
+  "--pg-ink": "#0B0B10",
+  "--pg-ink-2": "#4A4A55",
+  "--pg-ink-3": "#77778A",
+  "--pg-line": "#E4E4EA",
+  "--pg-accent": "#6C4CF1",
+  "--pg-accent-soft": "#EFEBFE",
+} as React.CSSProperties;
+
+/* ------------------------------------------------------------------ */
+
+/** One gutter for every section, so no block can drift to its own edge. */
+function Bleed({ children, className }: { children: React.ReactNode; className?: string }) {
+  return (
+    <div className={cx("w-full max-w-[1400px] mx-auto px-5 sm:px-8 lg:px-10", className)}>
+      {children}
+    </div>
+  );
+}
+
+/**
+ * A feature card.
+ *
+ * No icon in a tinted tile, no category pill, no tag row — piling those into one
+ * card is the clearest slop signature there is. A card here is a claim, a short
+ * body, and the path in the tree that implements it. That path is the point: it
+ * makes every card falsifiable by a reader who doubts it.
+ */
+function Card({
+  title,
+  body,
+  where,
+  href,
+  stat,
+}: {
+  title: string;
+  body: string;
+  where: string;
+  href?: string;
+  stat?: string;
+}) {
+  const inner = (
+    <>
+      <div className="flex items-start justify-between gap-4">
+        <h3
+          className="text-[clamp(19px,1.7vw,24px)] leading-[1.16] tracking-[-0.02em] font-medium text-balance"
+          style={{ color: "var(--pg-ink)" }}
+        >
+          {title}
+        </h3>
+        {stat ? (
+          <span
+            className="num text-[13px] shrink-0 tabular-nums"
+            style={{ color: "var(--pg-accent)" }}
+          >
+            {stat}
+          </span>
+        ) : null}
+      </div>
+      <p className="mt-3 text-[14px] leading-[22px] text-pretty" style={{ color: "var(--pg-ink-2)" }}>
+        {body}
+      </p>
+      <p className="num mt-auto pt-6 text-[11px] break-all" style={{ color: "var(--pg-ink-3)" }}>
+        {where}
+      </p>
+      {href ? (
+        <span
+          className="mt-3 inline-flex items-center gap-2 text-[13px] transition-opacity group-hover:opacity-70"
+          style={{ color: "var(--pg-accent)" }}
+        >
+          Open
+          <IconArrowOut size={13} />
+        </span>
+      ) : null}
+    </>
+  );
+
+  const shell = "group flex flex-col h-full rounded-[20px] p-6 sm:p-7";
+  const style = { background: "var(--pg-card)", border: "1px solid var(--pg-line)" };
+
+  return href ? (
+    <Link href={href} className={shell} style={style}>
+      {inner}
+    </Link>
+  ) : (
+    <div className={shell} style={style}>
+      {inner}
+    </div>
+  );
+}
+
+/** Square-cornered enough to stay an instrument. Never a glowing pill. */
+function Cta({
+  href,
+  children,
+  tone = "solid",
+}: {
+  href: string;
+  children: React.ReactNode;
+  tone?: "solid" | "quiet";
+}) {
+  return (
+    <Link
+      href={href}
+      className="inline-flex items-center gap-2 h-11 px-5 rounded-[10px] text-[14px] font-medium transition-opacity hover:opacity-85"
+      style={
+        tone === "solid"
+          ? { background: "var(--pg-ink)", color: "var(--pg-card)" }
+          : { background: "var(--pg-accent-soft)", color: "var(--pg-accent)" }
+      }
+    >
+      {children}
+    </Link>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+
 export default async function HomePage() {
-  // The fold used to render a generated "BTC 4h ladder" of seven fake strikes.
-  // The venue lists ONE strike per window, so that ladder never existed. What
-  // follows is the real live board.
   const [snap, btc, eth] = await Promise.all([
     cachedMarketSnapshot().catch(() => null),
     getLivePrice("BTC").catch(() => null),
@@ -32,302 +161,530 @@ export default async function HomePage() {
       a.asset === b.asset ? a.intervalSec - b.intervalSec : a.asset.localeCompare(b.asset),
     );
   const routableCount = (snap?.routable ?? []).length;
+  const venueCount = snap ? Object.keys(snap.venues).length : 0;
+  const assetCount = snap ? Object.keys(snap.assets).length : 0;
+  const oracle = [btc, eth].filter((p): p is NonNullable<typeof p> => Boolean(p));
 
   return (
-    <div className="min-h-dvh flex flex-col bg-base">
+    <div className="min-h-dvh flex flex-col" style={{ ...LIGHT, background: "var(--pg-bg)" }}>
       <MarketingNav />
 
       {/* ============================================================
-          HERO — the headline owns the full width of the fold, and the
-          artifact sits bare on the page beneath it rather than boxed
-          into a panel on the right. Deliberately NOT the
-          text-column-plus-object-column skeleton.
+          HERO — a centred statement, then the product artifact broken
+          past the fold. The artifact is the real board, not a mockup.
           ============================================================ */}
-      <section className="relative flex-1 min-h-[calc(100dvh-56px)] flex flex-col">
+      <section className="pt-14 sm:pt-20">
+        <Bleed>
+          <Reveal step={0}>
+            <h1
+              className="mx-auto max-w-[19ch] text-center text-[clamp(34px,6vw,74px)] leading-[1.02] tracking-[-0.045em] font-semibold text-balance"
+              style={{ color: "var(--pg-ink)" }}
+            >
+              Simply the clearest way to trade Event Contracts
+            </h1>
+          </Reveal>
 
+          <Reveal step={1}>
+            <p
+              className="mx-auto mt-6 max-w-[62ch] text-center text-[16px] leading-[26px] text-pretty"
+              style={{ color: "var(--pg-ink-2)" }}
+            >
+              DreamDEX Event Contracts expire every few minutes. PRISM reads them
+              live from Somnia, executes on the venue&rsquo;s own integer grid,
+              verifies every outcome from chain, and carries a view into the
+              successor window.
+            </p>
+          </Reveal>
 
-        <div className="relative z-10 flex-1 flex flex-col justify-center">
-          <div className="w-full max-w-[1560px] mx-auto px-5 sm:px-8 lg:px-12 py-8">
-
-            {/* THE PANEL OWNS THE FOLD, and the headline crosses its bottom
-                edge rather than sitting politely above it. That crossing is the
-                composition: foreground type over a midground object, so the
-                fold reads with depth instead of as stacked bands. */}
-            <div className="relative">
-              <Reveal step={0}>
-                <div className="relative w-full lg:w-[87%] h-[52vh] min-h-[380px] lg:h-[62vh] overflow-hidden rounded-[26px] border border-line">
-                  <HeroFieldGL intensity={0.95} />
-
-                  {/* Inside the panel, on its own layer. Kept to the top so the
-                      headline crossing the bottom edge has clear air. */}
-                  <div className="absolute inset-0 flex items-start justify-between p-5 sm:p-7">
-                    <p className="num text-[13px] leading-[18px] text-ink/85">
-                      PRISM
-                      <br />
-                      <span className="text-ink/55">Event Contracts</span>
-                    </p>
-                    <Link href="/trade" className="shrink-0">
-                      <Button variant="primary" size="md" trailing={<IconArrowRight size={14} />}>
-                        Open the terminal
-                      </Button>
-                    </Link>
-                  </div>
-
-                  {/* The headline lives INSIDE the panel, anchored to its
-                      bottom-left. Width is capped so it can never run under the
-                      notch on the opposite corner — the cut must never crop a
-                      word. Padding matches the label above it, so both sit on
-                      the panel's own left edge. */}
-                  <h1 className="absolute left-5 sm:left-7 bottom-5 sm:bottom-7 z-20 max-w-[64%] num text-[clamp(30px,5vw,68px)] leading-[0.94] tracking-[-0.055em] font-medium text-ink">
-                    Event Contracts,
-                    <br />
-                    <span className="text-accent">refracted.</span>
-                  </h1>
-
-                  {/* The notch. A bespoke silhouette rather than a rectangle:
-                      the panel is cut away at the bottom right and the links
-                      block nests into it, with two inverse corners so the seam
-                      reads as one continuous edge. Hidden below lg, where the
-                      panel is too narrow for a cut to be legible. */}
-                  <div className="hidden lg:block absolute bottom-0 right-0 w-[19rem] h-[7.5rem] bg-base rounded-tl-[26px]">
-                    {/* The links live inside the notch, so they are positioned
-                        against IT rather than the outer wrapper — which is
-                        taller than the panel, and was dropping them below it. */}
-                    <ul className="absolute inset-0 flex flex-col items-end justify-center gap-1.5 pr-5">
-                      {[
-                        { href: "/markets", label: "Live markets" },
-                        { href: "/structures", label: "Structures" },
-                        { href: "/proof", label: "On-chain proof" },
-                      ].map((l) => (
-                        <li key={l.href}>
-                          <Link
-                            href={l.href}
-                            className="text-[13px] text-ink-2 hover:text-accent transition-colors inline-flex items-center gap-2"
-                          >
-                            {l.label}
-                            <IconArrowOut size={13} />
-                          </Link>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                </div>
-              </Reveal>
-
+          <Reveal step={2}>
+            <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
+              <Cta href="/trade">
+                Open the terminal
+                <IconArrowRight size={15} />
+              </Cta>
+              <Cta href="/proof" tone="quiet">
+                See the on-chain proof
+                <IconArrowOut size={14} />
+              </Cta>
             </div>
+          </Reveal>
+        </Bleed>
 
-            <Reveal step={3}>
-              <div className="mt-6 max-w-[46ch]">
-                <p className="text-[15px] leading-[24px] text-ink-2">
-                  A DreamDEX Event Contract is a digital option that expires every
-                  few minutes. PRISM states your view once and carries it across
-                  window succession, so a stream of short binaries becomes a
-                  position with a real tenor.
-                </p>
-                <span className="mt-4 text-label-xs uppercase text-ink-4 flex items-center gap-2">
-                  <span className="pip-live inline-block w-[5px] h-[5px] bg-up" />
-                  Live on {NETWORK.chainName}
-                </span>
+        {/* The artifact, clipped by the fold so it continues past the screen the
+            way a real product shot does. Every row is a live registry row. */}
+        <Bleed className="mt-14">
+          <Reveal step={3}>
+            <div
+              className="relative overflow-hidden rounded-t-[24px] sm:rounded-t-[30px]"
+              style={{
+                border: "1px solid var(--pg-line)",
+                borderBottom: "none",
+                background: "var(--pg-card)",
+              }}
+            >
+              <div className="relative h-[86px] sm:h-[118px] overflow-hidden">
+                <HeroFieldGL intensity={0.9} base="#F4F4F6" accent="#6C4CF1" />
+                <div className="absolute inset-0 flex items-center justify-between gap-4 px-5 sm:px-7">
+                  <p
+                    className="num text-[12px] sm:text-[13px] leading-[17px]"
+                    style={{ color: "var(--pg-ink)" }}
+                  >
+                    PRISM
+                    <br />
+                    <span style={{ color: "var(--pg-ink-3)" }}>Live board</span>
+                  </p>
+                  <span
+                    className="num text-[12px] tabular-nums text-right"
+                    style={{ color: "var(--pg-ink-2)" }}
+                  >
+                    {routableCount} routable · {venueCount} venue{venueCount === 1 ? "" : "s"}
+                  </span>
+                </div>
               </div>
-            </Reveal>
-          </div>
-        </div>
 
-        {/* The live board, moved below the fold. The panel is the fold's one
-            artifact now; two competing for the same glance was the problem with
-            the previous arrangement. */}
-        <div className="relative z-10 border-t border-line">
-          <div className="w-full max-w-[1560px] mx-auto px-5 sm:px-8 lg:px-12 py-8">
-            <HeroInstrument
-              rows={board.slice(0, 6).map((m) => ({
-                marketId: m.marketId,
-                asset: m.asset,
-                interval: m.interval,
-                strike: m.strike,
-                expiry: m.expiry,
-                routable:
-                  m.strike !== null &&
-                  m.status === "Trading" &&
-                  m.expiry - nowSec > headroomSec(m.intervalSec),
-              }))}
-              fetchedAt={snap?.fetchedAt ?? Date.now()}
-              routableCount={routableCount}
-              venueCount={snap ? Object.keys(snap.venues).length : 0}
-              oracle={[btc, eth]
-                .filter((p): p is NonNullable<typeof p> => Boolean(p))
-                .map((p) => ({ asset: p.asset, price: p.price }))}
+              {oracle.length > 0 ? (
+                <div
+                  className="grid grid-cols-2"
+                  style={{
+                    borderTop: "1px solid var(--pg-line)",
+                    borderBottom: "1px solid var(--pg-line)",
+                  }}
+                >
+                  {oracle.map((o, i) => (
+                    <div
+                      key={o.asset}
+                      className="px-5 py-4 sm:px-7"
+                      style={i === 0 ? { borderRight: "1px solid var(--pg-line)" } : undefined}
+                    >
+                      <p className="text-label-xs uppercase" style={{ color: "var(--pg-ink-3)" }}>
+                        {o.asset} oracle
+                      </p>
+                      <p
+                        className="num text-[19px] sm:text-[22px] mt-1"
+                        style={{ color: "var(--pg-ink)" }}
+                      >
+                        {o.price.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+
+              {board.length === 0 ? (
+                <p className="px-5 sm:px-7 py-8 text-[13px]" style={{ color: "var(--pg-ink-2)" }}>
+                  The venue returned no active markets. Nothing is being substituted.
+                </p>
+              ) : (
+                <ul>
+                  {board.slice(0, 7).map((m) => {
+                    const left = m.expiry - nowSec;
+                    const live =
+                      m.strike !== null &&
+                      m.status === "Trading" &&
+                      left > headroomSec(m.intervalSec);
+                    return (
+                      <li
+                        key={m.marketId}
+                        className="grid grid-cols-[1fr_auto_auto] items-baseline gap-4 px-5 sm:px-7 py-3"
+                        style={{ borderBottom: "1px solid var(--pg-line)" }}
+                      >
+                        <span className="num text-[13px] truncate" style={{ color: "var(--pg-ink)" }}>
+                          {m.asset} <span style={{ color: "var(--pg-ink-3)" }}>{m.interval}</span>
+                        </span>
+                        <span
+                          className="num text-[13px] tabular-nums"
+                          style={{ color: "var(--pg-ink-2)" }}
+                        >
+                          {m.strike !== null ? m.strike.toLocaleString("en-US") : "unstruck"}
+                        </span>
+                        <span
+                          className="num text-[13px] tabular-nums w-[5rem] text-right"
+                          style={{ color: live ? "var(--pg-accent)" : "var(--pg-ink-3)" }}
+                        >
+                          {left <= 0 ? "closed" : `${Math.floor(left / 60)}m ${left % 60}s`}
+                        </span>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </div>
+          </Reveal>
+        </Bleed>
+      </section>
+
+      <div className="mt-14">
+        <ClaimMarquee />
+      </div>
+
+      {/* ============================================================
+          WHAT THE VENUE ACTUALLY SUPPORTS
+          ============================================================ */}
+      <section className="py-16 sm:py-24">
+        <Bleed>
+          <h2
+            className="max-w-[16ch] text-[clamp(28px,4.4vw,54px)] leading-[1.04] tracking-[-0.04em] font-semibold text-balance"
+            style={{ color: "var(--pg-ink)" }}
+          >
+            Everything the venue actually supports
+          </h2>
+          <p
+            className="mt-5 max-w-[58ch] text-[15px] leading-[24px] text-pretty"
+            style={{ color: "var(--pg-ink-2)" }}
+          >
+            One strike per window and five cadences per asset. That kills
+            composition across strike, which is why the roll is the product here
+            and not the ladder — and why Range, Spread and Ladder are reported as
+            unconstructible rather than quietly omitted.
+          </p>
+
+          <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <Card
+              title="Discovery, normalised once"
+              body="Binary rows from the Somnia indexer become a typed EventMarket at one boundary, so nothing downstream does arithmetic on a decimal string. Every discarded row is counted by reason."
+              where="sdk/venue/normalize.ts"
+              stat={snap ? `${snap.all.length} rows` : undefined}
+              href="/markets"
+            />
+            <Card
+              title="Execution on the integer grid"
+              body="Price and size snap to the venue's own tick and lot, read from the pool, as exact integers. A float reaching an 18-decimal venue lands off-grid and reverts — and is invisible on a 6-decimal testnet."
+              where="sdk/dreamdex/place-limit.ts"
+              href="/trade"
+            />
+            <Card
+              title="Verification independent of the SDK"
+              body="A write can resolve without throwing on a reverted transaction. Outcomes are re-derived from receipt, nonce movement and collateral delta — and may answer UNKNOWN, which is never rendered as success."
+              where="sdk/dreamdex/execution.ts"
+              href="/proof"
+            />
+            <Card
+              title="Settlement that finds your winnings"
+              body="loadMarkets excludes finalized markets, so a redeem-by-scan built on the registry finds nothing on exactly the markets you need to claim from. This reads listBinaryMarkets and redeems through the raw tier."
+              where="sdk/dreamdex/settlement.ts"
+              href="/settlement"
+            />
+            <Card
+              title="Cancellation re-read from chain"
+              body="A green receipt says the transaction executed, not that every id in it was pulled — a batch cancel skips stale ids silently. What is still resting comes from getOwnOpenOrdersOnchain, never the indexer."
+              where="sdk/dreamdex/cancel.ts"
+            />
+            <Card
+              title="dreamBot Builder configs"
+              body="All six Event Contract strategies run on PRISM's verified path, under the kit's names or the Builder's. A probe reads the kit's own docs and fails if this list has drifted in either direction."
+              where="sdk/bot/config.ts"
+              stat="6 / 6"
+              href="/agents"
             />
           </div>
-        </div>
-
-        {/* The diagram, given its own band below the fold.
-            It used to sit beside the headline as a second artifact competing
-            with the board for the same glance — the left-text / right-panel
-            skeleton on a thousand landing pages. One artifact owns the fold;
-            this one explains it, on its own line, after the scroll begins. */}
-        <div className="relative z-10 border-t border-line bg-surface/40 backdrop-blur-md">
-          <div className="max-w-[1560px] mx-auto px-5 sm:px-8 lg:px-12 py-7">
-            <p className="text-label-xs uppercase text-ink-4 mb-4">
-              One view, carried across successive windows
-            </p>
-            <div className="max-w-[620px]">
-              <Refraction
-                legs={[
-                  { label: "WINDOW N", detail: "fill" },
-                  { label: "WINDOW N+1", detail: "re-strike" },
-                  { label: "WINDOW N+2", detail: "carry" },
-                ]}
-              />
-            </div>
-          </div>
-        </div>
-
+        </Bleed>
       </section>
 
       {/* ============================================================
-          MECHANISM — three beats on one grid, opened by the step
-          number rather than a kicker above a heading.
+          THE TWO LARGE CARDS
           ============================================================ */}
-      <section className="border-b border-line">
-        <div className="max-w-[1560px] mx-auto px-5 sm:px-8 lg:px-12 py-16 lg:py-24">
-          <p className="text-[clamp(22px,3vw,34px)] leading-[1.22] tracking-[-0.02em] text-ink max-w-[26ch]">
-            Every prediction market treats the binary as the product. PRISM
-            treats it as the <span className="text-accent">basis</span>.
-          </p>
-
-          <div className="mt-14 grid md:grid-cols-3 gap-px bg-line border border-line">
-            {MECHANISM.map((m) => (
-              <article
-                key={m.n}
-                className="bg-base p-6 lg:p-8 flex flex-col min-h-[268px]"
+      <section className="pb-16 sm:pb-24">
+        <Bleed>
+          <div className="grid gap-4 lg:grid-cols-2">
+            <div
+              className="rounded-[20px] p-6 sm:p-9 flex flex-col"
+              style={{ background: "var(--pg-card)", border: "1px solid var(--pg-line)" }}
+            >
+              <h3
+                className="text-[clamp(21px,2.3vw,30px)] leading-[1.1] tracking-[-0.03em] font-semibold"
+                style={{ color: "var(--pg-ink)" }}
               >
-                <span className="num text-[13px] text-accent">{m.n}</span>
-                <h2 className="mt-5 text-title-sm text-ink">{m.title}</h2>
-                <p className="mt-3 text-[13px] leading-[21px] text-ink-3">
-                  {m.body}
-                </p>
-                <p className="mt-auto pt-6 text-[11px] leading-[16px] text-ink-4 num">
-                  {m.foot}
-                </p>
-              </article>
-            ))}
+                The Roll Engine
+              </h3>
+              <p
+                className="mt-4 max-w-[46ch] text-[14px] leading-[22px] text-pretty"
+                style={{ color: "var(--pg-ink-2)" }}
+              >
+                A window closes every few minutes. Carrying a view across the
+                succession by hand, forever, is the problem PRISM exists to
+                remove. It does not churn the expiring leg — it lets that settle
+                and claims it, while opening the equivalent exposure in the
+                successor.
+              </p>
+              <div className="mt-8">
+                <Refraction
+                  legs={[
+                    { label: "WINDOW N", detail: "fill" },
+                    { label: "WINDOW N+1", detail: "re-strike" },
+                    { label: "WINDOW N+2", detail: "carry" },
+                  ]}
+                />
+              </div>
+              <p className="num mt-auto pt-7 text-[11px]" style={{ color: "var(--pg-ink-3)" }}>
+                sdk/dreamdex/roll.ts · backend/roll
+              </p>
+            </div>
+
+            <div
+              className="rounded-[20px] p-6 sm:p-9 flex flex-col"
+              style={{ background: "var(--pg-card)", border: "1px solid var(--pg-line)" }}
+            >
+              <h3
+                className="text-[clamp(21px,2.3vw,30px)] leading-[1.1] tracking-[-0.03em] font-semibold"
+                style={{ color: "var(--pg-ink)" }}
+              >
+                Multi-leg, graded honestly
+              </h3>
+              <p
+                className="mt-4 max-w-[46ch] text-[14px] leading-[22px] text-pretty"
+                style={{ color: "var(--pg-ink-2)" }}
+              >
+                EIP-7702 ships in Prague and this chain is pre-Prague, so atomic
+                batching is unavailable — probed at runtime, not asserted. Every
+                leg is gated before a signature exists, and a leg that fills
+                after a later one fails is sold back and the sale verified.
+              </p>
+              <ul
+                className="mt-6 rounded-[14px] overflow-hidden"
+                style={{ border: "1px solid var(--pg-line)" }}
+              >
+                {[
+                  ["PREFLIGHT_ALL_OR_NOTHING", "refused whole; nothing sent"],
+                  ["SEQUENTIAL_VERIFIED", "every leg filled and verified"],
+                  ["PARTIAL_UNWOUND", "a leg failed; the rest sold back"],
+                  ["PARTIAL_EXPOSED", "a leg failed AND an unwind failed"],
+                ].map(([k, v], i) => (
+                  <li
+                    key={k}
+                    className="px-4 py-2.5 flex flex-wrap items-baseline gap-x-3 gap-y-1"
+                    style={i > 0 ? { borderTop: "1px solid var(--pg-line)" } : undefined}
+                  >
+                    <span
+                      className="num text-[12px] shrink-0"
+                      style={{ color: k === "PARTIAL_EXPOSED" ? "#C0392B" : "var(--pg-ink)" }}
+                    >
+                      {k}
+                    </span>
+                    <span className="text-[12px]" style={{ color: "var(--pg-ink-3)" }}>
+                      {v}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+              <p className="num mt-auto pt-7 text-[11px]" style={{ color: "var(--pg-ink-3)" }}>
+                sdk/dreamdex/batch.ts · atomicity.ts
+              </p>
+            </div>
           </div>
-        </div>
+        </Bleed>
       </section>
 
-      <MarketingFooter
-        venues={snap ? Object.keys(snap.venues).length : null}
-        assets={snap ? Object.keys(snap.assets).length : null}
-      />
+      {/* ============================================================
+          THE EVIDENCE PANEL
+          ============================================================ */}
+      <section className="pb-16 sm:pb-24">
+        <Bleed>
+          <div
+            className="relative overflow-hidden rounded-[24px] p-6 sm:p-11 lg:p-14"
+            style={{ background: "var(--pg-ink)" }}
+          >
+            <h2 className="max-w-[22ch] text-[clamp(26px,3.6vw,46px)] leading-[1.05] tracking-[-0.04em] font-semibold text-balance text-white">
+              Everything here is on chain, or it is not claimed.
+            </h2>
+            <p className="mt-5 max-w-[54ch] text-[15px] leading-[24px] text-white/70 text-pretty">
+              A buy and a redeem, a multi-leg batch that had to unwind, an order
+              placed and pulled, and two oracle-driven fills — each one a
+              transaction you can open on the explorer. The claims that could not
+              be proven say so instead of going quiet.
+            </p>
+
+            <dl className="mt-9 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              {[
+                ["Verified round trip", "buy + redeem, net +0.114 tUSDC"],
+                ["Batch", "PARTIAL_UNWOUND, sale verified"],
+                ["Cancel", "resting 1 → 0, re-read from chain"],
+                ["Oracle strategy", "2 fills of 3 signals"],
+              ].map(([k, v]) => (
+                <div key={k} className="rounded-[14px] px-4 py-4 bg-white/[0.06]">
+                  <dt className="text-label-xs uppercase text-white/45">{k}</dt>
+                  <dd className="text-[13px] text-white/85 mt-1.5 text-pretty">{v}</dd>
+                </div>
+              ))}
+            </dl>
+
+            <div className="mt-9 flex flex-wrap items-center gap-3">
+              <Link
+                href="/proof"
+                className="inline-flex items-center gap-2 h-11 px-5 rounded-[10px] text-[14px] font-medium transition-opacity hover:opacity-85"
+                style={{ background: "var(--pg-accent)", color: "#fff" }}
+              >
+                Read the proof
+                <IconArrowRight size={15} />
+              </Link>
+              <Link
+                href="/docs"
+                className="inline-flex items-center gap-2 h-11 px-5 rounded-[10px] text-[14px] text-white/75 hover:text-white transition-colors"
+              >
+                What is not implemented, and why
+                <IconArrowOut size={14} />
+              </Link>
+            </div>
+          </div>
+        </Bleed>
+      </section>
+
+      <MarketingFooter venues={venueCount} assets={assetCount} />
     </div>
   );
 }
 
-/**
- * The mechanism, as it actually works.
- *
- * These three cards used to describe differentiating a strike ladder into a
- * risk-neutral density, a weight vector over a digital basis, and legs landing
- * in one batched transaction. The venue lists one strike per window, so there
- * is no ladder to differentiate and no basis to solve over; and EIP-7702 is not
- * available on this chain, so the batch was never coming. Marketing copy that
- * promises a product the venue cannot express is the most expensive kind of
- * wrong, because it is the first thing anyone reads.
- */
-const MECHANISM = [
-  {
-    n: "01",
-    title: "Read the term structure",
-    body: "Every live YES price is a risk-neutral probability. The venue lists one strike per window and five window lengths, so the real structure is that one strike observed across 5m, 15m, 1h, 4h and 24h — a term structure rather than a smile.",
-    foot: "One strike per window, five cadences",
-  },
-  {
-    n: "02",
-    title: "Price the carry",
-    body: "A view is priced against the depth actually resting on the successor's book, not a theoretical mid. If nothing is resting, the plan says so and refuses rather than quoting a fill that cannot happen.",
-    foot: "Depth-aware, refuses on an empty book",
-  },
-  {
-    n: "03",
-    title: "Fill and roll",
-    body: "Every fill is verified from chain — receipt, nonce and collateral delta — never from the SDK's word, which can report success on a reverted transaction. When the window closes, the expiring leg is left to settle and claimed, while the equivalent exposure opens in the successor.",
-    foot: "Verified on-chain, settle-don't-churn",
-  },
-] as const;
+/* ------------------------------------------------------------------ */
+
+const NAV = [
+  { href: "/markets", label: "Markets" },
+  { href: "/structures", label: "Structures" },
+  { href: "/analytics", label: "Analytics" },
+  { href: "/roll", label: "Roll" },
+  { href: "/proof", label: "Proof" },
+  { href: "/agents", label: "Agents" },
+];
 
 function MarketingNav() {
   return (
-    <header className="h-14 shrink-0 border-b border-line bg-base/80 backdrop-blur-xl sticky top-0 z-30">
-      <div className="h-full max-w-[1560px] mx-auto px-5 sm:px-8 lg:px-12 flex items-center gap-6">
+    <header
+      className="sticky top-0 z-30 backdrop-blur-xl"
+      style={{
+        background: "color-mix(in srgb, var(--pg-bg) 82%, transparent)",
+        borderBottom: "1px solid var(--pg-line)",
+      }}
+    >
+      <Bleed className="h-16 flex items-center gap-6">
         <Link href="/" className="inline-flex items-center gap-2.5 shrink-0">
-          <PrismMark size={24} />
-          <PrismWordmark size={18} className="text-accent" />
+          <PrismMark size={26} />
+          <span style={{ color: "var(--pg-ink)" }}>
+            <PrismWordmark size={19} />
+          </span>
         </Link>
 
-        <nav aria-label="Primary" className="hidden md:flex items-center gap-6 ml-4">
-          {[
-            { href: "/markets", label: "Markets" },
-            { href: "/structures", label: "Structures" },
-            { href: "/analytics", label: "Analytics" },
-            { href: "/agents", label: "Agents" },
-          ].map((l) => (
+        <nav aria-label="Primary" className="hidden lg:flex items-center gap-6 ml-3">
+          {NAV.map((l) => (
             <Link
               key={l.href}
               href={l.href}
-              className="text-[13px] text-ink-3 hover:text-ink transition-colors"
+              className="text-[13.5px] transition-opacity hover:opacity-60"
+              style={{ color: "var(--pg-ink-2)" }}
             >
               {l.label}
             </Link>
           ))}
         </nav>
 
-        <div className="ml-auto flex items-center gap-3 shrink-0">
-          <span className="hidden sm:inline-flex items-center gap-2 border border-line h-8 px-2.5 text-label-xs uppercase text-ink-3">
-            <span className="pip-live inline-block w-[5px] h-[5px] bg-up" />
+        <div className="ml-auto flex items-center gap-2.5 shrink-0">
+          <span
+            className="hidden sm:inline-flex items-center gap-2 h-9 px-3 rounded-[9px] text-label-xs uppercase"
+            style={{ background: "var(--pg-accent-soft)", color: "var(--pg-accent)" }}
+          >
+            <span
+              className="pip-live inline-block w-[5px] h-[5px] rounded-full"
+              style={{ background: "var(--pg-accent)" }}
+            />
             {NETWORK.name}
           </span>
-          <Link href="/trade">
-            <Button variant="primary" size="sm">
-              Launch
-            </Button>
+          <Link
+            href="/trade"
+            className="inline-flex items-center h-9 px-4 rounded-[9px] text-[13.5px] font-medium transition-opacity hover:opacity-85"
+            style={{ background: "var(--pg-accent)", color: "#fff" }}
+          >
+            Launch
           </Link>
         </div>
-      </div>
+      </Bleed>
+
+      {/* Six destinations do not need a drawer. A scrollable rail keeps every one
+          of them a single tap away instead of two. */}
+      <nav
+        aria-label="Primary, compact"
+        className="lg:hidden overflow-x-auto"
+        style={{ borderTop: "1px solid var(--pg-line)" }}
+      >
+        <ul className="flex items-center gap-5 px-5 py-2.5 w-max">
+          {NAV.map((l) => (
+            <li key={l.href}>
+              <Link
+                href={l.href}
+                className="text-[13px] whitespace-nowrap"
+                style={{ color: "var(--pg-ink-2)" }}
+              >
+                {l.label}
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </nav>
     </header>
   );
 }
 
-function MarketingFooter({
-  venues,
-  assets,
-}: {
-  /** Live venue-id count, or null when the registry was unreachable. */
-  venues: number | null;
-  /** Live underlying count, same. */
-  assets: number | null;
-}) {
+function MarketingFooter({ venues, assets }: { venues: number; assets: number }) {
+  const columns = [
+    {
+      head: "Terminal",
+      items: [
+        { href: "/trade", label: "Trade" },
+        { href: "/markets", label: "Markets" },
+        { href: "/structures", label: "Structures" },
+        { href: "/analytics", label: "Analytics" },
+      ],
+    },
+    {
+      head: "Positions",
+      items: [
+        { href: "/positions", label: "Positions" },
+        { href: "/roll", label: "Roll Engine" },
+        { href: "/settlement", label: "Settlement" },
+        { href: "/activity", label: "Activity" },
+      ],
+    },
+    {
+      head: "Evidence",
+      items: [
+        { href: "/proof", label: "On-chain proof" },
+        { href: "/docs", label: "Documentation" },
+        { href: "/agents", label: "Bot integration" },
+        { href: "/settings", label: "Venue settings" },
+      ],
+    },
+  ];
+
   return (
-    <footer className="relative bg-base">
-      <div className="max-w-[1560px] mx-auto px-5 sm:px-8 lg:px-12 pt-16">
-        <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-4 pb-14">
+    <footer className="mt-auto" style={{ borderTop: "1px solid var(--pg-line)" }}>
+      <Bleed className="pt-14 pb-10">
+        <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_repeat(3,minmax(0,auto))] lg:gap-16">
           <div className="min-w-0">
-            <PrismMark size={30} />
-            <p className="mt-4 text-[13px] leading-[20px] text-ink-3 max-w-[30ch]">
-              The structured payoff layer for DreamDEX Event Contracts.
+            <Link href="/" className="inline-flex items-center gap-2.5">
+              <PrismMark size={24} />
+              <span style={{ color: "var(--pg-ink)" }}>
+                <PrismWordmark size={18} />
+              </span>
+            </Link>
+            <p
+              className="mt-4 max-w-[34ch] text-[13px] leading-[21px] text-pretty"
+              style={{ color: "var(--pg-ink-2)" }}
+            >
+              Strategy infrastructure for DreamDEX Event Contracts. Testnet build
+              — educational reference, not financial advice.
             </p>
           </div>
 
-          {FOOTER.map((col) => (
-            <div key={col.title} className="min-w-0">
-              <p className="text-label-xs uppercase text-ink-4">{col.title}</p>
-              <ul className="mt-4 flex flex-col gap-2.5">
-                {col.links.map((l) => (
-                  <li key={l.label}>
+          {columns.map((c) => (
+            <div key={c.head} className="min-w-0">
+              <p className="text-label-xs uppercase" style={{ color: "var(--pg-ink-3)" }}>
+                {c.head}
+              </p>
+              <ul className="mt-4 space-y-2.5">
+                {c.items.map((i) => (
+                  <li key={i.href}>
                     <Link
-                      href={l.href}
-                      className="text-[13px] text-ink-3 hover:text-accent transition-colors"
+                      href={i.href}
+                      className="text-[13px] transition-opacity hover:opacity-60"
+                      style={{ color: "var(--pg-ink-2)" }}
                     >
-                      {l.label}
+                      {i.label}
                     </Link>
                   </li>
                 ))}
@@ -336,35 +693,27 @@ function MarketingFooter({
           ))}
         </div>
 
-        <div className="flex flex-wrap items-center justify-between gap-4 py-5 border-t border-line">
-          <p className="text-[12px] text-ink-4">
-            Testnet build. Educational reference, not financial advice.
+        <div
+          className="mt-12 pt-6 flex flex-wrap items-center justify-between gap-4"
+          style={{ borderTop: "1px solid var(--pg-line)" }}
+        >
+          <p className="text-[12px]" style={{ color: "var(--pg-ink-3)" }}>
+            Built on {NETWORK.chainName} · chain {NETWORK.chainId}
           </p>
-          {/* Read off the live registry, not off a constant. The venue-id set
-              has already drifted from two to four; printing one hard-coded id
-              made the footer quietly wrong the day the venue added a third. */}
-          <p className="num text-[12px] text-ink-4">
-            {venues !== null && assets !== null
-              ? `${venues} venue${venues === 1 ? "" : "s"} · ${assets} underlying${
-                  assets === 1 ? "" : "s"
-                } · chain ${NETWORK.chainId}`
-              : `chain ${NETWORK.chainId}`}
+          <p className="num text-[12px]" style={{ color: "var(--pg-ink-3)" }}>
+            {venues} venue{venues === 1 ? "" : "s"} · {assets} underlying
+            {assets === 1 ? "" : "s"}, read live
           </p>
         </div>
-      </div>
+      </Bleed>
 
-      {/* Oversized wordmark: on the top layer, anchored flush to the very
-          bottom edge with no gap beneath it, and given real headroom above
-          so no cap is shaved by the container. */}
-      <div className="relative overflow-hidden pt-6">
+      {/* Anchored flush to the bottom edge with headroom above, so no cap is
+          shaved by the container. */}
+      <div className="relative overflow-hidden pt-3">
         <span
           aria-hidden
-          className="block select-none text-center leading-[0.78] font-semibold tracking-[-0.045em] text-[clamp(72px,19vw,268px)] text-transparent bg-clip-text"
-          style={{
-            backgroundImage:
-              "linear-gradient(180deg, #1c2426 0%, #0d1112 62%, #050505 100%)",
-            marginBottom: "-0.14em",
-          }}
+          className="num block select-none text-center leading-[0.76] font-semibold tracking-[-0.05em] text-[clamp(64px,17vw,230px)]"
+          style={{ color: "color-mix(in srgb, var(--pg-ink) 7%, transparent)" }}
         >
           PRISM
         </span>
@@ -372,33 +721,3 @@ function MarketingFooter({
     </footer>
   );
 }
-
-const FOOTER = [
-  {
-    title: "Terminal",
-    links: [
-      { href: "/trade", label: "Trade" },
-      { href: "/markets", label: "Markets" },
-      { href: "/structures", label: "Structures" },
-      { href: "/positions", label: "Positions" },
-    ],
-  },
-  {
-    title: "Engine",
-    links: [
-      { href: "/analytics", label: "Volatility surface" },
-      { href: "/roll", label: "Roll engine" },
-      { href: "/settlement", label: "Settlement" },
-      { href: "/activity", label: "Audit log" },
-    ],
-  },
-  {
-    title: "Build",
-    links: [
-      { href: "/agents", label: "Agent API" },
-      { href: "/docs", label: "Documentation" },
-      { href: "https://docs.dreamdex.io/developers/event-contracts", label: "DreamDEX docs" },
-      { href: "https://github.com/somnia-chain/dreamdex-bot-kit", label: "Bot kit" },
-    ],
-  },
-] as const;

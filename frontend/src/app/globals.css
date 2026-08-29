@@ -242,3 +242,14 @@ body {
 .pip-live {
   animation: prism-pulse 2.4s ease-in-out infinite;
 }
+
+/* The claim strip. Translating half the doubled track is what makes the loop
+   seamless — the second copy is aria-hidden and exists only for that. */
+@keyframes prism-marquee {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(-50%, 0, 0);
+  }
+}

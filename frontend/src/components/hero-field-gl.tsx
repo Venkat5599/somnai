@@ -144,9 +144,15 @@ const FRAGMENT = `
 export function HeroFieldGL({
   /** Ceiling on how far toward the accent the brightest point travels. */
   intensity = 0.34,
+  /** Substrate the field sits on. Defaults to the terminal's near-black. */
+  base = "#050505",
+  /** The single hue the noise drives intensity along. */
+  accent = "#00f0ff",
   className,
 }: {
   intensity?: number;
+  base?: string;
+  accent?: string;
   className?: string;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -177,8 +183,8 @@ export function HeroFieldGL({
       uRes: { value: new THREE.Vector2(1, 1) },
       uMouse: { value: new THREE.Vector2(0.5, 0.62) },
       uIntensity: { value: intensity },
-      uBase: { value: new THREE.Color("#050505") },
-      uAccent: { value: new THREE.Color("#00f0ff") },
+      uBase: { value: new THREE.Color(base) },
+      uAccent: { value: new THREE.Color(accent) },
     };
 
     const material = new THREE.ShaderMaterial({
@@ -255,7 +261,7 @@ export function HeroFieldGL({
       material.dispose();
       renderer.dispose();
     };
-  }, [intensity]);
+  }, [intensity, base, accent]);
 
   return (
     <canvas
