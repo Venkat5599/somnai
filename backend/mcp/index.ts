@@ -45,6 +45,16 @@ import { verifyLifecycle } from "../../sdk/dreamdex/proof";
 import { structureMatrix } from "../../sdk/venue/structures";
 import { getPriceSnapshot } from "../../sdk/venue/prices";
 import { readBalances } from "../../sdk/dreamdex/execution";
+import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
+import { join, dirname } from "node:path";
+import {
+  checkFence,
+  clampToGrant,
+  redeemGrant,
+  verifyGrant,
+  type Grant,
+  type Lease,
+} from "../../sdk/agent/credential";
 import {
   DEFAULT_POLICY,
   authorize,
@@ -82,6 +92,90 @@ const policy: AgentPolicy = {
   dryRun: (process.env.AGENT_DRY_RUN ?? "true") !== "false" || config.dryRun,
 };
 
+/* ------------------------------------------------------------------ */
+/* Execution credential                                                */
+/* ------------------------------------------------------------------ */
+
+/**
+ * OPTIONAL, AND OFF BY DEFAULT. Without AGENT_GRANT the server runs exactly as
+ * before, on the environment policy alone. With one, the grant becomes a
+ * CEILING the environment cannot exceed, and the lease makes the credential
+ * usable by one process at a time.
+ *
+ * The lease is a file because the property only needs to hold between processes
+ * on one operator's machine — that is where "somebody copied my config" happens.
+ * It is not a distributed lock and does not pretend to be.
+ */
+const LEASE_PATH = process.env.AGENT_LEASE_PATH ?? join(process.cwd(), ".agent-lease.json");
+
+function readLease(grantId: string): Lease | null {
+  try {
+    if (!existsSync(LEASE_PATH)) return null;
+    const all = JSON.parse(readFileSync(LEASE_PATH, "utf8")) as Record<string, Lease>;
+    return all[grantId] ?? null;
+  } catch {
+    // An unreadable lease is NOT an absent lease. Returning null here would
+    // mint fence 1 and hand a second process a valid credential, which is the
+    // exact failure this file exists to prevent.
+    throw new Error(`Lease store at ${LEASE_PATH} is unreadable; refusing to start.`);
+  }
+}
+
+function writeLease(lease: Lease) {
+  let all: Record<string, Lease> = {};
+  try {
+    if (existsSync(LEASE_PATH)) all = JSON.parse(readFileSync(LEASE_PATH, "utf8"));
+  } catch {
+    all = {};
+  }
+  all[lease.grantId] = lease;
+  mkdirSync(dirname(LEASE_PATH), { recursive: true });
+  writeFileSync(LEASE_PATH, JSON.stringify(all, null, 2) + String.fromCharCode(10));
+}
+
+let credential: { grant: Grant; fence: number; holder: string } | null = null;
+
+if (process.env.AGENT_GRANT) {
+  const secret = process.env.AGENT_SECRET ?? "";
+  let grant: Grant;
+  try {
+    grant = JSON.parse(process.env.AGENT_GRANT) as Grant;
+  } catch {
+    throw new Error("AGENT_GRANT is not valid JSON.");
+  }
+
+  const v = verifyGrant(grant, secret);
+  if (!v.ok) throw new Error(`Grant refused: ${v.reason}`);
+
+  const r = redeemGrant(grant, readLease(grant.grantId));
+  writeLease(r.lease);
+  credential = { grant, fence: r.fence, holder: r.holder };
+
+  // The grant is a ceiling, never a grant of extra room.
+  Object.assign(policy, clampToGrant(policy, grant));
+
+  if (r.displacedPrevious)
+    // stderr, not stdout: stdout is the MCP transport.
+    console.error(
+      `[prism] displaced an earlier holder of grant ${grant.grantId} (fence ${r.fence}). ` +
+        `If you did not start a second session, this credential has been copied.`,
+    );
+}
+
+/**
+ * Every write asks this first.
+ *
+ * If another process redeemed the same grant, our fence is stale and this
+ * refuses — which is how the losing clone finds out, rather than quietly
+ * double-trading against one budget.
+ */
+function credentialOk(): { ok: true } | { ok: false; reason: string; detail: string } {
+  if (!credential) return { ok: true };
+  const live = readLease(credential.grant.grantId);
+  const r = checkFence(live, { fence: credential.fence, holder: credential.holder });
+  return r.ok ? { ok: true } : { ok: false, reason: r.reason, detail: r.detail };
+}
+
 let state = newState();
 
 const ok = (data: unknown) => ({
@@ -98,7 +192,13 @@ server.tool(
   "get_policy",
   "The budget, caps and scope this session trades under, and what remains of them.",
   {},
-  async () => ok(describePolicy(policy, state)),
+  async () =>
+    ok({
+      ...describePolicy(policy, state),
+      credential: credential
+        ? { grantId: credential.grant.grantId, fence: credential.fence, live: credentialOk().ok }
+        : null,
+    }),
 );
 
 server.tool(
@@ -184,6 +284,10 @@ server.tool(
     size: z.number().positive(),
   },
   async ({ marketId, outcome, size }) => {
+    const cred = credentialOk();
+    if (!cred.ok)
+      return ok({ status: "REFUSED_BY_CREDENTIAL", reason: cred.reason, detail: cred.detail });
+
     const snap = await getMarketSnapshot(config);
     const market = snap.all.find((m) => m.marketId === marketId) ?? null;
     if (!market) return ok({ status: "REFUSED", reason: "MARKET_NOT_FOUND" });
@@ -336,6 +440,10 @@ server.tool(
       .max(4),
   },
   async ({ legs }) => {
+    const cred = credentialOk();
+    if (!cred.ok)
+      return ok({ status: "REFUSED_BY_CREDENTIAL", reason: cred.reason, detail: cred.detail });
+
     // Every leg is authorized separately against the SAME budget, so a batch
     // cannot do in four calls what one call would be refused for.
     const plans = await planBatch(legs.map((l) => ({ ...l, side: "buy" as const })) as BatchLeg[], config);
@@ -371,6 +479,10 @@ server.tool(
   "Carry a view into the successor window. Opens the successor; the expiring leg settles.",
   { marketId: z.string(), outcome: z.enum(["YES", "NO"]), size: z.number().positive() },
   async ({ marketId, outcome, size }) => {
+    const cred = credentialOk();
+    if (!cred.ok)
+      return ok({ status: "REFUSED_BY_CREDENTIAL", reason: cred.reason, detail: cred.detail });
+
     const plan = await planRoll({ marketId, outcome: outcome as Outcome, size }, config);
     if (!plan.ok || !plan.to)
       return ok({ status: "NOT_ATTEMPTED", blocker: plan.blocker, detail: plan.detail });
@@ -400,6 +512,9 @@ server.tool(
   "Redeem a settled position. Collects funds rather than spending them, so it costs no budget.",
   { marketId: z.string() },
   async ({ marketId }) => {
+    const cred = credentialOk();
+    if (!cred.ok)
+      return ok({ status: "REFUSED_BY_CREDENTIAL", reason: cred.reason, detail: cred.detail });
     if (state.revoked) return ok({ status: "REFUSED_BY_POLICY", reason: "SESSION_REVOKED" });
     if (policy.dryRun) return ok({ status: "REFUSED_BY_POLICY", reason: "DRY_RUN" });
     const rows = await findClaimable(25, config);
@@ -414,6 +529,9 @@ server.tool(
   "Pull resting orders. Spends no budget; what is still resting is re-read from chain.",
   { marketId: z.string(), orderIds: z.array(z.string()).min(1) },
   async ({ marketId, orderIds }) => {
+    const cred = credentialOk();
+    if (!cred.ok)
+      return ok({ status: "REFUSED_BY_CREDENTIAL", reason: cred.reason, detail: cred.detail });
     if (state.revoked) return ok({ status: "REFUSED_BY_POLICY", reason: "SESSION_REVOKED" });
     return ok(await cancelOrders(marketId, orderIds, config));
   },
@@ -424,6 +542,9 @@ server.tool(
   "Pull EVERY resting order on a market. The safe exit; costs no budget.",
   { marketId: z.string() },
   async ({ marketId }) => {
+    const cred = credentialOk();
+    if (!cred.ok)
+      return ok({ status: "REFUSED_BY_CREDENTIAL", reason: cred.reason, detail: cred.detail });
     if (state.revoked) return ok({ status: "REFUSED_BY_POLICY", reason: "SESSION_REVOKED" });
     return ok(await flatten(marketId, config));
   },

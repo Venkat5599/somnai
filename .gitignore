@@ -46,3 +46,6 @@ Thumbs.db
 
 # a generated bot config carries tuning, and may carry a key line
 bot.env
+
+# Agent lease store — a live credential binding, never committed.
+.agent-lease.json
