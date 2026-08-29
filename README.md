@@ -493,6 +493,69 @@ node scripts/mcp-demo.mjs                             # the MCP server, live
 Both print a transcript rather than a claim. Neither signs anything — the
 session is dry-run, so the refusals are the part worth reading.
 
+
+---
+
+## Why this grows the venue
+
+Event Contracts have a structural problem that is not a liquidity problem: a
+contract that expires in five minutes has no holding period, so there is no
+reason to come back tomorrow. Every measurement below was taken from the live
+venue while writing this.
+
+**The cadence is faster than humans trade.** A five-minute window means twelve
+decisions an hour, per market, forever. Nobody sits at that. The venue's own
+board shows the consequence — of 14 live windows, 10 were unstruck and 0 were
+routable at the moment of measurement. Depth is thin because attention is thin.
+
+**Agents do not have that limit, and that is the whole thesis.** PRISM ships as
+an MCP server and a TypeScript client, so any Claude user is one paste away from
+trading DreamDEX, and any developer can embed the venue without learning it.
+Nineteen tools, a spend policy the model cannot raise, and dry-run by default —
+which is what makes it safe to hand to strangers rather than a liability.
+
+**The roll converts a five-minute contract into a position.** Carrying a view
+across window succession is what turns a one-time click into a returning
+trader — and returning traders are the only kind that compound volume. That is
+the product, not the ladder.
+
+**Makers create the depth the board is missing.** All six bot-kit strategies run
+on PRISM's verified path, three of them resting — maker, passive bid, ladder.
+More makers is more depth, and more depth is what makes the venue tradeable for
+everyone who arrives after.
+
+### Revenue, natively
+
+DreamDEX's own `placeOrder` carries `address builder` and
+`uint96 builderFeeBpsTimes1k`. The venue already pays whoever routes the flow —
+no token, no separate protocol, no rent extracted from users:
+
+```solidity
+function placeOrder(
+  bool isBid, uint64 userData, uint256 price, uint256 quantity,
+  uint64 expireTimestampNs, uint8 orderType, uint8 selfMatchingOption,
+  address builder, uint96 builderFeeBpsTimes1k
+) external payable returns (bool success, uint128 orderId);
+```
+
+So the incentives point the same way for everyone. PRISM earns when it routes
+volume, DreamDEX earns when volume exists, and a trader pays a venue fee they
+would pay anyway. A terminal, an agent surface and a fleet of makers are three
+ways of feeding the same order book — which is why this is a business rather
+than a demo.
+
+### What would have to be true
+
+Stated as conditions rather than promises, because the honest version is more
+useful than an optimistic one:
+
+| | |
+|---|---|
+| Agents actually trade | the surface exists and is verified; nobody has run one at scale |
+| Successors get pre-struck | the roll is built and waiting — 0 successors in ~300 recorded sweeps |
+| Mainnet behaves like testnet | the 18-decimal grid work exists *because* it will not |
+| Makers find it worth quoting | fee capture is native; the spread has to cover it |
+
 ---
 
 ## Local development
