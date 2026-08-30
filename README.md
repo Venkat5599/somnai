@@ -74,6 +74,66 @@ Everything below executes against Somnia and is independently verifiable.
 | Roll planner + daemon | real succession chains, typed blockers |
 | Wallet history | read from the Shannon explorer account API |
 
+### 50-tx on-chain batch — Aug 30, 2026
+
+Operator burner `0xc27C4fBadF1B22C83C075104EC7d1D3360c1c31E` distributed
+**0.9 STT in each of 50 mined transactions** to the testnet cohort wallet set.
+Every hash below was re-verified against the Shannon explorer (from/to/value,
+receipt success) after mining — no row is claimed from memory.
+
+| # | Transaction hash | Explorer | Value | Status |
+|---|------------------|----------|-------|--------|
+| 1 | `0xca74793c072edbcfe598b0961bd0db68ac9943029286c74fc65af86bf4ca102c` | [view](https://shannon-explorer.somnia.network/tx/0xca74793c072edbcfe598b0961bd0db68ac9943029286c74fc65af86bf4ca102c) | 0.9 STT | success |
+| 2 | `0x6fe0a090a710b15f38164e1df963e66f4d929e0927c3ab8e32638df14b1df5f1` | [view](https://shannon-explorer.somnia.network/tx/0x6fe0a090a710b15f38164e1df963e66f4d929e0927c3ab8e32638df14b1df5f1) | 0.9 STT | success |
+| 3 | `0x7a8977e5cbadcd92dbd86815d42fabbaa2045c3d748528d94ad5ae1b63ea3d3a` | [view](https://shannon-explorer.somnia.network/tx/0x7a8977e5cbadcd92dbd86815d42fabbaa2045c3d748528d94ad5ae1b63ea3d3a) | 0.9 STT | success |
+| 4 | `0xb14cd57fbfa743d301ef20f5887c072b8edc52a1e01fdaf5c2a0cda6c8dad4dd` | [view](https://shannon-explorer.somnia.network/tx/0xb14cd57fbfa743d301ef20f5887c072b8edc52a1e01fdaf5c2a0cda6c8dad4dd) | 0.9 STT | success |
+| 5 | `0x848ff837e7c8b456736e36aef5aa62f04c7d186308a0ccd215a1d6ac641ef852` | [view](https://shannon-explorer.somnia.network/tx/0x848ff837e7c8b456736e36aef5aa62f04c7d186308a0ccd215a1d6ac641ef852) | 0.9 STT | success |
+| 6 | `0x4da93fde8b500ac8e9dcd1b719c4c128bb6d94e96263c6a7079ea55ab2512c01` | [view](https://shannon-explorer.somnia.network/tx/0x4da93fde8b500ac8e9dcd1b719c4c128bb6d94e96263c6a7079ea55ab2512c01) | 0.9 STT | success |
+| 7 | `0x11c16d93ea9e972300482ddd5b423d3ecc28af46d832125cb1d4db8ac07c38ec` | [view](https://shannon-explorer.somnia.network/tx/0x11c16d93ea9e972300482ddd5b423d3ecc28af46d832125cb1d4db8ac07c38ec) | 0.9 STT | success |
+| 8 | `0x0e5739c399b1a4921c912af7271902a37677a507d52e4723e18293bb2a2a2ebe` | [view](https://shannon-explorer.somnia.network/tx/0x0e5739c399b1a4921c912af7271902a37677a507d52e4723e18293bb2a2a2ebe) | 0.9 STT | success |
+| 9 | `0xe96f0137157e40c9b5e8d9c66a0bd360e8544f3c4eed10a6ec4554f36d102d08` | [view](https://shannon-explorer.somnia.network/tx/0xe96f0137157e40c9b5e8d9c66a0bd360e8544f3c4eed10a6ec4554f36d102d08) | 0.9 STT | success |
+| 10 | `0x47bf82caf36a801cbaef46d5505eaf6059ea58cc755845309124d64633a44837` | [view](https://shannon-explorer.somnia.network/tx/0x47bf82caf36a801cbaef46d5505eaf6059ea58cc755845309124d64633a44837) | 0.9 STT | success |
+| 11 | `0x6ef3170a44552c3f3e0fb8e1ccecf474ff78d2d166d36637ac0b9028ee01f66a` | [view](https://shannon-explorer.somnia.network/tx/0x6ef3170a44552c3f3e0fb8e1ccecf474ff78d2d166d36637ac0b9028ee01f66a) | 0.9 STT | success |
+| 12 | `0x4625afcae6517bea83b1bce7eac9025133aefd58078ee49bd5de69656c580642` | [view](https://shannon-explorer.somnia.network/tx/0x4625afcae6517bea83b1bce7eac9025133aefd58078ee49bd5de69656c580642) | 0.9 STT | success |
+| 13 | `0x1534bdd16a2ce20d090133a489517c86d1baa99ec517f2cc7107508ba303f128` | [view](https://shannon-explorer.somnia.network/tx/0x1534bdd16a2ce20d090133a489517c86d1baa99ec517f2cc7107508ba303f128) | 0.9 STT | success |
+| 14 | `0x50dad22e8ff6a20576e0c34395dd7bfe3cb9824db0ddb215521cb293ba0bad08` | [view](https://shannon-explorer.somnia.network/tx/0x50dad22e8ff6a20576e0c34395dd7bfe3cb9824db0ddb215521cb293ba0bad08) | 0.9 STT | success |
+| 15 | `0x44f3aa170c82274473c553f89a360572277a4da8f75fd014c2a0451e73afd531` | [view](https://shannon-explorer.somnia.network/tx/0x44f3aa170c82274473c553f89a360572277a4da8f75fd014c2a0451e73afd531) | 0.9 STT | success |
+| 16 | `0xd65400fa3f65a3805ef6110ea0b94073df8ef47543298189b4220b817aabe756` | [view](https://shannon-explorer.somnia.network/tx/0xd65400fa3f65a3805ef6110ea0b94073df8ef47543298189b4220b817aabe756) | 0.9 STT | success |
+| 17 | `0xa380ac5b91b182ca13ea530b7d72d8a769752a851ac89b8e802eb85d0e9c40cb` | [view](https://shannon-explorer.somnia.network/tx/0xa380ac5b91b182ca13ea530b7d72d8a769752a851ac89b8e802eb85d0e9c40cb) | 0.9 STT | success |
+| 18 | `0x06660283ef8961956c12f8e45a96840d331893ce2c808e9656e2d37db3cc29ee` | [view](https://shannon-explorer.somnia.network/tx/0x06660283ef8961956c12f8e45a96840d331893ce2c808e9656e2d37db3cc29ee) | 0.9 STT | success |
+| 19 | `0xc9e8b7cadab6cd2d5160425bc241c8d0e35754770990ef85897e86cf2c20fce1` | [view](https://shannon-explorer.somnia.network/tx/0xc9e8b7cadab6cd2d5160425bc241c8d0e35754770990ef85897e86cf2c20fce1) | 0.9 STT | success |
+| 20 | `0xd2c04e0879d039873c68ce65630f5864c7c16ca8463d6355b64075decda80d5d` | [view](https://shannon-explorer.somnia.network/tx/0xd2c04e0879d039873c68ce65630f5864c7c16ca8463d6355b64075decda80d5d) | 0.9 STT | success |
+| 21 | `0xe506612276fc2d80878929132c52f0298cde3a65d1fa850c3eff599e232a8a30` | [view](https://shannon-explorer.somnia.network/tx/0xe506612276fc2d80878929132c52f0298cde3a65d1fa850c3eff599e232a8a30) | 0.9 STT | success |
+| 22 | `0xe4e4e684423a4d5579d5fe80642ac18370871ba5c937c227ada64599ce9dea3b` | [view](https://shannon-explorer.somnia.network/tx/0xe4e4e684423a4d5579d5fe80642ac18370871ba5c937c227ada64599ce9dea3b) | 0.9 STT | success |
+| 23 | `0x19d2d118e002a26a29ff7a02abeef059f62a4fd4f0dde319665cf616ca7cedc4` | [view](https://shannon-explorer.somnia.network/tx/0x19d2d118e002a26a29ff7a02abeef059f62a4fd4f0dde319665cf616ca7cedc4) | 0.9 STT | success |
+| 24 | `0xd74008bd9776e86e87348c4e8f5b97b9d8d41ddb0c49b66e9b7c51bed0dea85c` | [view](https://shannon-explorer.somnia.network/tx/0xd74008bd9776e86e87348c4e8f5b97b9d8d41ddb0c49b66e9b7c51bed0dea85c) | 0.9 STT | success |
+| 25 | `0x5bb87ac41c2743e04cb4d76008d25126730138124481be7ceb4770aa47981a34` | [view](https://shannon-explorer.somnia.network/tx/0x5bb87ac41c2743e04cb4d76008d25126730138124481be7ceb4770aa47981a34) | 0.9 STT | success |
+| 26 | `0x6fd4be71c07a1fddffd5a46160bd586eb2f599fd190faee5eeba550b438928e3` | [view](https://shannon-explorer.somnia.network/tx/0x6fd4be71c07a1fddffd5a46160bd586eb2f599fd190faee5eeba550b438928e3) | 0.9 STT | success |
+| 27 | `0xc36e0d16e7561443b1c4713041f3a9c3fd8f84fe8afa7d7e6f8c157fdb1d135a` | [view](https://shannon-explorer.somnia.network/tx/0xc36e0d16e7561443b1c4713041f3a9c3fd8f84fe8afa7d7e6f8c157fdb1d135a) | 0.9 STT | success |
+| 28 | `0x5b9c19bed4f706d062b474499a8737f997c37339389ef8d56c2b68495ac0b4fe` | [view](https://shannon-explorer.somnia.network/tx/0x5b9c19bed4f706d062b474499a8737f997c37339389ef8d56c2b68495ac0b4fe) | 0.9 STT | success |
+| 29 | `0x1089bb23eeed8f70f5e55c4c6d8233ddee4e47add2693e996305aea873353e30` | [view](https://shannon-explorer.somnia.network/tx/0x1089bb23eeed8f70f5e55c4c6d8233ddee4e47add2693e996305aea873353e30) | 0.9 STT | success |
+| 30 | `0xe902ff6d2836efe60b49b4e0ed81ddc62e2f30743a0a0e2db9c739cde11ed189` | [view](https://shannon-explorer.somnia.network/tx/0xe902ff6d2836efe60b49b4e0ed81ddc62e2f30743a0a0e2db9c739cde11ed189) | 0.9 STT | success |
+| 31 | `0x703b3685f60026db805c363e773014725d8120adc1fc3e2e9c6196f28873f901` | [view](https://shannon-explorer.somnia.network/tx/0x703b3685f60026db805c363e773014725d8120adc1fc3e2e9c6196f28873f901) | 0.9 STT | success |
+| 32 | `0x8ccaec91089aa13113b4ef691aed1d085ab51eb812d1844c600ecdecc247cfaf` | [view](https://shannon-explorer.somnia.network/tx/0x8ccaec91089aa13113b4ef691aed1d085ab51eb812d1844c600ecdecc247cfaf) | 0.9 STT | success |
+| 33 | `0x6f33cb10f359d9c4f739c85d7ba238d6f085046c5869262353f825d20662277f` | [view](https://shannon-explorer.somnia.network/tx/0x6f33cb10f359d9c4f739c85d7ba238d6f085046c5869262353f825d20662277f) | 0.9 STT | success |
+| 34 | `0x41f04039282e34a7b15825b390a5998e8b5efc098a5c3f7209a5c753beaccf05` | [view](https://shannon-explorer.somnia.network/tx/0x41f04039282e34a7b15825b390a5998e8b5efc098a5c3f7209a5c753beaccf05) | 0.9 STT | success |
+| 35 | `0xa3139d4658d271af29c4f810fe55aa4a81b2d47ed46c45e3ef540dcf1910df82` | [view](https://shannon-explorer.somnia.network/tx/0xa3139d4658d271af29c4f810fe55aa4a81b2d47ed46c45e3ef540dcf1910df82) | 0.9 STT | success |
+| 36 | `0x5aeac1b01930ade96a03169b140235194689e01fa10c6ee77272f12212a477af` | [view](https://shannon-explorer.somnia.network/tx/0x5aeac1b01930ade96a03169b140235194689e01fa10c6ee77272f12212a477af) | 0.9 STT | success |
+| 37 | `0xd40cbbc8820a5d8ff3c8ea3c6550f1380761d735a64ef0aaae3c567fe8355cb8` | [view](https://shannon-explorer.somnia.network/tx/0xd40cbbc8820a5d8ff3c8ea3c6550f1380761d735a64ef0aaae3c567fe8355cb8) | 0.9 STT | success |
+| 38 | `0x1c4aab968f35545dbef921d38b8c1ecc01d66e06629e1caffb2ec10db73388f1` | [view](https://shannon-explorer.somnia.network/tx/0x1c4aab968f35545dbef921d38b8c1ecc01d66e06629e1caffb2ec10db73388f1) | 0.9 STT | success |
+| 39 | `0xf4f1c4b978385c03547c149821fe7aea5fe57ad35cd440c4c47b43d6846fe915` | [view](https://shannon-explorer.somnia.network/tx/0xf4f1c4b978385c03547c149821fe7aea5fe57ad35cd440c4c47b43d6846fe915) | 0.9 STT | success |
+| 40 | `0x21583f2e0916c5a18f773a5eedacba6787a8fb08a9c0ffd033ffc619d40e2b69` | [view](https://shannon-explorer.somnia.network/tx/0x21583f2e0916c5a18f773a5eedacba6787a8fb08a9c0ffd033ffc619d40e2b69) | 0.9 STT | success |
+| 41 | `0x55c6f2e0924929a993b0f0bf68c3056f51d22688f38de137a927a6adf05284a9` | [view](https://shannon-explorer.somnia.network/tx/0x55c6f2e0924929a993b0f0bf68c3056f51d22688f38de137a927a6adf05284a9) | 0.9 STT | success |
+| 42 | `0x0382897c647c66f4264d57b77142027c10f32558be336a2b6dcdf22054b4bd25` | [view](https://shannon-explorer.somnia.network/tx/0x0382897c647c66f4264d57b77142027c10f32558be336a2b6dcdf22054b4bd25) | 0.9 STT | success |
+| 43 | `0x8ae0f7b63aed5221f0443343cd75d1032c7c35fce6e0673d1cfdcaf57f81df10` | [view](https://shannon-explorer.somnia.network/tx/0x8ae0f7b63aed5221f0443343cd75d1032c7c35fce6e0673d1cfdcaf57f81df10) | 0.9 STT | success |
+| 44 | `0x679ffaee4744f332151bcd9131a92fe49cf3132b9d3172c753a8b675dde433ae` | [view](https://shannon-explorer.somnia.network/tx/0x679ffaee4744f332151bcd9131a92fe49cf3132b9d3172c753a8b675dde433ae) | 0.9 STT | success |
+| 45 | `0xd5e60763b1ea130369d19a781b07f9b205a7f1106bc1a4f24deb84cbea61646e` | [view](https://shannon-explorer.somnia.network/tx/0xd5e60763b1ea130369d19a781b07f9b205a7f1106bc1a4f24deb84cbea61646e) | 0.9 STT | success |
+| 46 | `0xcd474d3991378c55178640e66f596a891f674a7139b7e2b1546c2be845aa1b57` | [view](https://shannon-explorer.somnia.network/tx/0xcd474d3991378c55178640e66f596a891f674a7139b7e2b1546c2be845aa1b57) | 0.9 STT | success |
+| 47 | `0x3ab69fe5161b1f6e2a98f0458d0958a5b621dcf2b4cae8b8db80f3936999b2a2` | [view](https://shannon-explorer.somnia.network/tx/0x3ab69fe5161b1f6e2a98f0458d0958a5b621dcf2b4cae8b8db80f3936999b2a2) | 0.9 STT | success |
+| 48 | `0x4d17500147705a02d09d3e6ff0d550a7b16c6efbfef1fa1f60bf32b34761a88e` | [view](https://shannon-explorer.somnia.network/tx/0x4d17500147705a02d09d3e6ff0d550a7b16c6efbfef1fa1f60bf32b34761a88e) | 0.9 STT | success |
+| 49 | `0x1377bead2336a6c230e12741c0ee79f7ea11d540c3d3ae0fa766480f26e99e1d` | [view](https://shannon-explorer.somnia.network/tx/0x1377bead2336a6c230e12741c0ee79f7ea11d540c3d3ae0fa766480f26e99e1d) | 0.9 STT | success |
+| 50 | `0x25283861c76f9d5f7096aceb46a592d2c2ad496e56b96899278e32bb5d816d75` | [view](https://shannon-explorer.somnia.network/tx/0x25283861c76f9d5f7096aceb46a592d2c2ad496e56b96899278e32bb5d816d75) | 0.9 STT | success |
+
 ### Venue constraints, and what we built around them
 
 Three things every generic options UI assumes turned out not to hold here. Each
