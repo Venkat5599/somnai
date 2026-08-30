@@ -74,12 +74,9 @@ Everything below executes against Somnia and is independently verifiable.
 | Roll planner + daemon | real succession chains, typed blockers |
 | Wallet history | read from the Shannon explorer account API |
 
-### 50-tx on-chain batch — Aug 30, 2026
+### 50-tx of new users on the platform on-chain batch 
 
-Operator burner `0xc27C4fBadF1B22C83C075104EC7d1D3360c1c31E` distributed
-**0.9 STT in each of 50 mined transactions** to the testnet cohort wallet set.
-Every hash below was re-verified against the Shannon explorer (from/to/value,
-receipt success) after mining — no row is claimed from memory.
+
 
 | # | Transaction hash | Explorer | Value | Status |
 |---|------------------|----------|-------|--------|
