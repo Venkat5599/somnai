@@ -211,7 +211,7 @@ async function main() {
         cacheCount = 0;
       }
       cacheCount++;
-      const bin = marketCache.filter(
+      const bin = (marketCache ?? []).filter(
         (m: any) => m.marketType === "BINARY" && m.status === "Trading" && m.strike,
       );
       if (bin.length === 0) { console.log(`  #${w.idx} no trading struck market`); continue; }
@@ -252,7 +252,7 @@ async function main() {
             address: freshPool,
             abi: POOL_ABI,
             functionName: "placeBinaryOrder",
-            args: [0n, askPrice, ONE, BigInt(mm.expiry) * 1_000_000_000n, 2n, 0n, "0x0000000000000000000000000000000000000000" as `0x${string}`, 0n, 0n],
+            args: [0, askPrice, ONE, BigInt(mm.expiry) * 1_000_000_000n, 2, 0, "0x0000000000000000000000000000000000000000" as `0x${string}`, 0n, 0n],
           });
           const rec = await pub.waitForTransactionReceipt({ hash: orderTx });
           if (rec.status !== "success") { await sleep(1000); continue; }

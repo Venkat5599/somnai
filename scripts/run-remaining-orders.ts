@@ -177,7 +177,7 @@ async function main() {
             address: pool,
             abi: POOL_ABI,
             functionName: "placeBinaryOrder",
-            args: [0n, askPrice, ONE, BigInt(picked.expiry) * 1_000_000_000n, 2n, 0n, "0x0000000000000000000000000000000000000000" as `0x${string}`, 0n, 0n],
+            args: [0, askPrice, ONE, BigInt(picked.expiry) * 1_000_000_000n, 2, 0, "0x0000000000000000000000000000000000000000" as `0x${string}`, 0n, 0n],
           });
           const rec = await pub.waitForTransactionReceipt({ hash: orderTx });
           if (rec.status !== "success") { await sleep(800); continue; }
