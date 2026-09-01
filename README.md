@@ -71,51 +71,8 @@ Fifty distinct cohort wallets each placed a real `BUY_YES` order against live Dr
 | 3 | `0x876096…525e` | `0xe5b7cea28f10…` | [view](https://shannon-explorer.somnia.network/tx/0xe5b7cea28f10920c515e02b5fa2c35ca917aadab5de68cf62cccee47d68ba446) | `0x1569440e…` | 476660754 | success |
 | 4 | `0x7BAAa5…7C3A` | `0xc30e788b6d3e…` | [view](https://shannon-explorer.somnia.network/tx/0xc30e788b6d3e1bc3ae7743e3add7d56fff6e597acf7e462f23aa0fb8bee717d2) | `0x4143cd6d…` | 476660967 | success |
 | 5 | `0xcaE490…0Cc3` | `0x040d5d877980…` | [view](https://shannon-explorer.somnia.network/tx/0x040d5d877980d0327ebfb8e77cb8e0ce97f24f2685df49d23d6875ef1ba0832c) | `0x610fa91f…` | 476641377 | success |
-| 6 | `0x2941eB…9f17` | `0xd9d094912f96…` | [view](https://shannon-explorer.somnia.network/tx/0xd9d094912f968ab66280ce4e1706f438bc068408f377a564a4600946995600d2) | `0x246a6564…` | 476641468 | success |
-| 7 | `0x2CfC99…af4f` | `0xc04eb8e64a04…` | [view](https://shannon-explorer.somnia.network/tx/0xc04eb8e64a04117667709cbd15f6d6e1c8474ac66230aefa85ba34fdbec16898) | `0x778c14b1…` | 476662152 | success |
-| 8 | `0x67F4fd…23E7` | `0x1203758be2aa…` | [view](https://shannon-explorer.somnia.network/tx/0x1203758be2aa202441d7774809fbdb5f479b0ce8c8b5b2cfc955be432a235e31) | `0x1f44b95c…` | 476641670 | success |
-| 9 | `0xe3fB2b…84ff` | `0xdeaf0d379410…` | [view](https://shannon-explorer.somnia.network/tx/0xdeaf0d3794105bd7b48219bfb3606303c94866e854481d41daca228a6dadf65b) | `0xf60d9c37…` | 476634080 | success |
-| 10 | `0x2cA18c…Ef48` | `0xd0cbe920cbff…` | [view](https://shannon-explorer.somnia.network/tx/0xd0cbe920cbff8c81fe0e1ec714d7b0653f9b69f132b75107dd85caf8f53f8544) | `0x246a6564…` | 476663632 | success |
-| 11 | `0xE421C9…23bE` | `0x989ee7e7c0df…` | [view](https://shannon-explorer.somnia.network/tx/0x989ee7e7c0df53cbc57e9e773066a75de2576d71735da647bffa20ce7a30e44c) | `0x610fa91f…` | 476663750 | success |
-| 12 | `0x18eF51…29f4` | `0x810c662a0a2c…` | [view](https://shannon-explorer.somnia.network/tx/0x810c662a0a2ccd278852592f3c4e09031308e2d9e92e7db796f24208a491f256) | `0x3e35f705…` | 476663862 | success |
-| 13 | `0x920313…427b` | `0x11d7915aea91…` | [view](https://shannon-explorer.somnia.network/tx/0x11d7915aea9132d0e017edd73f7799b0eb55e4b0f02e6dde4138f5dd687a03ee) | `0x699dce5b…` | 476664006 | success |
-| 14 | `0xAAbBa3…10BF` | `0x60f7df32bd19…` | [view](https://shannon-explorer.somnia.network/tx/0x60f7df32bd1931d4373f049d3d5fc9c9b40438d1d51d5dc536fe24335b295757) | `0x2e50436a…` | 476664125 | success |
-| 15 | `0xf1fE06…09c2` | `0x7be74b65bd2d…` | [view](https://shannon-explorer.somnia.network/tx/0x7be74b65bd2d91df9d9a16800d71cca024133c82d03407d6d2a331d64c397ab0) | `0x4143cd6d…` | 476642686 | success |
-| 16 | `0xee8565…691D` | `0xf648cdc8ac49…` | [view](https://shannon-explorer.somnia.network/tx/0xf648cdc8ac49e658b0700e4502020352b782386df177a71ac1f9a6352a1f8bbd) | `0x31fddb37…` | 476672443 | success |
-| 17 | `0x0f0a9D…105d` | `0xa6507e9cc228…` | [view](https://shannon-explorer.somnia.network/tx/0xa6507e9cc2289b43d583202b8a330fd70cfcaf37e8ed23313f096d092b628649) | `0xc9801d78…` | 476672862 | success |
-| 18 | `0xCD6631…C42b` | `0xd17fc3c77576…` | [view](https://shannon-explorer.somnia.network/tx/0xd17fc3c77576dc0468f0b2ea229c9d8c3284003e8a486a58f19bca2b483efabc) | `0xc9801d78…` | 476673041 | success |
-| 19 | `0xb6141A…CA44` | `0x16048edc14b4…` | [view](https://shannon-explorer.somnia.network/tx/0x16048edc14b4376397d41648beeaaac88bfdef7b332fcc35f46e11e839be7a3f) | `0xc9801d78…` | 476673138 | success |
-| 20 | `0x9C5B97…dc40` | `0x8460ee83a382…` | [view](https://shannon-explorer.somnia.network/tx/0x8460ee83a38275150d567dd4dc061a655e99e806c070e2d7bd739544ce7ac1aa) | `0xd5bed053…` | 476673320 | success |
-| 21 | `0x989b98…A6C9` | `0x55ebf388e4d7…` | [view](https://shannon-explorer.somnia.network/tx/0x55ebf388e4d72a8786333e75438be5ae5b2b8f08666d496e6cadc3278589f2e6) | `0xd5bed053…` | 476673420 | success |
-| 22 | `0xCb6BcC…20dc` | `0xdb4d1e0f1234…` | [view](https://shannon-explorer.somnia.network/tx/0xdb4d1e0f1234d22752c77a15c56d5b96baf7b56c7e9060a81b53adbc91ef8de0) | `0xd460d2a1…` | 476678887 | success |
-| 23 | `0x163042…36AE` | `0x11d0ac7f5e4f…` | [view](https://shannon-explorer.somnia.network/tx/0x11d0ac7f5e4f9ba69638910495beb62fa61f03ca442b90b2bf8a16849c822c61) | `0x4e83efca…` | 476679304 | success |
-| 24 | `0x8f9ba8…64a2` | `0xc0d3e04841aa…` | [view](https://shannon-explorer.somnia.network/tx/0xc0d3e04841aaedac9fe6f1c94d05290deed6d962eb16799de693769717e0eed7) | `0xb0dc0fe3…` | 476674275 | success |
-| 25 | `0x40345A…1808` | `0xe5d129d78756…` | [view](https://shannon-explorer.somnia.network/tx/0xe5d129d78756678aac1dd52b37ce86ad5d1e7a2b03e0a62bbb2c1741806a0044) | `0xb0dc0fe3…` | 476674473 | success |
-| 26 | `0x6e4357…3d56` | `0x7da1515164a2…` | [view](https://shannon-explorer.somnia.network/tx/0x7da1515164a2f76ad3301c78b3bb292981a2fd3ff407d59614107565fbb20a4b) | `0xd5bed053…` | 476674572 | success |
-| 27 | `0x50a411…117b` | `0xbbbc14d4a6b7…` | [view](https://shannon-explorer.somnia.network/tx/0xbbbc14d4a6b725aa360c77cb88e158dc4c57a2cc5667d628cd3acb9de4b10ab7) | `0x1569440e…` | 476682474 | success |
-| 28 | `0xb76d2A…a1E8` | `0x443154619ad4…` | [view](https://shannon-explorer.somnia.network/tx/0x443154619ad492d485f2bfb602d28d6bb803381622fdd8d933f24ce9fedca23d) | `0x4d002895…` | 476680032 | success |
-| 29 | `0xcb1cC8…21E9` | `0x198c234e691a…` | [view](https://shannon-explorer.somnia.network/tx/0x198c234e691a998239b7c62075783819e36e417e551bbb6c37de78a7b16ea6fa) | `0x778c14b1…` | 476675478 | success |
-| 30 | `0x68fAd3…f504` | `0x51638b2fc1f1…` | [view](https://shannon-explorer.somnia.network/tx/0x51638b2fc1f1452f1c61e10779cc2c4adb0b2246cd484f20d0c06554931054cb) | `0xefa394da…` | 476675689 | success |
-| 31 | `0x865Fb6…fc4B` | `0xa7fca0007211…` | [view](https://shannon-explorer.somnia.network/tx/0xa7fca0007211f21eefce92722153abb0b67ab10a09efd338d8c68f2320964919) | `0x1531ed14…` | 476675787 | success |
-| 32 | `0x59067f…2e0B` | `0x47d40b931e52…` | [view](https://shannon-explorer.somnia.network/tx/0x47d40b931e5201bedbc7993149a2204330167298efe43907c840208c9538a62f) | `0x1531ed14…` | 476675954 | success |
-| 33 | `0xD70CFC…963A` | `0x5e2b76a141d5…` | [view](https://shannon-explorer.somnia.network/tx/0x5e2b76a141d53bf051315515e4dd508c36bad3bb0ec952dd4744d790e8b815e1) | `0x1531ed14…` | 476676115 | success |
-| 34 | `0x5484F1…7B80` | `0x046d91ab8bd9…` | [view](https://shannon-explorer.somnia.network/tx/0x046d91ab8bd9fd3f7b8b6287754e8a79751b9483cb0bca0794687eef2403a73c) | `0x4d002895…` | 476682950 | success |
-| 35 | `0x616a74…2a9c` | `0x3e3e470d7f0e…` | [view](https://shannon-explorer.somnia.network/tx/0x3e3e470d7f0e531f7fb948a03525c40d332afe2b478f6567b319dca23e3b5363) | `0x1569440e…` | 476680532 | success |
-| 36 | `0xE28308…B453` | `0x376e36ed4f44…` | [view](https://shannon-explorer.somnia.network/tx/0x376e36ed4f44611755e156bda49d40023e92fec3105b548deaa718cd09998f6a) | `0x9a4edaa9…` | 476677132 | success |
-| 37 | `0x4C00c4…3Cb3` | `0xe88a438ab953…` | [view](https://shannon-explorer.somnia.network/tx/0xe88a438ab9539cdf3701e618c412b37a0bf68456d61c14000b24bca47dcf9345) | `0x1531ed14…` | 476677479 | success |
-| 38 | `0x89bC8A…C6b6` | `0x151326529dc8…` | [view](https://shannon-explorer.somnia.network/tx/0x151326529dc8ee4d47ac10d76407ad333f43235901870e03264f77db254d2843) | `0xb4cea3f5…` | 476677674 | success |
-| 39 | `0xcA4a51…2B89` | `0xf44c7f4fe1ae…` | [view](https://shannon-explorer.somnia.network/tx/0xf44c7f4fe1ae1ec66d131aca18db0c18c78f05eac393685eb7c3f625675b071c) | `0xb4cea3f5…` | 476677849 | success |
-| 40 | `0xc4ad98…6fa4` | `0x21f01291f57d…` | [view](https://shannon-explorer.somnia.network/tx/0x21f01291f57da0f857e0cef379e0ff4aa40554dc2ed27d2bf58f0f10a5094aa3) | `0xb4cea3f5…` | 476677947 | success |
-| 41 | `0xf04cA4…4b63` | `0x8bc046024cbb…` | [view](https://shannon-explorer.somnia.network/tx/0x8bc046024cbb18f267857af4e92c92e1c1dcde7394a9fbfa4f4d6fbc5bac099c) | `0x1531ed14…` | 476678055 | success |
-| 42 | `0xB17f43…669D` | `0x1cd10fc07a77…` | [view](https://shannon-explorer.somnia.network/tx/0x1cd10fc07a77a69848b9b39b46f2b5c6d201c3b9a4336ba95a399fd814534393) | `0x37ea2f36…` | 476678219 | success |
-| 43 | `0xA3C698…1288` | `0x993997cd052e…` | [view](https://shannon-explorer.somnia.network/tx/0x993997cd052ec3737259ea35ca6a7eb62930ecf894a301a6bbfb53273c14870f) | `0x37ea2f36…` | 476678517 | success |
-| 44 | `0xb25043…7a30` | `0x52ccf568b0f3…` | [view](https://shannon-explorer.somnia.network/tx/0x52ccf568b0f349d8edcf7fc0f1a8d1fce0c6a33c15a9e578517b4de1682b02af) | `0x1569440e…` | 476680714 | success |
-| 45 | `0x378557…d2c3` | `0x5b75f214559e…` | [view](https://shannon-explorer.somnia.network/tx/0x5b75f214559e28b5841da61ac072d4132802475157ce94b4ceb2fc3dfc49a343) | `0x4d002895…` | 476683084 | success |
-| 46 | `0x072A34…66eA` | `0xbdec8e3a9419…` | [view](https://shannon-explorer.somnia.network/tx/0xbdec8e3a9419d1588313935f0d1a758aba6f62515bdca3e6295a6d4144e03c4c) | `0xd48676d2…` | 476681203 | success |
-| 47 | `0x515491…A74e` | `0x59de69c0581e…` | [view](https://shannon-explorer.somnia.network/tx/0x59de69c0581eb706dfd615ed3a18af5f3e6e6fa7abfadd56c9c2f6f4b6b21790) | `0xd48676d2…` | 476681405 | success |
-| 48 | `0x12445A…9B2D` | `0xbf0bd8a94c11…` | [view](https://shannon-explorer.somnia.network/tx/0xbf0bd8a94c114f11020caf3ab15dbb6e4e285ab9cf672eeb2568f2d27039eb3c) | `0xd48676d2…` | 476681514 | success |
-| 49 | `0x3c5eae…374D` | `0xe0fe9c1ade96…` | [view](https://shannon-explorer.somnia.network/tx/0xe0fe9c1ade960ad95a9726abbbb58d27031d24448b2208f1c9a62324046f4b5d) | `0xefa394da…` | 476681699 | success |
-| 50 | `0x705978…8cAf` | `0x10ad7fd96dfa…` | [view](https://shannon-explorer.somnia.network/tx/0x10ad7fd96dfaa88022a28a666b9f03dda8783aa7a0f3b365bf72619d4b5f7397) | `0xefa394da…` | 476681807 | success |
+
+Full list of all 50 wallets and their order transactions is kept locally (`50-tx-full-list.md`).
 
 ## Why DreamDEX specifically
 
