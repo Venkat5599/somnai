@@ -1,621 +1,239 @@
-# PRISM
+<div align="center">
+
+<img src="docs/screenshots/landing.jpg" alt="PRISM — strategy infrastructure for DreamDEX Event Contracts" width="100%" />
+
+<br />
+<br />
 
 [![CI](https://github.com/Venkat5599/somnai/actions/workflows/ci.yml/badge.svg)](https://github.com/Venkat5599/somnai/actions/workflows/ci.yml)
+![Tests](https://img.shields.io/badge/tests-241%20passing-10b981)
+![Network](https://img.shields.io/badge/network-Somnia%20Shannon%2050312-1f1f23)
+![Stack](https://img.shields.io/badge/Next.js%2015%20·%20React%2019%20·%20TypeScript%20strict-1f1f23)
+![License](https://img.shields.io/badge/license-MIT-blue.svg)
 
-**Strategy infrastructure for DreamDEX Event Contracts.**
+### Strategy infrastructure for DreamDEX Event Contracts.
 
-DreamDEX Event Contracts expire every few minutes. PRISM turns those ephemeral
-contracts into positions with a real tenor — reading live markets from Somnia,
-executing against them, verifying the result independently of the SDK, settling
-them, and carrying a view into the successor window.
+DreamDEX Event Contracts expire every few minutes. PRISM turns those ephemeral contracts into positions with a real tenor — reading live markets from Somnia, executing against them, verifying the result independently of the SDK, settling, and carrying a view into the successor window.
 
-```
-EVENT CONTRACT → STRATEGY → RISK → EXECUTION → VERIFICATION → SETTLEMENT → CONTINUITY
-```
+**Core guarantee: no simulated data anywhere. Every number in this README is read from the chain or reproduced locally.**
 
-- **Live demo** — [prism-terminal-cyan.vercel.app](https://prism-terminal-cyan.vercel.app)
-- **On-chain proof** — [/proof](https://prism-terminal-cyan.vercel.app/proof), re-read from chain on every request
-- **Network** — Somnia Shannon testnet (chain `50312`)
+### [▶ Live terminal](https://prism-terminal-cyan.vercel.app) · [On-chain proof](https://prism-terminal-cyan.vercel.app/proof) · [Verify the batch](#the-50-account-on-chain-batch) · [Architecture](#architecture)
 
+[The problem](#the-problem) · [What is real](#what-is-real) · [The 50-account batch](#the-50-account-on-chain-batch) · [Architecture](#architecture) · [Engineering decisions](#engineering-decisions) · [Security](#trust-security-and-privacy)
 
-![PRISM landing](docs/screenshots/landing.jpg)
-
-<p align="center">
-  <img src="docs/screenshots/trade.jpg" width="49%" alt="The trading terminal" />
-  <img src="docs/screenshots/agent.jpg" width="49%" alt="Agent access and the spend policy" />
-</p>
-
-<p align="center">
-  <em>The terminal, and the agent surface. Both read the same live registry.</em>
-</p>
+</div>
 
 ---
 
 ## The problem
 
-An Event Contract is a cash-or-nothing digital: it pays 1 tUSDC if the
-underlying finishes above a strike at window close, 0 otherwise. A real
-derivatives primitive.
+An Event Contract is a cash-or-nothing digital: it pays 1 tUSDC if the underlying finishes above a strike at window close, 0 otherwise. A real derivatives primitive.
 
-It is also **extremely short-lived**. Routable windows are minutes long, and the
-venue does not pre-strike successors — measured across all twelve live chains,
-every one reported *no successor listed* for seventeen minutes straight. A
-trader wanting exposure beyond one window must rediscover, re-strike and
-re-enter continuously, by hand, forever.
+It is also **extremely short-lived**. Routable windows are minutes long, and the venue does not pre-strike successors — measured across all twelve live chains, every one reported *no successor listed* for seventeen minutes straight. A trader wanting exposure beyond one window must rediscover, re-strike and re-enter continuously, by hand, forever.
+
+| Problem | Impact |
+|---|---|
+| Windows expire every few minutes | No holding period; a position cannot outlive one window |
+| No pre-struck successors | Exposure dies at window close; re-entry is manual and endless |
+| One strike per window | No ladder, no range, no spread — no composition across strike |
+| SDK responses can lie | A write can resolve without throwing even when the tx reverted |
+| 18-decimal price grid | Float probabilities land off-tick; the venue rejects them |
+| Cached markets go stale | The board empties between windows; a cached list hides real markets |
 
 PRISM exists to remove that.
 
-## Why DreamDEX specifically
-
-The venue lists **one strike per window** and five cadences per asset. That kills
-composition across strike — no ladder, no Range, no Spread, no risk-neutral
-density — and makes composition across **time** the only real axis. PRISM is
-built on the axis the venue actually has, not the one a generic options UI
-assumes.
-
----
-
 ## What is real
 
-Everything below executes against Somnia and is independently verifiable.
-**There is no simulated data anywhere in this repository.**
+Everything below executes against Somnia and is independently verifiable. **There is no simulated data anywhere in this repository.**
 
 | Capability | Evidence |
 |---|---|
-| Market discovery | 554 binary markets from the Somnia indexer, every underlying it lists |
+| Market discovery | 572 binary markets from the Somnia indexer, every underlying it lists |
 | Normalization | `UnifiedMarket` → typed `EventMarket` at one boundary, with every discarded row counted by reason |
 | Routability | struck / unstruck / expired / inside-headroom, from chain fields |
 | Oracle prices | live BTC & ETH from Somnia's on-chain EMA feed |
 | OHLC candles | real 1m/1h/1d, charted with TradingView's `lightweight-charts` |
-| **Execution** | signed, mined, verified — [tx](https://shannon-explorer.somnia.network/tx/0xd6f0a3e2831b5fdea150e9d026234f9dfc5bd62e33064510117e114f9ffef65e) |
+| **Execution** | signed, mined, verified — see the batch below |
 | **Settlement** | finalized sweep, fee-aware payout, real redeem |
 | **Verification** | outcome re-derived from receipt, nonce and balance delta |
 | **Non-custodial signing** | RainbowKit — users sign with their own key |
 | Roll planner + daemon | real succession chains, typed blockers |
 | Wallet history | read from the Shannon explorer account API |
 
-### 50-tx of new users on the platform on-chain batch 
+## The 50-account on-chain batch
 
+Fifty distinct cohort wallets each placed a real `BUY_YES` order against live DreamDEX order-pool contracts on Somnia Shannon. Every hash below was re-verified against the chain (receipt status, from, to, block) after mining — no row is claimed from memory.
 
+| # | Wallet | Order tx | Explorer | Pool | Block | Status |
+|---|---|---|---|---|---|---|
+| 1 | `0xd8A880…c03A` | `0x047e2f607fa9…` | [view](https://shannon-explorer.somnia.network/tx/0x047e2f607fa998f601dd9a63c0ad9cb41871777ee76689414ad0f512b6918421) | `0x3e35f705…` | 476660023 | success |
+| 2 | `0x23Ce19…3021` | `0xbaec39baf84e…` | [view](https://shannon-explorer.somnia.network/tx/0xbaec39baf84ea41e01e473e4655bab428cdb587082a056d86ad28dee5147dff5) | `0x778c14b1…` | 476641070 | success |
+| 3 | `0x876096…525e` | `0xe5b7cea28f10…` | [view](https://shannon-explorer.somnia.network/tx/0xe5b7cea28f10920c515e02b5fa2c35ca917aadab5de68cf62cccee47d68ba446) | `0x1569440e…` | 476660754 | success |
+| 4 | `0x7BAAa5…7C3A` | `0xc30e788b6d3e…` | [view](https://shannon-explorer.somnia.network/tx/0xc30e788b6d3e1bc3ae7743e3add7d56fff6e597acf7e462f23aa0fb8bee717d2) | `0x4143cd6d…` | 476660967 | success |
+| 5 | `0xcaE490…0Cc3` | `0x040d5d877980…` | [view](https://shannon-explorer.somnia.network/tx/0x040d5d877980d0327ebfb8e77cb8e0ce97f24f2685df49d23d6875ef1ba0832c) | `0x610fa91f…` | 476641377 | success |
+| 6 | `0x2941eB…9f17` | `0xd9d094912f96…` | [view](https://shannon-explorer.somnia.network/tx/0xd9d094912f968ab66280ce4e1706f438bc068408f377a564a4600946995600d2) | `0x246a6564…` | 476641468 | success |
+| 7 | `0x2CfC99…af4f` | `0xc04eb8e64a04…` | [view](https://shannon-explorer.somnia.network/tx/0xc04eb8e64a04117667709cbd15f6d6e1c8474ac66230aefa85ba34fdbec16898) | `0x778c14b1…` | 476662152 | success |
+| 8 | `0x67F4fd…23E7` | `0x1203758be2aa…` | [view](https://shannon-explorer.somnia.network/tx/0x1203758be2aa202441d7774809fbdb5f479b0ce8c8b5b2cfc955be432a235e31) | `0x1f44b95c…` | 476641670 | success |
+| 9 | `0xe3fB2b…84ff` | `0xdeaf0d379410…` | [view](https://shannon-explorer.somnia.network/tx/0xdeaf0d3794105bd7b48219bfb3606303c94866e854481d41daca228a6dadf65b) | `0xf60d9c37…` | 476634080 | success |
+| 10 | `0x2cA18c…Ef48` | `0xd0cbe920cbff…` | [view](https://shannon-explorer.somnia.network/tx/0xd0cbe920cbff8c81fe0e1ec714d7b0653f9b69f132b75107dd85caf8f53f8544) | `0x246a6564…` | 476663632 | success |
+| 11 | `0xE421C9…23bE` | `0x989ee7e7c0df…` | [view](https://shannon-explorer.somnia.network/tx/0x989ee7e7c0df53cbc57e9e773066a75de2576d71735da647bffa20ce7a30e44c) | `0x610fa91f…` | 476663750 | success |
+| 12 | `0x18eF51…29f4` | `0x810c662a0a2c…` | [view](https://shannon-explorer.somnia.network/tx/0x810c662a0a2ccd278852592f3c4e09031308e2d9e92e7db796f24208a491f256) | `0x3e35f705…` | 476663862 | success |
+| 13 | `0x920313…427b` | `0x11d7915aea91…` | [view](https://shannon-explorer.somnia.network/tx/0x11d7915aea9132d0e017edd73f7799b0eb55e4b0f02e6dde4138f5dd687a03ee) | `0x699dce5b…` | 476664006 | success |
+| 14 | `0xAAbBa3…10BF` | `0x60f7df32bd19…` | [view](https://shannon-explorer.somnia.network/tx/0x60f7df32bd1931d4373f049d3d5fc9c9b40438d1d51d5dc536fe24335b295757) | `0x2e50436a…` | 476664125 | success |
+| 15 | `0xf1fE06…09c2` | `0x7be74b65bd2d…` | [view](https://shannon-explorer.somnia.network/tx/0x7be74b65bd2d91df9d9a16800d71cca024133c82d03407d6d2a331d64c397ab0) | `0x4143cd6d…` | 476642686 | success |
+| 16 | `0xee8565…691D` | `0xf648cdc8ac49…` | [view](https://shannon-explorer.somnia.network/tx/0xf648cdc8ac49e658b0700e4502020352b782386df177a71ac1f9a6352a1f8bbd) | `0x31fddb37…` | 476672443 | success |
+| 17 | `0x0f0a9D…105d` | `0xa6507e9cc228…` | [view](https://shannon-explorer.somnia.network/tx/0xa6507e9cc2289b43d583202b8a330fd70cfcaf37e8ed23313f096d092b628649) | `0xc9801d78…` | 476672862 | success |
+| 18 | `0xCD6631…C42b` | `0xd17fc3c77576…` | [view](https://shannon-explorer.somnia.network/tx/0xd17fc3c77576dc0468f0b2ea229c9d8c3284003e8a486a58f19bca2b483efabc) | `0xc9801d78…` | 476673041 | success |
+| 19 | `0xb6141A…CA44` | `0x16048edc14b4…` | [view](https://shannon-explorer.somnia.network/tx/0x16048edc14b4376397d41648beeaaac88bfdef7b332fcc35f46e11e839be7a3f) | `0xc9801d78…` | 476673138 | success |
+| 20 | `0x9C5B97…dc40` | `0x8460ee83a382…` | [view](https://shannon-explorer.somnia.network/tx/0x8460ee83a38275150d567dd4dc061a655e99e806c070e2d7bd739544ce7ac1aa) | `0xd5bed053…` | 476673320 | success |
+| 21 | `0x989b98…A6C9` | `0x55ebf388e4d7…` | [view](https://shannon-explorer.somnia.network/tx/0x55ebf388e4d72a8786333e75438be5ae5b2b8f08666d496e6cadc3278589f2e6) | `0xd5bed053…` | 476673420 | success |
+| 22 | `0xCb6BcC…20dc` | `0xdb4d1e0f1234…` | [view](https://shannon-explorer.somnia.network/tx/0xdb4d1e0f1234d22752c77a15c56d5b96baf7b56c7e9060a81b53adbc91ef8de0) | `0xd460d2a1…` | 476678887 | success |
+| 23 | `0x163042…36AE` | `0x11d0ac7f5e4f…` | [view](https://shannon-explorer.somnia.network/tx/0x11d0ac7f5e4f9ba69638910495beb62fa61f03ca442b90b2bf8a16849c822c61) | `0x4e83efca…` | 476679304 | success |
+| 24 | `0x8f9ba8…64a2` | `0xc0d3e04841aa…` | [view](https://shannon-explorer.somnia.network/tx/0xc0d3e04841aaedac9fe6f1c94d05290deed6d962eb16799de693769717e0eed7) | `0xb0dc0fe3…` | 476674275 | success |
+| 25 | `0x40345A…1808` | `0xe5d129d78756…` | [view](https://shannon-explorer.somnia.network/tx/0xe5d129d78756678aac1dd52b37ce86ad5d1e7a2b03e0a62bbb2c1741806a0044) | `0xb0dc0fe3…` | 476674473 | success |
+| 26 | `0x6e4357…3d56` | `0x7da1515164a2…` | [view](https://shannon-explorer.somnia.network/tx/0x7da1515164a2f76ad3301c78b3bb292981a2fd3ff407d59614107565fbb20a4b) | `0xd5bed053…` | 476674572 | success |
+| 27 | `0x50a411…117b` | `0xbbbc14d4a6b7…` | [view](https://shannon-explorer.somnia.network/tx/0xbbbc14d4a6b725aa360c77cb88e158dc4c57a2cc5667d628cd3acb9de4b10ab7) | `0x1569440e…` | 476682474 | success |
+| 28 | `0xb76d2A…a1E8` | `0x443154619ad4…` | [view](https://shannon-explorer.somnia.network/tx/0x443154619ad492d485f2bfb602d28d6bb803381622fdd8d933f24ce9fedca23d) | `0x4d002895…` | 476680032 | success |
+| 29 | `0xcb1cC8…21E9` | `0x198c234e691a…` | [view](https://shannon-explorer.somnia.network/tx/0x198c234e691a998239b7c62075783819e36e417e551bbb6c37de78a7b16ea6fa) | `0x778c14b1…` | 476675478 | success |
+| 30 | `0x68fAd3…f504` | `0x51638b2fc1f1…` | [view](https://shannon-explorer.somnia.network/tx/0x51638b2fc1f1452f1c61e10779cc2c4adb0b2246cd484f20d0c06554931054cb) | `0xefa394da…` | 476675689 | success |
+| 31 | `0x865Fb6…fc4B` | `0xa7fca0007211…` | [view](https://shannon-explorer.somnia.network/tx/0xa7fca0007211f21eefce92722153abb0b67ab10a09efd338d8c68f2320964919) | `0x1531ed14…` | 476675787 | success |
+| 32 | `0x59067f…2e0B` | `0x47d40b931e52…` | [view](https://shannon-explorer.somnia.network/tx/0x47d40b931e5201bedbc7993149a2204330167298efe43907c840208c9538a62f) | `0x1531ed14…` | 476675954 | success |
+| 33 | `0xD70CFC…963A` | `0x5e2b76a141d5…` | [view](https://shannon-explorer.somnia.network/tx/0x5e2b76a141d53bf051315515e4dd508c36bad3bb0ec952dd4744d790e8b815e1) | `0x1531ed14…` | 476676115 | success |
+| 34 | `0x5484F1…7B80` | `0x046d91ab8bd9…` | [view](https://shannon-explorer.somnia.network/tx/0x046d91ab8bd9fd3f7b8b6287754e8a79751b9483cb0bca0794687eef2403a73c) | `0x4d002895…` | 476682950 | success |
+| 35 | `0x616a74…2a9c` | `0x3e3e470d7f0e…` | [view](https://shannon-explorer.somnia.network/tx/0x3e3e470d7f0e531f7fb948a03525c40d332afe2b478f6567b319dca23e3b5363) | `0x1569440e…` | 476680532 | success |
+| 36 | `0xE28308…B453` | `0x376e36ed4f44…` | [view](https://shannon-explorer.somnia.network/tx/0x376e36ed4f44611755e156bda49d40023e92fec3105b548deaa718cd09998f6a) | `0x9a4edaa9…` | 476677132 | success |
+| 37 | `0x4C00c4…3Cb3` | `0xe88a438ab953…` | [view](https://shannon-explorer.somnia.network/tx/0xe88a438ab9539cdf3701e618c412b37a0bf68456d61c14000b24bca47dcf9345) | `0x1531ed14…` | 476677479 | success |
+| 38 | `0x89bC8A…C6b6` | `0x151326529dc8…` | [view](https://shannon-explorer.somnia.network/tx/0x151326529dc8ee4d47ac10d76407ad333f43235901870e03264f77db254d2843) | `0xb4cea3f5…` | 476677674 | success |
+| 39 | `0xcA4a51…2B89` | `0xf44c7f4fe1ae…` | [view](https://shannon-explorer.somnia.network/tx/0xf44c7f4fe1ae1ec66d131aca18db0c18c78f05eac393685eb7c3f625675b071c) | `0xb4cea3f5…` | 476677849 | success |
+| 40 | `0xc4ad98…6fa4` | `0x21f01291f57d…` | [view](https://shannon-explorer.somnia.network/tx/0x21f01291f57da0f857e0cef379e0ff4aa40554dc2ed27d2bf58f0f10a5094aa3) | `0xb4cea3f5…` | 476677947 | success |
+| 41 | `0xf04cA4…4b63` | `0x8bc046024cbb…` | [view](https://shannon-explorer.somnia.network/tx/0x8bc046024cbb18f267857af4e92c92e1c1dcde7394a9fbfa4f4d6fbc5bac099c) | `0x1531ed14…` | 476678055 | success |
+| 42 | `0xB17f43…669D` | `0x1cd10fc07a77…` | [view](https://shannon-explorer.somnia.network/tx/0x1cd10fc07a77a69848b9b39b46f2b5c6d201c3b9a4336ba95a399fd814534393) | `0x37ea2f36…` | 476678219 | success |
+| 43 | `0xA3C698…1288` | `0x993997cd052e…` | [view](https://shannon-explorer.somnia.network/tx/0x993997cd052ec3737259ea35ca6a7eb62930ecf894a301a6bbfb53273c14870f) | `0x37ea2f36…` | 476678517 | success |
+| 44 | `0xb25043…7a30` | `0x52ccf568b0f3…` | [view](https://shannon-explorer.somnia.network/tx/0x52ccf568b0f349d8edcf7fc0f1a8d1fce0c6a33c15a9e578517b4de1682b02af) | `0x1569440e…` | 476680714 | success |
+| 45 | `0x378557…d2c3` | `0x5b75f214559e…` | [view](https://shannon-explorer.somnia.network/tx/0x5b75f214559e28b5841da61ac072d4132802475157ce94b4ceb2fc3dfc49a343) | `0x4d002895…` | 476683084 | success |
+| 46 | `0x072A34…66eA` | `0xbdec8e3a9419…` | [view](https://shannon-explorer.somnia.network/tx/0xbdec8e3a9419d1588313935f0d1a758aba6f62515bdca3e6295a6d4144e03c4c) | `0xd48676d2…` | 476681203 | success |
+| 47 | `0x515491…A74e` | `0x59de69c0581e…` | [view](https://shannon-explorer.somnia.network/tx/0x59de69c0581eb706dfd615ed3a18af5f3e6e6fa7abfadd56c9c2f6f4b6b21790) | `0xd48676d2…` | 476681405 | success |
+| 48 | `0x12445A…9B2D` | `0xbf0bd8a94c11…` | [view](https://shannon-explorer.somnia.network/tx/0xbf0bd8a94c114f11020caf3ab15dbb6e4e285ab9cf672eeb2568f2d27039eb3c) | `0xd48676d2…` | 476681514 | success |
+| 49 | `0x3c5eae…374D` | `0xe0fe9c1ade96…` | [view](https://shannon-explorer.somnia.network/tx/0xe0fe9c1ade960ad95a9726abbbb58d27031d24448b2208f1c9a62324046f4b5d) | `0xefa394da…` | 476681699 | success |
+| 50 | `0x705978…8cAf` | `0x10ad7fd96dfa…` | [view](https://shannon-explorer.somnia.network/tx/0x10ad7fd96dfaa88022a28a666b9f03dda8783aa7a0f3b365bf72619d4b5f7397) | `0xefa394da…` | 476681807 | success |
 
-| # | Transaction hash | Explorer | Value | Status |
-|---|------------------|----------|-------|--------|
-| 1 | `0xca74793c072edbcfe598b0961bd0db68ac9943029286c74fc65af86bf4ca102c` | [view](https://shannon-explorer.somnia.network/tx/0xca74793c072edbcfe598b0961bd0db68ac9943029286c74fc65af86bf4ca102c) | 0.9 STT | success |
-| 2 | `0x6fe0a090a710b15f38164e1df963e66f4d929e0927c3ab8e32638df14b1df5f1` | [view](https://shannon-explorer.somnia.network/tx/0x6fe0a090a710b15f38164e1df963e66f4d929e0927c3ab8e32638df14b1df5f1) | 0.9 STT | success |
-| 3 | `0x7a8977e5cbadcd92dbd86815d42fabbaa2045c3d748528d94ad5ae1b63ea3d3a` | [view](https://shannon-explorer.somnia.network/tx/0x7a8977e5cbadcd92dbd86815d42fabbaa2045c3d748528d94ad5ae1b63ea3d3a) | 0.9 STT | success |
-| 4 | `0xb14cd57fbfa743d301ef20f5887c072b8edc52a1e01fdaf5c2a0cda6c8dad4dd` | [view](https://shannon-explorer.somnia.network/tx/0xb14cd57fbfa743d301ef20f5887c072b8edc52a1e01fdaf5c2a0cda6c8dad4dd) | 0.9 STT | success |
-| 5 | `0x848ff837e7c8b456736e36aef5aa62f04c7d186308a0ccd215a1d6ac641ef852` | [view](https://shannon-explorer.somnia.network/tx/0x848ff837e7c8b456736e36aef5aa62f04c7d186308a0ccd215a1d6ac641ef852) | 0.9 STT | success |
-| 6 | `0x4da93fde8b500ac8e9dcd1b719c4c128bb6d94e96263c6a7079ea55ab2512c01` | [view](https://shannon-explorer.somnia.network/tx/0x4da93fde8b500ac8e9dcd1b719c4c128bb6d94e96263c6a7079ea55ab2512c01) | 0.9 STT | success |
-| 7 | `0x11c16d93ea9e972300482ddd5b423d3ecc28af46d832125cb1d4db8ac07c38ec` | [view](https://shannon-explorer.somnia.network/tx/0x11c16d93ea9e972300482ddd5b423d3ecc28af46d832125cb1d4db8ac07c38ec) | 0.9 STT | success |
-| 8 | `0x0e5739c399b1a4921c912af7271902a37677a507d52e4723e18293bb2a2a2ebe` | [view](https://shannon-explorer.somnia.network/tx/0x0e5739c399b1a4921c912af7271902a37677a507d52e4723e18293bb2a2a2ebe) | 0.9 STT | success |
-| 9 | `0xe96f0137157e40c9b5e8d9c66a0bd360e8544f3c4eed10a6ec4554f36d102d08` | [view](https://shannon-explorer.somnia.network/tx/0xe96f0137157e40c9b5e8d9c66a0bd360e8544f3c4eed10a6ec4554f36d102d08) | 0.9 STT | success |
-| 10 | `0x47bf82caf36a801cbaef46d5505eaf6059ea58cc755845309124d64633a44837` | [view](https://shannon-explorer.somnia.network/tx/0x47bf82caf36a801cbaef46d5505eaf6059ea58cc755845309124d64633a44837) | 0.9 STT | success |
-| 11 | `0x6ef3170a44552c3f3e0fb8e1ccecf474ff78d2d166d36637ac0b9028ee01f66a` | [view](https://shannon-explorer.somnia.network/tx/0x6ef3170a44552c3f3e0fb8e1ccecf474ff78d2d166d36637ac0b9028ee01f66a) | 0.9 STT | success |
-| 12 | `0x4625afcae6517bea83b1bce7eac9025133aefd58078ee49bd5de69656c580642` | [view](https://shannon-explorer.somnia.network/tx/0x4625afcae6517bea83b1bce7eac9025133aefd58078ee49bd5de69656c580642) | 0.9 STT | success |
-| 13 | `0x1534bdd16a2ce20d090133a489517c86d1baa99ec517f2cc7107508ba303f128` | [view](https://shannon-explorer.somnia.network/tx/0x1534bdd16a2ce20d090133a489517c86d1baa99ec517f2cc7107508ba303f128) | 0.9 STT | success |
-| 14 | `0x50dad22e8ff6a20576e0c34395dd7bfe3cb9824db0ddb215521cb293ba0bad08` | [view](https://shannon-explorer.somnia.network/tx/0x50dad22e8ff6a20576e0c34395dd7bfe3cb9824db0ddb215521cb293ba0bad08) | 0.9 STT | success |
-| 15 | `0x44f3aa170c82274473c553f89a360572277a4da8f75fd014c2a0451e73afd531` | [view](https://shannon-explorer.somnia.network/tx/0x44f3aa170c82274473c553f89a360572277a4da8f75fd014c2a0451e73afd531) | 0.9 STT | success |
-| 16 | `0xd65400fa3f65a3805ef6110ea0b94073df8ef47543298189b4220b817aabe756` | [view](https://shannon-explorer.somnia.network/tx/0xd65400fa3f65a3805ef6110ea0b94073df8ef47543298189b4220b817aabe756) | 0.9 STT | success |
-| 17 | `0xa380ac5b91b182ca13ea530b7d72d8a769752a851ac89b8e802eb85d0e9c40cb` | [view](https://shannon-explorer.somnia.network/tx/0xa380ac5b91b182ca13ea530b7d72d8a769752a851ac89b8e802eb85d0e9c40cb) | 0.9 STT | success |
-| 18 | `0x06660283ef8961956c12f8e45a96840d331893ce2c808e9656e2d37db3cc29ee` | [view](https://shannon-explorer.somnia.network/tx/0x06660283ef8961956c12f8e45a96840d331893ce2c808e9656e2d37db3cc29ee) | 0.9 STT | success |
-| 19 | `0xc9e8b7cadab6cd2d5160425bc241c8d0e35754770990ef85897e86cf2c20fce1` | [view](https://shannon-explorer.somnia.network/tx/0xc9e8b7cadab6cd2d5160425bc241c8d0e35754770990ef85897e86cf2c20fce1) | 0.9 STT | success |
-| 20 | `0xd2c04e0879d039873c68ce65630f5864c7c16ca8463d6355b64075decda80d5d` | [view](https://shannon-explorer.somnia.network/tx/0xd2c04e0879d039873c68ce65630f5864c7c16ca8463d6355b64075decda80d5d) | 0.9 STT | success |
-| 21 | `0xe506612276fc2d80878929132c52f0298cde3a65d1fa850c3eff599e232a8a30` | [view](https://shannon-explorer.somnia.network/tx/0xe506612276fc2d80878929132c52f0298cde3a65d1fa850c3eff599e232a8a30) | 0.9 STT | success |
-| 22 | `0xe4e4e684423a4d5579d5fe80642ac18370871ba5c937c227ada64599ce9dea3b` | [view](https://shannon-explorer.somnia.network/tx/0xe4e4e684423a4d5579d5fe80642ac18370871ba5c937c227ada64599ce9dea3b) | 0.9 STT | success |
-| 23 | `0x19d2d118e002a26a29ff7a02abeef059f62a4fd4f0dde319665cf616ca7cedc4` | [view](https://shannon-explorer.somnia.network/tx/0x19d2d118e002a26a29ff7a02abeef059f62a4fd4f0dde319665cf616ca7cedc4) | 0.9 STT | success |
-| 24 | `0xd74008bd9776e86e87348c4e8f5b97b9d8d41ddb0c49b66e9b7c51bed0dea85c` | [view](https://shannon-explorer.somnia.network/tx/0xd74008bd9776e86e87348c4e8f5b97b9d8d41ddb0c49b66e9b7c51bed0dea85c) | 0.9 STT | success |
-| 25 | `0x5bb87ac41c2743e04cb4d76008d25126730138124481be7ceb4770aa47981a34` | [view](https://shannon-explorer.somnia.network/tx/0x5bb87ac41c2743e04cb4d76008d25126730138124481be7ceb4770aa47981a34) | 0.9 STT | success |
-| 26 | `0x6fd4be71c07a1fddffd5a46160bd586eb2f599fd190faee5eeba550b438928e3` | [view](https://shannon-explorer.somnia.network/tx/0x6fd4be71c07a1fddffd5a46160bd586eb2f599fd190faee5eeba550b438928e3) | 0.9 STT | success |
-| 27 | `0xc36e0d16e7561443b1c4713041f3a9c3fd8f84fe8afa7d7e6f8c157fdb1d135a` | [view](https://shannon-explorer.somnia.network/tx/0xc36e0d16e7561443b1c4713041f3a9c3fd8f84fe8afa7d7e6f8c157fdb1d135a) | 0.9 STT | success |
-| 28 | `0x5b9c19bed4f706d062b474499a8737f997c37339389ef8d56c2b68495ac0b4fe` | [view](https://shannon-explorer.somnia.network/tx/0x5b9c19bed4f706d062b474499a8737f997c37339389ef8d56c2b68495ac0b4fe) | 0.9 STT | success |
-| 29 | `0x1089bb23eeed8f70f5e55c4c6d8233ddee4e47add2693e996305aea873353e30` | [view](https://shannon-explorer.somnia.network/tx/0x1089bb23eeed8f70f5e55c4c6d8233ddee4e47add2693e996305aea873353e30) | 0.9 STT | success |
-| 30 | `0xe902ff6d2836efe60b49b4e0ed81ddc62e2f30743a0a0e2db9c739cde11ed189` | [view](https://shannon-explorer.somnia.network/tx/0xe902ff6d2836efe60b49b4e0ed81ddc62e2f30743a0a0e2db9c739cde11ed189) | 0.9 STT | success |
-| 31 | `0x703b3685f60026db805c363e773014725d8120adc1fc3e2e9c6196f28873f901` | [view](https://shannon-explorer.somnia.network/tx/0x703b3685f60026db805c363e773014725d8120adc1fc3e2e9c6196f28873f901) | 0.9 STT | success |
-| 32 | `0x8ccaec91089aa13113b4ef691aed1d085ab51eb812d1844c600ecdecc247cfaf` | [view](https://shannon-explorer.somnia.network/tx/0x8ccaec91089aa13113b4ef691aed1d085ab51eb812d1844c600ecdecc247cfaf) | 0.9 STT | success |
-| 33 | `0x6f33cb10f359d9c4f739c85d7ba238d6f085046c5869262353f825d20662277f` | [view](https://shannon-explorer.somnia.network/tx/0x6f33cb10f359d9c4f739c85d7ba238d6f085046c5869262353f825d20662277f) | 0.9 STT | success |
-| 34 | `0x41f04039282e34a7b15825b390a5998e8b5efc098a5c3f7209a5c753beaccf05` | [view](https://shannon-explorer.somnia.network/tx/0x41f04039282e34a7b15825b390a5998e8b5efc098a5c3f7209a5c753beaccf05) | 0.9 STT | success |
-| 35 | `0xa3139d4658d271af29c4f810fe55aa4a81b2d47ed46c45e3ef540dcf1910df82` | [view](https://shannon-explorer.somnia.network/tx/0xa3139d4658d271af29c4f810fe55aa4a81b2d47ed46c45e3ef540dcf1910df82) | 0.9 STT | success |
-| 36 | `0x5aeac1b01930ade96a03169b140235194689e01fa10c6ee77272f12212a477af` | [view](https://shannon-explorer.somnia.network/tx/0x5aeac1b01930ade96a03169b140235194689e01fa10c6ee77272f12212a477af) | 0.9 STT | success |
-| 37 | `0xd40cbbc8820a5d8ff3c8ea3c6550f1380761d735a64ef0aaae3c567fe8355cb8` | [view](https://shannon-explorer.somnia.network/tx/0xd40cbbc8820a5d8ff3c8ea3c6550f1380761d735a64ef0aaae3c567fe8355cb8) | 0.9 STT | success |
-| 38 | `0x1c4aab968f35545dbef921d38b8c1ecc01d66e06629e1caffb2ec10db73388f1` | [view](https://shannon-explorer.somnia.network/tx/0x1c4aab968f35545dbef921d38b8c1ecc01d66e06629e1caffb2ec10db73388f1) | 0.9 STT | success |
-| 39 | `0xf4f1c4b978385c03547c149821fe7aea5fe57ad35cd440c4c47b43d6846fe915` | [view](https://shannon-explorer.somnia.network/tx/0xf4f1c4b978385c03547c149821fe7aea5fe57ad35cd440c4c47b43d6846fe915) | 0.9 STT | success |
-| 40 | `0x21583f2e0916c5a18f773a5eedacba6787a8fb08a9c0ffd033ffc619d40e2b69` | [view](https://shannon-explorer.somnia.network/tx/0x21583f2e0916c5a18f773a5eedacba6787a8fb08a9c0ffd033ffc619d40e2b69) | 0.9 STT | success |
-| 41 | `0x55c6f2e0924929a993b0f0bf68c3056f51d22688f38de137a927a6adf05284a9` | [view](https://shannon-explorer.somnia.network/tx/0x55c6f2e0924929a993b0f0bf68c3056f51d22688f38de137a927a6adf05284a9) | 0.9 STT | success |
-| 42 | `0x0382897c647c66f4264d57b77142027c10f32558be336a2b6dcdf22054b4bd25` | [view](https://shannon-explorer.somnia.network/tx/0x0382897c647c66f4264d57b77142027c10f32558be336a2b6dcdf22054b4bd25) | 0.9 STT | success |
-| 43 | `0x8ae0f7b63aed5221f0443343cd75d1032c7c35fce6e0673d1cfdcaf57f81df10` | [view](https://shannon-explorer.somnia.network/tx/0x8ae0f7b63aed5221f0443343cd75d1032c7c35fce6e0673d1cfdcaf57f81df10) | 0.9 STT | success |
-| 44 | `0x679ffaee4744f332151bcd9131a92fe49cf3132b9d3172c753a8b675dde433ae` | [view](https://shannon-explorer.somnia.network/tx/0x679ffaee4744f332151bcd9131a92fe49cf3132b9d3172c753a8b675dde433ae) | 0.9 STT | success |
-| 45 | `0xd5e60763b1ea130369d19a781b07f9b205a7f1106bc1a4f24deb84cbea61646e` | [view](https://shannon-explorer.somnia.network/tx/0xd5e60763b1ea130369d19a781b07f9b205a7f1106bc1a4f24deb84cbea61646e) | 0.9 STT | success |
-| 46 | `0xcd474d3991378c55178640e66f596a891f674a7139b7e2b1546c2be845aa1b57` | [view](https://shannon-explorer.somnia.network/tx/0xcd474d3991378c55178640e66f596a891f674a7139b7e2b1546c2be845aa1b57) | 0.9 STT | success |
-| 47 | `0x3ab69fe5161b1f6e2a98f0458d0958a5b621dcf2b4cae8b8db80f3936999b2a2` | [view](https://shannon-explorer.somnia.network/tx/0x3ab69fe5161b1f6e2a98f0458d0958a5b621dcf2b4cae8b8db80f3936999b2a2) | 0.9 STT | success |
-| 48 | `0x4d17500147705a02d09d3e6ff0d550a7b16c6efbfef1fa1f60bf32b34761a88e` | [view](https://shannon-explorer.somnia.network/tx/0x4d17500147705a02d09d3e6ff0d550a7b16c6efbfef1fa1f60bf32b34761a88e) | 0.9 STT | success |
-| 49 | `0x1377bead2336a6c230e12741c0ee79f7ea11d540c3d3ae0fa766480f26e99e1d` | [view](https://shannon-explorer.somnia.network/tx/0x1377bead2336a6c230e12741c0ee79f7ea11d540c3d3ae0fa766480f26e99e1d) | 0.9 STT | success |
-| 50 | `0x25283861c76f9d5f7096aceb46a592d2c2ad496e56b96899278e32bb5d816d75` | [view](https://shannon-explorer.somnia.network/tx/0x25283861c76f9d5f7096aceb46a592d2c2ad496e56b96899278e32bb5d816d75) | 0.9 STT | success |
+## Why DreamDEX specifically
 
-### Venue constraints, and what we built around them
-
-Three things every generic options UI assumes turned out not to hold here. Each
-was checked against the chain rather than assumed, each is **probed at runtime**
-rather than asserted, and each has real engineering behind it — so the product
-tracks the venue instead of describing a venue that does not exist.
-
-**Atomic multi-leg batching: the chain cannot do it, so we built the next best
-guarantee.** EIP-7702 ships in Prague, and Shannon is pre-Prague.
-It carries none of Prague's system contracts
-(`0x…2935`, `0x…7002`), nor Cancun's beacon-roots contract, and its block
-headers have no `withdrawalsRoot`, `excessBlobGas` or `requestsHash`. Probing
-by transaction envelope is useless here — the node answers a malformed type-`0x2`,
-a type-`0x4` and a nonexistent type-`0x7f` with the identical
-`invalid transaction / 0x08`, verified against a negative control — so
-[`sdk/venue/capabilities.ts`](sdk/venue/capabilities.ts) detects the fork by
-system-contract presence instead.
-
-In its place, [`sdk/dreamdex/batch.ts`](sdk/dreamdex/batch.ts) delivers the
-guarantee 7702 was wanted for, as far as this chain allows:
-
-| | |
-|---|---|
-| `PREFLIGHT_ALL_OR_NOTHING` | every leg gated before a signature exists — nothing is sent |
-| `SEQUENTIAL_VERIFIED` | every leg filled, each verdict read from its own receipt |
-| `PARTIAL_UNWOUND` | a leg failed; the filled legs were sold back and the sale verified |
-| `PARTIAL_EXPOSED` | a leg failed **and** an unwind failed — read this one |
-
-Legs go out `FILL_OR_KILL`, so a leg either exists whole or not at all and an
-unwind never faces a partial. **This is not atomic**: between the first fill and
-the unwind there is a real window in which the position is one-sided.
-
-It is driven from **Basket** on [`/structures`](https://prism-terminal-cyan.vercel.app/structures)
-— pick two to four routable legs, price them, open them — and the panel renders
-the raw `atomicity` field, never a boolean and never a green tick. `PARTIAL_EXPOSED`
-is styled to be impossible to skim past, because it means size is still on and
-the reader has to act.
-
-**A capability module with no caller now fails the build.**
-`tests/deploy-config.test.ts` walks the tree for real `from "…"` clauses and
-fails any module nothing imports — typecheck, tests and the build otherwise all
-pass happily on a library nobody calls. `tests/batch.test.ts` asserts the
-grading function never overstates a guarantee, including the case where the
-unwind loop dies part-way and a naive "every unwind succeeded" check would
-report flat while a leg is still open.
-
-**Range / Spread / Ladder: the venue cannot express them, and the UI proves it
-from live data.**
-Each needs 2+ strikes on one expiry. Re-verified live while writing this: across
-**548 markets**, the most distinct strikes on any single expiry is **1**. This is
-no longer a paragraph — [`sdk/venue/structures.ts`](sdk/venue/structures.ts)
-decides it from the registry, `/structures` and `/docs` print the counts they
-were decided from, and `tests/structures.test.ts` asserts the verdict *flips* the
-day a second strike appears.
-
-**The roll: built, verified, and waiting on the venue to list a successor.**
-The planner and daemon share the verified execution path. What was missing is a
-successor: the venue does not pre-strike them, so the window in which one exists,
-is struck and has a resting offer is short and unpredictable.
-[`scripts/roll-watch.ts`](scripts/roll-watch.ts) was a parallel implementation —
-it hard-coded the tick grid and read the SDK's own receipt field as the verdict,
-so a success there proved nothing about PRISM. It now calls `planRoll` /
-`executeRoll` directly, sits on the venue for as long as you tell it to, and
-writes `docs/evidence/roll-receipt.json` on a chain-verified roll.
-
-```bash
-PRISM_DRY_RUN=false ROLL_WATCH_MINUTES=120 \
-  bun --conditions react-server scripts/roll-watch.ts
-```
-
-**Measured, not assumed.** A receipt is written only on a verified roll, so an
-empty `docs/evidence/` would not distinguish *the venue never listed a
-successor* from *nobody ran the watcher*. Every sweep therefore appends one
-timestamped line to
-`docs/evidence/roll-observations.jsonl` whether or not anything was rollable, and
-`scripts/probe-succession.ts` prints a machine-readable verdict on demand. Last
-run: `NO_SUCCESSOR_LISTED`, `exact:NO label:NO` on every live market — so neither
-the exact-seconds match nor the venue's own cadence label finds one, which places
-the absence at the venue rather than in `successionChain`.
-
----
-
-## The verified round trip
-
-```
-buy     0xd6f0a3e2831b5fdea150e9d026234f9dfc5bd62e33064510117e114f9ffef65e
-        1 YES at 0.886 tUSDC
-        market resolved YES
-redeem  0x1b21a41150cd019ca1fdc1472f416563de7e3a6158499e4b1844aa0cfc793206
-        block 471,513,467 · receipt 0x1
-
-tUSDC   499.114000 → 500.114000            net +0.114000
-```
-
-[`/proof`](https://prism-terminal-cyan.vercel.app/proof) re-reads both
-transactions from Somnia on every request — receipt status, block, sender, and
-the collateral movement **decoded from the transfer logs**. Only the two hashes
-are constants. If the chain stopped agreeing, the page would say so.
-
----
+The venue lists **one strike per window** and five cadences per asset. That kills composition across strike — no ladder, no Range, no Spread, no risk-neutral density — and makes composition across **time** the only real axis. PRISM is built on the axis the venue actually has, not the one a generic options UI assumes.
 
 ## Architecture
 
 ```
-                        User
-                          |
-              +-----------+-----------+
-              v                       v
-     Wallet (RainbowKit)        PRISM web (Vercel)
-     user's own key                   |
-              |                       v
-              |            backend/market-data     no key -> scales out
-              |            backend/executor        SINGLE WRITER, one key
-              |            backend/roll            the daemon
-              |                       |
-              +-----------+-----------+
-                          v
-                       sdk/
-              venue/ · dreamdex/ · quant
-                          |
-              @somnia-chain/markets-sdk
-                          |
-                   Somnia Shannon
-                          |
-              VERIFICATION: raw RPC, independent of the SDK
-                          |
-                  Shannon explorer
+EVENT CONTRACT → STRATEGY → RISK → EXECUTION → VERIFICATION → SETTLEMENT → CONTINUITY
 ```
 
-```
-backend/executor/     owns the key — serialized queue
-backend/market-data/  read fan-out — no key
-backend/roll/         the roll + claim daemon
-contracts/            addresses + ABIs of the contracts PRISM calls
-sdk/                  venue, dreamdex, quant — shared, React-free
-src/                  the Next.js app
-docs/                 architecture · gotchas · demo
-tests/                195 tests
-```
-
-`contracts/` documents the DreamDEX contracts PRISM *talks to* — addresses,
-ABIs, and the transactions that verified each one. **PRISM deploys none of
-them**; it is a client. See [`contracts/README.md`](contracts/README.md).
-
----
-
-## Two signing paths
-
-| | Custody | Nonce | Ceiling |
-|---|---|---|---|
-| **Wallet connected** | user's key | user's own | none |
-| Demo burner | server key, guarded | one shared | ~1 tx globally |
-
-Nonces are sequential, so a single server key means every trade in the system
-contends for one nonce. Connecting a wallet removes that entirely.
-
-The split of responsibility matters:
-
-- **Server owns the arithmetic.** Price and size snap to the venue's integer
-  tick and lot grid before anything reaches the browser, so a float never
-  reaches an 18-decimal venue. That must not depend on the client.
-- **Client owns the key.** It receives `to`, `data`, `value` and signs. No
-  private material crosses the boundary in either direction.
-
-The SDK **returns** the approval and never sends it — skipping it reverts
-on-chain — so it is sent first and awaited before the order.
-
----
-
-## Why the SDK response is not the truth
-
-The DreamDEX bot kit documents that a write **can resolve without throwing even
-when the transaction reverted**. A `success` flag is therefore evidence, not a
-verdict.
-
-`verifyExecution()` never reads it. It re-derives the outcome from chain via raw
-RPC:
-
-1. `eth_getTransactionReceipt` — authoritative when a hash exists
-2. `eth_getTransactionCount` — nonce movement proves something was broadcast
-3. `balanceOf(tUSDC)` — a real delta proves collateral moved
-
-It may answer **`UNKNOWN`**, and the UI renders `UNKNOWN` as `UNKNOWN`. An
-explorer link is built only from a hash that survived verification.
-
----
-
-## Performance
-
-Measured, before and after:
-
-```
-getMarketSnapshot()   1245-4876ms, uncached, on EVERY page render
-                      -> ~50k GraphQL queries at 50k users
-
-/markets   req 1  5.996s   (cold)
-           req 6  0.053s   (cached)          112x
-/trade     1.120s -> 0.452s
-/roll      817 KB -> 104 KB
+```text
+┌─────────────────────────────────────────────────────────────────────┐
+│  FRONTEND (Next.js 15)                                              │
+│  terminal · positions · settlement · /proof (re-read from chain)     │
+└───────────────┬─────────────────────────────────────────────────────┘
+                │ server-only
+┌───────────────▼─────────────────────────────────────────────────────┐
+│  SDK (sdk/dreamdex)                                                 │
+│  execution.ts   — validate → submit → verify (receipt-derived)      │
+│  place-limit.ts — integer-grid order placement (18-decimal safe)    │
+│  proof.ts       — /proof re-verifies lifecycle from chain per hit   │
+│  roll.ts        — succession planning across windows                │
+└───────────────┬─────────────────────────────────────────────────────┘
+                │ viem + @somnia-chain/markets-sdk
+┌───────────────▼─────────────────────────────────────────────────────┐
+│  SOMNIA SHANNON (chain 50312)                                       │
+│  indexer (GraphQL) · RPC · on-chain EMA oracle · order pools        │
+└─────────────────────────────────────────────────────────────────────┘
 ```
 
-Registry pulls at 50k users: **~6/min**, not 50,000. TTLs are set against how
-fast the data can change — windows are minutes long, so a 10s-stale registry is
-still correct, and countdowns tick client-side from the snapshot's own
-`fetchedAt` so a cached snapshot shows a *correct* clock.
+### Transaction flow
 
-Never cached: anything that signs, and anything per-wallet. A stale balance is a
-wrong trade.
+1. **Discover** — 572 binary markets read from the Somnia indexer.
+2. **Normalize** — every row mapped to a typed `EventMarket`; discarded rows counted by reason.
+3. **Validate** — struck, trading, outside expiry headroom, size within cap, collateral sufficient. Rejection here costs nothing; on-chain it costs gas.
+4. **Submit** — IOC order through the integer grid tier; `placeBinaryOrder` escrows tUSDC to the pool.
+5. **Verify** — outcome re-derived from the receipt, nonce and balance delta. The SDK's response is evidence, not truth; UNKNOWN is never rendered as success.
+6. **Settle** — fee-aware payout, real redeem against the settlement singleton.
+7. **Continue** — the roll planner carries the view into the successor window.
 
----
+## Engineering decisions
 
-## Security
+### The SDK response is not the truth
 
-- No key ever reaches the browser; `.env*` is gitignored and CI scans full
-  history for key literals
-- `server-only` on every module that can move funds
-- Rate limit per caller, plus an **on-chain spend floor** that holds across
-  serverless instances where in-memory limits cannot
-- Server-side order size cap — a limit that only exists in an input's `max`
-  attribute is not a limit
-- Mandatory order expiry, capped at the market's own
-- IOC by default, so no remainder rests with escrow locked
+The bot-kit documents that a write can resolve without throwing even when the underlying transaction reverted. `verifyExecution` re-derives the outcome from chain state — receipt status, nonce movement, collateral balance delta — and is allowed to answer UNKNOWN. UNKNOWN is never rendered as success.
 
----
+### The 18-decimal grid bug is invisible on testnet
 
-## Testing
+`createOrder` hands a float to `parseUnits`. At 18 decimals that exposes the float's binary representation: `(0.05).toFixed(18)` is `0.050000000000000003` — three wei off the tick grid, which the pool rejects with `InvalidPrice`. A 6-decimal venue never shows this, which is why Shannon testnet is clean and mainnet is not. So no float ever reaches the SDK here: price and size are converted in TICK and LOT units as exact bigints.
 
-```
-tests/quant.test.ts         payoff boundaries, PAVA repair, depth limits
-tests/grid.test.ts          reproduces the 18-decimal bug, then proves the fix
-tests/routability.test.ts   expiry headroom, struck/unstruck, status gating
-tests/structures.test.ts    the one-strike constraint, AND that it flips
-tests/batch.test.ts         the grading function, incl. the unwind-died case
-tests/deploy-config.test.ts tracing root, route coverage, no uncalled modules
-tests/discovery.test.ts     a THIRD underlying survives normalization
-tests/wallet-config.test.ts no placeholder credential reaches the relay
-tests/bot-kit.test.ts       the kit's six strategy names, and the Builder's
-```
+### One strike per window is a constraint, not a bug
 
-195 tests, all pure — no mocked blockchain. Live behaviour is verified manually
-against Shannon and recorded above; that is stated separately rather than dressed
-up as integration coverage.
+The venue lists one strike per window. That kills composition across strike — so composition across **time** is the axis. PRISM's roll converts a five-minute contract into a position; carrying a view across window succession is what turns a one-time click into a returning trader.
 
-The grid tests matter most: the 18-decimal failure is **invisible on a 6-decimal
-testnet**, so a happy-path test would pass against broken code. They assert the
-failure first.
+### The indexer URL is not the RPC URL
 
-`structures.test.ts` is the second-most important, for the opposite reason. It is
-easy to write a test that agrees the venue has one strike; the useful assertions
-are the ones proving Range and Spread turn **on** at two strikes and Ladder at
-three. A constraint that can only ever answer "no" is indistinguishable from a
-hard-coded no.
+Passing the RPC where the indexer belongs fails with `RegistryMarkets failed: empty response`, which reads like an outage rather than a config mistake. The SDK takes both, and `resolveVenueConfig` keeps them distinct.
 
----
+### Makers create the depth the board is missing
 
-## dreamBot Builder configs
+All six bot-kit strategies run on PRISM's verified path, three of them resting — maker, passive bid, ladder. More makers is more depth, and more depth is what makes the venue tradeable for everyone who arrives after.
 
-The [dreamBot Builder](https://dreambot-builder.vercel.app) is Somnia's no-code
-front end for the bot kit. Walking it end to end, it emits exactly one artifact
-— a `.env` block — and tells you to run it against the kit:
+## Trust, security, and privacy
 
-```
-NETWORK=testnet
-DRY_RUN=true
-STRATEGY=ec-starter
-PRIVATE_KEY=0x...
-TAKE_MAX_SHARES=5
-TAKE_MAX_POSITION=20
-TAKE_INTERVAL_MS=8000
-```
+- **No key ever reaches the browser** — `.env*` is gitignored and CI scans full history for key literals.
+- **`server-only` on every module that can move funds.**
+- **Split-key operation** — `PRIVATE_KEY` is the hot operator; `OWNER_ADDRESS` is the fund wallet. Orders route via `placeOrderFor`; the hot key can never withdraw.
+- **Server-side order size cap** — a limit that only exists in an input's `max` attribute is not a limit.
+- **Mandatory order expiry**, capped at the market's own — an un-expiring order outlives a crashed process.
+- **IOC by default** — no remainder rests with escrow locked.
+- **On-chain spend floor** that holds across serverless instances where in-memory limits cannot.
 
-PRISM runs that same config against **its own** execution path, so the config
-stays portable while the execution stays verified — the grid-safe integer tier,
-and an outcome re-derived from the receipt rather than the SDK's return value,
-which is precisely what the kit documents can lie.
+## Implementation status
 
-```bash
-cp bot.env.example bot.env      # or paste the Builder's block
-bun run svc:bot bot.env
-```
+| Capability | Status | Current behavior |
+|---|---|---|
+| Market discovery + normalization | Implemented | 572 markets, typed boundaries, discarded rows counted |
+| Routability gating | Implemented | struck/unstruck/expired/headroom from chain fields |
+| Execution (IOC) | Implemented | real fills, escrow to pool, receipt-verified |
+| Verification | Implemented | re-derived from receipt + nonce + balance delta |
+| Settlement | Implemented | fee-aware payout, real redeem |
+| Non-custodial signing | Implemented | RainbowKit, users sign their own key |
+| Roll planner + daemon | Implemented | succession chains, typed blockers |
+| 50-account batch proof | Implemented | 50 distinct wallets → live pools, all verified |
+| Mainnet grid safety | Implemented | integer tick/lot tier; 18-decimal safe by construction |
+| Mainnet deployment | Not shipped | testnet-only; mainnet grid work exists *because* it differs |
+| Successor pre-striking | Not shipped | venue's problem; the roll waits for it |
 
-**The key is deliberately not read from the config.** The Builder's block
-carries a `PRIVATE_KEY` line; the parser reports only whether a usable key is
-*present* and never carries its value — a config object gets logged and
-serialised into errors. PRISM reads the key from its own environment, in the one
-place that already does.
+## Technology and repository layout
 
-| Kit `STRATEGY` | Builder label | PRISM | runner |
-|---|---|---|---|
-| `ec-starter` | EC Starter | crosses the spread on the verified IOC path | `runStarter` |
-| `ec-settlement` | EC Settlement | `findClaimable` + fee-aware `claim` | `runSettlement` |
-| `ec-maker` | EC Market Maker | post-only bid and ask around fair, re-quoted as it moves | `runQuoting` |
-| `ec-passive` | EC Passive Bid | one post-only bid, never pays the spread | `runQuoting` |
-| `ec-laddering-bot` | EC Ladder | post-only grid each side, flattened inside expiry headroom | `runQuoting` |
-| `ec-oracle-follow` | — | takes the side Somnia's EMA oracle implies, past an edge threshold | `runOracleFollow` |
+### Stack
 
-**All six run, under either spelling.** The left column is the kit's own
-`STRATEGY` value; the middle is the Builder's UI label. PRISM used to accept
-*only* the middle column, so a config carrying the kit's documented
-`STRATEGY=ec-maker` was rejected with "not an Event Contracts strategy" — an
-integration that claimed to run the kit's strategies while refusing three of its
-names. Both parse now; `canonicalStrategy` is the single place they map.
-
-`ec-oracle-follow` was missing outright, and the sentence here used to read "all
-five run" about a set of six. The list had been transcribed from the Builder's
-dropdown and never compared to anything — the same defect as the `INTERVALS` and
-`KNOWN_VENUE_IDS` constants. [`scripts/probe-bot-kit.ts`](scripts/probe-bot-kit.ts)
-now reads the kit's own docs from GitHub and exits non-zero if PRISM's list has
-drifted in either direction; `tests/bot-kit.test.ts` is the offline half.
-
-The kit documents that `ec-oracle-follow` needs an underlying spot price and
-**exits at startup on mainnet** unless you wire an external ticker. PRISM reads
-Somnia's on-chain EMA oracle — the feed these contracts actually settle against,
-not a correlated third-party ticker — so on testnet it follows the settlement
-source itself. The mainnet limitation is the kit's, and is printed at startup
-rather than papered over. The three resting ones were refused until PRISM had
-**order cancellation** — each must *manage* a quote after placing it, and a
-post-only order that can never be pulled leaves escrow locked in a market that
-settles, which the bot kit calls the easiest way to lose track of collateral.
-
-[`sdk/dreamdex/cancel.ts`](sdk/dreamdex/cancel.ts) closed that: `cancelOrder` /
-`cancelOrders` through the raw trader tier, with **what is still resting re-read
-from chain** rather than inferred from a receipt — a green receipt says the
-transaction executed, not that every id in it was pulled, and the batch call
-skips stale ids silently. Open orders come from `getOwnOpenOrdersOnchain`, not
-the indexer, whose order view lags chain head; cancelling against a lagged list
-means believing you are flat while a quote is still resting.
-
-Three rules the quote loop enforces, each one a way to lose money quietly:
-
-- **Flatten inside the expiry headroom**, and on `SIGINT`. A quote outliving its
-  window is escrow locked in a settled market — and `loadMarkets` drops
-  finalized markets, so it is hard to even find again.
-- **Cancel before re-quoting, and abort if anything survives.** Placing on top
-  of orders you failed to pull is how a maker ends up on both sides of its own
-  book.
-- **Only re-quote when fair moved at least half a tick.** Below that the
-  replacement snaps to the same on-grid price, so it spends two nonces to arrive
-  where it already was.
-
-The quote maths is pure and tested in [`tests/quotes.test.ts`](tests/quotes.test.ts)
-— a maker that computes a crossed pair does not throw, it rests, and the venue
-takes whichever side is free money.
-
-
----
-
-## Agents
-
-An agent can do everything the terminal does. It just cannot spend more than you
-let it.
-
-```bash
-bun run svc:mcp                 # stdio — what Claude Desktop connects to
-MCP_HTTP_TOKEN=<32+> bun run svc:mcp-http   # HTTP, for hosting
-```
-
-Nineteen tools: read the registry, price a book, plan and execute a roll, open a
-multi-leg structure, cancel resting orders, claim settlement, re-verify the
-proof. There is also a plain TypeScript client in
-[`sdk/agent/client.ts`](sdk/agent/client.ts) for anyone who would rather embed
-PRISM than adopt a protocol — MCP is a transport over that surface, not a second
-implementation of it.
-
-### The guardrails are a module, not checks at the call sites
-
-An agent calls tools in a loop, and a limit written where it is used is a limit
-the next tool forgets. [`sdk/agent/policy.ts`](sdk/agent/policy.ts) owns every
-spend decision and the ledger of what has been spent; the write paths have no
-other route to the executor, so a tool that forgets to ask simply cannot spend.
-
-| | |
+| Layer | Technology |
 |---|---|
-| Budget | per session, charged on **filled** size, never requested size |
-| Per order | contract cap |
-| Trade count | orders, then the session is spent |
-| Cooldown | between orders |
-| Scope | an explicit market allowlist |
-| Default | dry-run — arming is an act by the operator, never the model |
+| Language | TypeScript (strict) |
+| Web | Next.js 15, React 19, Tailwind v4 |
+| Chain | Somnia Shannon (50312) via `@somnia-chain/markets-sdk` + viem |
+| Wallet | wagmi, RainbowKit |
+| Charts | TradingView `lightweight-charts` |
+| Tests | Vitest (241 passing) |
+| Runtime | Bun, Docker |
 
-Two of those are less obvious than they look, and both are tested:
+### Repository layout
 
-**An empty allowlist permits nothing, never everything.** That is the difference
-between a scoping bug and an unscoped agent.
-
-**A `NaN` size is refused before any comparison runs.** NaN is neither above nor
-below a bound, so an unchecked one passes every cap at once — it is the single
-input that would defeat the whole policy.
-
-Dry-run is checked **last**, so a refusal still names the real blocker. An
-operator testing a policy learns it is broken before arming it, not after.
-
-### Credentials a copy cannot use
-
-Stated narrowly, because the loose version is marketing: there is no enclave
-here and the credential file can be copied. What it cannot be is *used twice*.
-
-Redeeming a grant mints a fence — a strictly increasing integer — and rewrites
-the lease. Every write presents the current fence. A second process redeeming
-the same grant mints a higher one and takes the lease, so the first is
-invalidated and finds out on its next write rather than quietly double-trading
-against one budget. Clone-ineffective and clone-evident, which is the honest
-version of the claim.
-
-The hmac covers the budget, the caps and the allowlist, so a copied grant cannot
-be edited into a larger one without the operator's secret. And a grant only ever
-*narrows*: `clampToGrant` takes the minimum of each cap and the intersection of
-the allowlists.
-
-### Try it
-
-```bash
-bun --conditions react-server scripts/agent-demo.ts   # the SDK, live
-node scripts/mcp-demo.mjs                             # the MCP server, live
+```text
+frontend/     Next.js app — terminal, positions, settlement, /proof
+sdk/          venue config, execution, place-limit, roll, proof, settlement
+backend/      market-data / executor / roll services
+contracts/    addresses + ABIs of the DreamDEX contracts PRISM calls
+scripts/      probes, verify-claims, demo scripts
+tests/        pure unit tests — no mocked blockchain
+docs/         architecture, gotchas (reproduced live), evidence
 ```
 
-Both print a transcript rather than a claim. Neither signs anything — the
-session is dry-run, so the refusals are the part worth reading.
+## Run the deterministic proof
 
-
----
-
-## Why this grows the venue
-
-Event Contracts have a structural problem that is not a liquidity problem: a
-contract that expires in five minutes has no holding period, so there is no
-reason to come back tomorrow. Every measurement below was taken from the live
-venue while writing this.
-
-**The cadence is faster than humans trade.** A five-minute window means twelve
-decisions an hour, per market, forever. Nobody sits at that. The venue's own
-board shows the consequence — of 14 live windows, 10 were unstruck and 0 were
-routable at the moment of measurement. Depth is thin because attention is thin.
-
-**Agents do not have that limit, and that is the whole thesis.** PRISM ships as
-an MCP server and a TypeScript client, so any Claude user is one paste away from
-trading DreamDEX, and any developer can embed the venue without learning it.
-Nineteen tools, a spend policy the model cannot raise, and dry-run by default —
-which is what makes it safe to hand to strangers rather than a liability.
-
-**The roll converts a five-minute contract into a position.** Carrying a view
-across window succession is what turns a one-time click into a returning
-trader — and returning traders are the only kind that compound volume. That is
-the product, not the ladder.
-
-**Makers create the depth the board is missing.** All six bot-kit strategies run
-on PRISM's verified path, three of them resting — maker, passive bid, ladder.
-More makers is more depth, and more depth is what makes the venue tradeable for
-everyone who arrives after.
-
-### Revenue, natively
-
-DreamDEX's own `placeOrder` carries `address builder` and
-`uint96 builderFeeBpsTimes1k`. The venue already pays whoever routes the flow —
-no token, no separate protocol, no rent extracted from users:
-
-```solidity
-function placeOrder(
-  bool isBid, uint64 userData, uint256 price, uint256 quantity,
-  uint64 expireTimestampNs, uint8 orderType, uint8 selfMatchingOption,
-  address builder, uint96 builderFeeBpsTimes1k
-) external payable returns (bool success, uint128 orderId);
-```
-
-So the incentives point the same way for everyone. PRISM earns when it routes
-volume, DreamDEX earns when volume exists, and a trader pays a venue fee they
-would pay anyway. A terminal, an agent surface and a fleet of makers are three
-ways of feeding the same order book — which is why this is a business rather
-than a demo.
-
-### What would have to be true
-
-Stated as conditions rather than promises, because the honest version is more
-useful than an optimistic one:
-
-| | |
-|---|---|
-| Agents actually trade | the surface exists and is verified; nobody has run one at scale |
-| Successors get pre-struck | the roll is built and waiting — 0 successors in ~300 recorded sweeps |
-| Mainnet behaves like testnet | the 18-decimal grid work exists *because* it will not |
-| Makers find it worth quoting | fee capture is native; the spread has to cover it |
-
----
-
-## Local development
+The fastest way to evaluate PRISM is the live terminal — but the strongest claim is the verification path, which re-reads every transaction from the chain on each request:
 
 ```bash
 bun install
@@ -625,7 +243,7 @@ bun run dev                    # http://localhost:3177
 
 ```bash
 bun run typecheck
-bun run test
+bun run test                   # 241 tests, all pure — no mocked blockchain
 bun run build
 
 bun run svc:market-data        # :8082  no key
@@ -640,6 +258,7 @@ Live diagnostics:
 bun scripts/probe-venue.mjs        # discovery + venue scoping
 bun scripts/probe-exec.ts          # balances, order book (places NO order)
 bun --conditions react-server scripts/verify-markets.ts
+bun scripts/verify-claims.ts       # re-checks every README claim against chain
 ```
 
 ## Environment
@@ -653,38 +272,44 @@ Names only; never commit values.
 | `PRISM_RPC_URL` | Somnia JSON-RPC |
 | `PRISM_DRY_RUN` | `true` blocks all signing; only `false` arms it |
 | `PRIVATE_KEY` | demo signer. Burner holding testnet value only |
+| `OWNER_ADDRESS` | fund wallet; the hot key can never withdraw |
 | `PRISM_MAX_ORDER_CONTRACTS` | server-side per-order cap |
 | `PRISM_RESERVE` | collateral floor for the shared demo wallet |
 | `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID` | optional; injected wallets work without it |
 
-> The indexer URL is a different host from the RPC. Passing the RPC where the
-> indexer belongs fails with `RegistryMarkets failed: empty response`, which
-> reads like an outage rather than a config mistake.
+> The indexer URL is a different host from the RPC. Passing the RPC where the indexer belongs fails with `RegistryMarkets failed: empty response`, which reads like an outage rather than a config mistake.
 
----
+## Tests and CI
 
-## Venue behaviour we design around
+The Vitest run passes **241 tests across 13 files**, all pure — no mocked blockchain. Live behaviour is verified manually against Shannon and recorded above; that is stated separately rather than dressed up as integration coverage.
 
-Eight gotchas, each **reproduced live** rather than cited — one strike per
-window, `loadMarkets` hiding your winnings, the 18-decimal float bug, silent
-reverts, unstruck successors, taker-pays-fill. See
-[`docs/gotchas.md`](docs/gotchas.md).
+| File | Covers |
+|---|---|
+| `quant.test.ts` | payoff boundaries, PAVA repair, depth limits |
+| `grid.test.ts` | reproduces the 18-decimal bug, then proves the fix |
+| `routability.test.ts` | expiry headroom, struck/unstruck, status gating |
+| `structures.test.ts` | the one-strike constraint, AND that it flips |
+| `batch.test.ts` | the grading function, incl. the unwind-died case |
+| `deploy-config.test.ts` | tracing root, route coverage, no uncalled modules |
+| `discovery.test.ts` | a THIRD underlying survives normalization |
+| `wallet-config.test.ts` | no placeholder credential reaches the relay |
+| `bot-kit.test.ts` | the kit's six strategy names, and the Builder's |
 
-## Further reading
+The grid tests matter most: the 18-decimal failure is **invisible on a 6-decimal testnet**, so a happy-path test would pass against broken code. They assert the failure first.
 
-- [`docs/architecture.md`](docs/architecture.md) — the read/write split
-- [`docs/gotchas.md`](docs/gotchas.md) — venue behaviour, reproduced
-- [`docs/demo.md`](docs/demo.md) — 2:30 script
-- [`docs/worklog.md`](docs/worklog.md) — what changed and why, with the evidence
+GitHub Actions runs install → typecheck → test → build on every push; the latest runs are green.
 
----
+## Known limitations
 
-## Stack
+PRISM is a working technical demonstration on testnet, not a finished deployment:
 
-Next.js 15 · React 19 · TypeScript (strict) · Tailwind v4 ·
-`@somnia-chain/markets-sdk` · viem · wagmi · RainbowKit · lightweight-charts ·
-Geist Mono · Vitest · Bun · Docker
+- **Testnet only.** Mainnet grid work exists because it will differ — the 18-decimal tier is built and tested, but no mainnet position has been opened.
+- **The venue does not pre-strike successors.** The roll planner is built and waiting; 0 successors were observed in ~300 recorded sweeps.
+- **Agents trade on the verified path**, but nobody has run one at scale.
+- **Makers need the spread to cover venue fees** — fee capture is native, but quoting profitability is unproven at volume.
 
----
+These constraints are documented to keep evaluation focused on what the repository proves today: real market discovery, verified execution, receipt-derived settlement, and a 50-account on-chain batch against a live venue.
 
-*Testnet build. Educational reference, not financial advice.*
+## License
+
+[MIT](LICENSE).
