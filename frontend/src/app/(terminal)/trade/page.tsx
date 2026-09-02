@@ -5,6 +5,12 @@ import { resolveVenueConfig } from "@sdk/venue/config";
 import type { PriceSnapshot } from "@sdk/venue/prices";
 import { cachedPriceSnapshot } from "@sdk/venue/cache";
 import { isRoutable, type EventMarket, type Outcome } from "@sdk/venue/types";
+import {
+  emptySide,
+  emptyBook,
+  openingOutcome as decideOpeningOutcome,
+  type MarketBook,
+} from "@sdk/venue/mark";
 import { TradeTerminal } from "./terminal";
 
 export const metadata: Metadata = { title: "Trade — PRISM" };
@@ -12,21 +18,12 @@ export const metadata: Metadata = { title: "Trade — PRISM" };
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-export interface BookSide {
-  /** [price, size] best-first. */
-  levels: [number, number][];
-  /** Best price, or null when nothing is resting. */
-  best: number | null;
-  /** Contracts available at or better than the best level. */
-  depth: number;
-}
-
-export interface MarketBook {
-  YES: BookSide;
-  NO: BookSide;
-}
-
-const emptySide = (): BookSide => ({ levels: [], best: null, depth: 0 });
+/**
+ * The book shape and the mark-price cascade live in `@sdk/venue/mark` so they
+ * can be tested. They are re-exported here because every consumer in this
+ * route already imports them from `./page`.
+ */
+export type { BookSide, MarketBook } from "@sdk/venue/mark";
 
 /**
  * Total resting depth across both outcomes.
@@ -37,30 +34,21 @@ const emptySide = (): BookSide => ({ levels: [], best: null, depth: 0 });
  */
 async function totalDepth(m: EventMarket, config: ReturnType<typeof resolveVenueConfig>) {
   const ex = exchange(config);
-  let depth = 0;
+  let ask = 0;
+  let bid = 0;
   for (const o of ["YES", "NO"] as Outcome[]) {
     try {
       const ob = await ex.fetchOrderBook(`${m.symbol}#${o}`);
-      depth += ((ob.asks ?? []) as [number, number][]).reduce((n, [, s]) => n + s, 0);
+      ask += ((ob.asks ?? []) as [number, number][]).reduce((n, [, s]) => n + s, 0);
+      bid += ((ob.bids ?? []) as [number, number][]).reduce((n, [, s]) => n + s, 0);
     } catch {
       /* an unreadable book contributes nothing */
     }
   }
-  return depth;
-}
-
-/** Does either outcome have a resting offer? Cheap enough to scan a few. */
-async function hasBook(m: EventMarket, config: ReturnType<typeof resolveVenueConfig>) {
-  const ex = exchange(config);
-  for (const o of ["YES", "NO"] as Outcome[]) {
-    try {
-      const ob = await ex.fetchOrderBook(`${m.symbol}#${o}`);
-      if (((ob.asks ?? []) as [number, number][])[0]) return true;
-    } catch {
-      /* keep looking */
-    }
-  }
-  return false;
+  // Two separate numbers, deliberately. `ask` is what can be BOUGHT and decides
+  // selection; `bid` only ranks the consolation prize, because a window with
+  // bids can still be priced and drawn even though nothing can be lifted on it.
+  return { ask, bid };
 }
 
 export default async function TradePage({
@@ -74,7 +62,7 @@ export default async function TradePage({
   let routable: EventMarket[] = [];
   let active: EventMarket[] = [];
   let succession: EventMarket[] = [];
-  let book: MarketBook = { YES: emptySide(), NO: emptySide() };
+  let book: MarketBook = emptyBook();
   let prices: PriceSnapshot | null = null;
   let venueError: string | null = null;
 
@@ -120,19 +108,27 @@ export default async function TradePage({
       // the time the page renders — which is exactly how /trade kept opening on
       // "no resting offer" while other windows were quoting.
       let best: { market: EventMarket; depth: number } | null = null;
+      let quoted: { market: EventMarket; depth: number } | null = null;
       for (const m of durable) {
-        const depth = await totalDepth(m, config);
-        if (depth <= 0) continue;
-        if (!best || depth > best.depth) best = { market: m, depth };
+        const { ask, bid } = await totalDepth(m, config);
+        // Remember the best merely-QUOTED window as we go, so the fallback is
+        // a market that can still be priced rather than whichever one happens
+        // to expire last. That fallback is what put the reader in front of an
+        // unpriceable book while a quoted window sat one row away.
+        if (bid > 0 && (!quoted || bid > quoted.depth)) quoted = { market: m, depth: bid };
+        if (ask <= 0) continue;
+        if (!best || ask > best.depth) best = { market: m, depth: ask };
         // Enough to be worth trading; stop paying for book reads.
         if (best.depth >= 50) break;
       }
       // The scan took real time; the window may have closed inside it.
       if (best && isRoutable(best.market, Date.now())) selected = best.market;
+      if (!selected && quoted && isRoutable(quoted.market, Date.now()))
+        selected = quoted.market;
 
-      // Nothing has depth: bind the longest-lived market that is STILL open, so
-      // the context renders and the UI can say plainly that no book exists.
-      // Never fall back to a window that has already closed.
+      // Nothing quoted at all: bind the longest-lived market that is STILL open,
+      // so the context renders and the payoff draws unpriced instead of
+      // dead-ending. Never fall back to a window that has already closed.
       selected ??= durable.find((m) => isRoutable(m, Date.now())) ?? null;
     }
 
@@ -183,11 +179,18 @@ export default async function TradePage({
         (["YES", "NO"] as Outcome[]).map(async (o) => {
           try {
             const ob = await ex.fetchOrderBook(`${selected!.symbol}#${o}`);
-            // Buying an outcome lifts the ask.
+            // Buying an outcome lifts the ask — but the BIDS are read too, and
+            // that is the whole fix for the dead payoff. On a binary the two
+            // outcomes sum to 1, so a bid on NO is an implied ask on YES. This
+            // venue's books are one-sided most of the time; discarding the bid
+            // side threw away the only quote the window had.
             const asks = (ob.asks ?? []) as [number, number][];
+            const bids = (ob.bids ?? []) as [number, number][];
             const best = asks[0]?.[0] ?? null;
-            const depth = best === null ? 0 : asks.reduce((n, [, s]) => n + s, 0);
-            return [o, { levels: asks, best, depth }] as const;
+            const bid = bids[0]?.[0] ?? null;
+            const depth = asks.reduce((n, [, s]) => n + s, 0);
+            const bidDepth = bids.reduce((n, [, s]) => n + s, 0);
+            return [o, { levels: asks, bids, best, bid, depth, bidDepth }] as const;
           } catch {
             return [o, emptySide()] as const;
           }
@@ -210,15 +213,13 @@ export default async function TradePage({
    * Land on the side that is actually quoting.
    *
    * Books on this venue are frequently ONE-SIDED, so defaulting to YES drops the
-   * reader on "no resting offer, nothing to price against" with a dead Buy
-   * button — while the page itself prints that NO is quoting. Knowing which side
-   * has depth and opening the other one is the whole defect: the data was
-   * already here, nothing acted on it.
-   *
-   * Depth decides, and YES only wins a tie because the venue quotes in YES terms.
+   * reader on a side with no offer while the page itself prints that NO is
+   * quoting. Executable depth decides; a mark only breaks the tie when neither
+   * side is offered. The rule is `openingOutcome` in @sdk/venue/mark, where it
+   * is covered by tests — the previous inline expression preferred YES whenever
+   * YES had ANY depth, so one stale lot on YES beat a hundred on NO.
    */
-  const openingOutcome: Outcome =
-    book.YES.depth > 0 || book.NO.depth === 0 ? "YES" : "NO";
+  const openingOutcome: Outcome = decideOpeningOutcome(book);
 
   return (
     <TradeTerminal

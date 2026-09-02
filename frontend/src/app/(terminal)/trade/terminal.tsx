@@ -31,6 +31,7 @@ import {
 import { headroomSec, type Asset, type EventMarket, type Outcome } from "@sdk/venue/types";
 import type { PriceSnapshot } from "@sdk/venue/prices";
 import type { MarketBook } from "./page";
+import { markPrice, markProvenance, type Mark } from "@sdk/venue/mark";
 import { ExecutePanel } from "./execute-panel";
 import { useCountdown, expiryPhase, type ExpiryPhase } from "./use-countdown";
 
@@ -95,6 +96,17 @@ export function TradeTerminal({
   };
 
   const side = book[outcome];
+
+  /**
+   * The price the payoff is drawn against.
+   *
+   * NOT `side.best`. A one-sided book is the normal state here, and reading
+   * only this outcome's ask made the centre panel go blank whenever the quote
+   * sat on the other leg — which it usually does. The cascade in
+   * @sdk/venue/mark falls through to the complement, because YES and NO on one
+   * window sum to 1 and therefore price each other exactly.
+   */
+  const mark = useMemo(() => markPrice(book, outcome), [book, outcome]);
 
   // Cadences come from the live board, never a hardcoded table. The venue
   // started listing 60s windows after this UI was written, and a fixed list
@@ -281,7 +293,7 @@ export function TradeTerminal({
             <BinaryPayoff
               market={market}
               outcome={outcome}
-              price={side.best}
+              mark={mark}
               live={prices?.live?.price ?? null}
             />
           ) : prices ? (
@@ -428,12 +440,13 @@ function ExpiryBlock({
 function BinaryPayoff({
   market,
   outcome,
-  price,
+  mark,
   live,
 }: {
   market: EventMarket;
   outcome: Outcome;
-  price: number | null;
+  /** Cascaded mark, or null when BOTH outcomes are completely unquoted. */
+  mark: Mark | null;
   live: number | null;
 }) {
   const W = 660;
@@ -443,24 +456,28 @@ function BinaryPayoff({
   const ih = H - PAD.t - PAD.b;
 
   const k = market.strike;
-  if (k === null || price === null) {
-    // A dead end is a UX failure, not an honest empty state. Say what is wrong
-    // AND where to go — the other outcome often has a book when this one does
-    // not, and /markets shows which windows are routable right now.
+
+  /**
+   * The ONLY state with no payoff is a window with no strike.
+   *
+   * This used to also bail on a missing price and print "nothing to price
+   * against", which was both wrong and a dead end. A binary's payoff is a step
+   * at the strike; the price sets the height of the two arms, not whether the
+   * step exists. So an unquoted window still draws — with an unpriced axis and
+   * a caption that says exactly that — and a window quoted only on the other
+   * leg draws with the complement, labelled. The reader is never sent away
+   * from an instrument the page has already bound.
+   */
+  if (k === null) {
     return (
       <div className="border border-line bg-base p-8 text-center">
         <p className="text-[13px] text-ink-2">
-          {k === null
-            ? "This window has no strike yet, so it has no payoff."
-            : `No resting offer on ${outcome} — nothing to price against.`}
+          This window has no strike yet, so it has no payoff.
         </p>
-        {k !== null ? (
-          <p className="text-[12px] text-ink-3 mt-2 max-w-[52ch] mx-auto">
-            Books on this venue are frequently one-sided. Try{" "}
-            <span className="text-ink-2">{outcome === "YES" ? "NO" : "YES"}</span>,
-            or pick a window that is quoting.
-          </p>
-        ) : null}
+        <p className="text-[12px] text-ink-3 mt-2 max-w-[52ch] mx-auto">
+          The venue strikes each window as the previous one nears close. This
+          page re-reads the board while it waits.
+        </p>
         <Link
           href="/markets"
           className="mt-4 inline-flex items-center gap-1.5 text-[12px] uppercase tracking-[0.05em] text-accent hover:text-ink transition-colors"
@@ -471,6 +488,12 @@ function BinaryPayoff({
       </div>
     );
   }
+
+  // Unquoted on BOTH legs: the shape is still true, the scale is not known.
+  // Drawing it at the midpoint is a DIAGRAM, not a quote, and the caption and
+  // the axis both say so — the arms are labelled by outcome, never by a number.
+  const price = mark ? mark.price : 0.5;
+  const priced = mark !== null;
 
   // Domain: a band around the strike wide enough to show both regimes.
   const span = Math.max(k * 0.004, 1);
@@ -495,16 +518,35 @@ function BinaryPayoff({
           {market.asset} <span className="text-accent">{outcome}</span> at{" "}
           <span className="num">{k.toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
         </span>
-        <span className="num text-[12px] text-ink-3">
-          {(price * 100).toFixed(1)}% implied
+        <span
+          className={cx(
+            "num text-[12px]",
+            priced && mark!.executable ? "text-ink-3" : "text-ink-4",
+          )}
+        >
+          {priced
+            ? `${(price * 100).toFixed(1)}% implied${mark!.executable ? "" : " · inferred"}`
+            : "unquoted"}
         </span>
       </div>
+
+      {/* Provenance sits ABOVE the diagram, not in a tooltip: a number derived
+          from the opposite leg must never be mistaken for one you can pay. */}
+      <p className="text-[11px] leading-[15px] text-ink-3 -mt-1 mb-3 max-w-[70ch]">
+        {priced
+          ? markProvenance(mark!, outcome)
+          : `Neither leg of this window is quoted, so the arms below are unscaled. The step is real — it is set by the strike — but the height is not a price.`}
+      </p>
 
       <svg
         viewBox={`0 0 ${W} ${H}`}
         className="w-full h-auto block border border-line bg-base"
         role="img"
-        aria-label={`Payoff for ${outcome} at strike ${k}: ${win.toFixed(3)} per contract if it resolves ${outcome}, ${lose.toFixed(3)} otherwise.`}
+        aria-label={
+          priced
+            ? `Payoff for ${outcome} at strike ${k}: ${win.toFixed(3)} per contract if it resolves ${outcome}, ${lose.toFixed(3)} otherwise.`
+            : `Payoff shape for ${outcome} at strike ${k}. Neither leg is quoted, so the arms are unscaled.`
+        }
       >
         <g stroke="#2a2724" strokeWidth="1" strokeDasharray="2 4">
           {[0, 0.5, 1].map((f) => (
@@ -550,8 +592,12 @@ function BinaryPayoff({
         ) : null}
 
         <g fill="#877f75" fontSize="9.5" fontFamily="var(--font-geist-mono), monospace">
-          <text x={PAD.l - 8} y={Y(win) + 3} textAnchor="end">+{win.toFixed(2)}</text>
-          <text x={PAD.l - 8} y={Y(lose) + 3} textAnchor="end">{lose.toFixed(2)}</text>
+          <text x={PAD.l - 8} y={Y(win) + 3} textAnchor="end">
+            {priced ? `+${win.toFixed(2)}` : "win"}
+          </text>
+          <text x={PAD.l - 8} y={Y(lose) + 3} textAnchor="end">
+            {priced ? lose.toFixed(2) : "lose"}
+          </text>
         </g>
       </svg>
 
@@ -559,6 +605,9 @@ function BinaryPayoff({
         Per contract. Settles at 1 if {market.asset} is{" "}
         {outcome === "YES" ? "above" : "at or below"} the strike when the window
         closes, 0 otherwise.
+        {priced && !mark!.executable
+          ? " Buying still needs a resting offer on this leg."
+          : ""}
       </p>
     </div>
   );

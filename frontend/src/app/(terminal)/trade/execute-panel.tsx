@@ -14,6 +14,7 @@
  */
 
 import { useMemo, useState, useTransition } from "react";
+import Link from "next/link";
 import { Button, Chip, Note, cx } from "@/components/ui";
 import { IconArrowOut, IconBolt, IconCheck, IconCross, IconInfo } from "@/components/icons";
 import type { EventMarket, Outcome } from "@sdk/venue/types";
@@ -232,9 +233,25 @@ export function ExecutePanel({
                 </>
               ) : (
                 <>
-                  Neither side of this window is quoting, so switching legs will
-                  not help. Try another window — the cadence selector shows which
-                  are live.
+                  Neither side of this window has a resting OFFER, so switching
+                  legs will not make one buyable.
+                  {side.bid !== null || otherSide.bid !== null ? (
+                    <>
+                      {" "}
+                      The window is still priced — bids are resting, and the
+                      payoff beside this ticket is drawn from them. A bid is not
+                      something you can buy from.
+                    </>
+                  ) : null}{" "}
+                  Try another window — the cadence selector shows which are live,
+                  and{" "}
+                  <Link
+                    href="/markets"
+                    className="text-accent hover:text-ink transition-colors"
+                  >
+                    the board
+                  </Link>{" "}
+                  ranks every window by real depth.
                 </>
               )}
             </>
