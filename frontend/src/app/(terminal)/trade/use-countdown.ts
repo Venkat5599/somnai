@@ -8,10 +8,24 @@ import { useEffect, useState } from "react";
  * The first frame is already correct, so nothing rendered from this depends on
  * the interval ever firing — a throttled or backgrounded tab shows a stale
  * countdown, not a blank one.
+ *
+ * THE SEED MUST COME FROM THE SERVER. This used to initialise from
+ * `Date.now()`, which runs twice — once while the server renders the HTML and
+ * again while React hydrates — so the two disagreed by however long the
+ * response took, and React threw "server rendered text didn't match the
+ * client" and re-rendered the whole tree. Passing the server's clock in makes
+ * the first client render byte-identical to the server's; the effect then
+ * corrects to the real local clock on mount, before the first tick.
+ *
+ * A tiny clock skew is not worth an extra state variable to hide: the seed is
+ * at most a page-load old, and the effect below fixes it immediately.
  */
-export function useCountdown(): number {
-  const [now, setNow] = useState(() => Math.floor(Date.now() / 1000));
+export function useCountdown(seedSeconds: number): number {
+  const [now, setNow] = useState(seedSeconds);
   useEffect(() => {
+    // Correct to the client's own clock first — the seed is the server's, and
+    // it is already slightly stale by the time this runs.
+    setNow(Math.floor(Date.now() / 1000));
     const id = setInterval(() => setNow(Math.floor(Date.now() / 1000)), 1000);
     return () => clearInterval(id);
   }, []);

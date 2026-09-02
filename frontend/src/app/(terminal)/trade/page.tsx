@@ -225,6 +225,7 @@ export default async function TradePage({
     <TradeTerminal
       market={selected}
       openingOutcome={openingOutcome}
+      serverNow={Math.floor(Date.now() / 1000)}
       routable={routable}
       active={active}
       succession={succession}

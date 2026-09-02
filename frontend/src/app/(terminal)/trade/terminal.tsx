@@ -63,6 +63,7 @@ export function TradeTerminal({
   requestedId,
   venueError,
   openingOutcome,
+  serverNow,
 }: {
   market: EventMarket | null;
   routable: EventMarket[];
@@ -74,6 +75,11 @@ export function TradeTerminal({
   venueError: string | null;
   /** Which side actually has resting depth, decided server-side. */
   openingOutcome: Outcome;
+  /**
+   * The server's clock at render, in seconds. Seeds the countdown so the first
+   * client render matches the server's HTML exactly — see use-countdown.ts.
+   */
+  serverNow: number;
 }) {
   const router = useRouter();
   const [structure, setStructure] = useState<StructureId>("DIRECTIONAL");
@@ -82,7 +88,7 @@ export function TradeTerminal({
   const [outcome, setOutcome] = useState<Outcome>(openingOutcome);
   const [view, setView] = useState<"payoff" | "market">("payoff");
 
-  const now = useCountdown();
+  const now = useCountdown(serverNow);
   const left = market ? market.expiry - now : 0;
   const phase: ExpiryPhase = market
     ? expiryPhase(left, headroomSec(market.intervalSec))

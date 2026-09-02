@@ -111,9 +111,19 @@ export function ExecutePanel({
     });
   };
 
-  /** Everything a binary needs — no model, just the strike and the book price. */
+  /**
+   * Everything a binary needs — no model, just the strike and the book price.
+   *
+   * THE STRIKE IS PART OF THE QUOTE, not just a gate on the Buy button. An
+   * unstruck window still has a book, so this used to print a complete ticket
+   * — "You pay 0.3750, max payout 1.0000, +166.7%" — for a contract whose
+   * question did not exist yet, beside a payoff panel correctly saying the
+   * window has no strike. Two panels disagreeing about whether there is an
+   * instrument is the same defect as pricing off one leg of a two-sided book:
+   * a number rendered because it could be computed, not because it was true.
+   */
   const quote = useMemo(() => {
-    if (price === null || amount <= 0) return null;
+    if (price === null || amount <= 0 || market.strike === null) return null;
     const cost = amount * price;
     const payout = amount; // settles at 1 per contract
     return {
@@ -124,7 +134,7 @@ export function ExecutePanel({
       returnPct: cost > 0 ? payout / cost - 1 : 0,
       fillable: maxFillable >= amount,
     };
-  }, [price, amount, maxFillable]);
+  }, [price, amount, maxFillable, market.strike]);
 
   const blocked =
     phase === "expired" || phase === "imminent" || price === null || market.strike === null;
@@ -166,12 +176,14 @@ export function ExecutePanel({
         </div>
       </div>
 
+      {/* Sizing an order for a contract that does not exist yet is the same
+          fiction as quoting one, so the field follows the ticket. */}
       <SizeField
         amount={amount}
         onAmount={setAmount}
         max={maxFillable}
         min={market.minAmount}
-        disabled={busy || price === null}
+        disabled={busy || price === null || market.strike === null}
       />
 
       {quote ? (
@@ -208,7 +220,16 @@ export function ExecutePanel({
         </>
       ) : (
         <Note tone="neutral" icon={<IconInfo size={14} />}>
-          {price === null ? (
+          {market.strike === null ? (
+            /* Checked BEFORE the book, because an unstruck window is usually
+               quoted — the missing thing is the question, not the price. */
+            <>
+              This window is not struck yet, so there is nothing to be right
+              about. The venue sets the strike as the window opens; until it
+              does, a price here would name no outcome. The countdown beside
+              this ticket is running toward that moment.
+            </>
+          ) : price === null ? (
             /* This used to send the user to the other leg unconditionally,
                without looking at whether the other leg had a book. Observed
                live: YES was empty on an ETH 1m window, the panel said "Check
