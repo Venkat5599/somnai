@@ -38,17 +38,20 @@ import { useCountdown, expiryPhase, type ExpiryPhase } from "./use-countdown";
 /**
  * Structures the venue can express.
  *
- * Range, Spread and Ladder each need two or more strikes on ONE expiry, and the
- * venue lists exactly one strike per window. They are shown LOCKED with the
- * reason rather than as a warning banner — a locked control explains itself in
- * place and costs no vertical space.
+ * ONLY THE ONES THAT ROUTE ARE LISTED. Range, Spread and Ladder each need two
+ * or more strikes on ONE expiry and the venue lists exactly one strike per
+ * window, so none of them can be built here.
+ *
+ * They used to sit in this grid as inert LOCKED tiles. /structures already
+ * argues the opposite case in its own words — "absent rather than shown
+ * disabled, because an inert card still implies the capability exists" — so
+ * the two pages contradicted each other on the product's own principle, and
+ * the tiles read as three unfinished features rather than one venue
+ * constraint. The constraint is stated once, in a sentence, below the grid.
  */
 const STRUCTURES = [
   { id: "DIRECTIONAL", label: "Directional", live: true, why: "One contract, one leg." },
   { id: "CALENDAR", label: "Calendar", live: true, why: "One strike carried across succession." },
-  { id: "RANGE", label: "Range", live: false, why: "Needs two strikes on one expiry." },
-  { id: "SPREAD", label: "Spread", live: false, why: "Needs two strikes on one expiry." },
-  { id: "LADDER", label: "Ladder", live: false, why: "Needs several strikes on one expiry." },
 ] as const;
 
 type StructureId = (typeof STRUCTURES)[number]["id"];
@@ -284,8 +287,9 @@ export function TradeTerminal({
               ))}
             </div>
             <p className="text-[11px] leading-[15px] text-ink-4 mt-2">
-              {STRUCTURES.find((s) => s.id === structure)?.why}{" "}
-              Locked structures need more than one strike on a single expiry.
+              {STRUCTURES.find((s) => s.id === structure)?.why} Range, Spread and
+              Ladder need two strikes on one expiry; this venue lists one, so
+              PRISM composes across time instead.
             </p>
           </div>
         </PanelBody>
