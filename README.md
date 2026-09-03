@@ -6,7 +6,7 @@
 <br />
 
 [![CI](https://github.com/Venkat5599/somnai/actions/workflows/ci.yml/badge.svg)](https://github.com/Venkat5599/somnai/actions/workflows/ci.yml)
-![Tests](https://img.shields.io/badge/tests-241%20passing-10b981)
+![Tests](https://img.shields.io/badge/tests-256%20passing-10b981)
 ![Network](https://img.shields.io/badge/network-Somnia%20Shannon%2050312-1f1f23)
 ![Stack](https://img.shields.io/badge/Next.js%2015%20·%20React%2019%20·%20TypeScript%20strict-1f1f23)
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
@@ -173,7 +173,7 @@ All six bot-kit strategies run on PRISM's verified path, three of them resting �
 | Chain | Somnia Shannon (50312) via `@somnia-chain/markets-sdk` + viem |
 | Wallet | wagmi, RainbowKit |
 | Charts | TradingView `lightweight-charts` |
-| Tests | Vitest (241 passing) |
+| Tests | Vitest (256 passing) |
 | Runtime | Bun, Docker |
 
 ### Repository layout
@@ -200,7 +200,7 @@ bun run dev                    # http://localhost:3177
 
 ```bash
 bun run typecheck
-bun run test                   # 241 tests, all pure — no mocked blockchain
+bun run test                   # 256 tests, all pure — no mocked blockchain
 bun run build
 
 bun run svc:market-data        # :8082  no key
@@ -238,7 +238,7 @@ Names only; never commit values.
 
 ## Tests and CI
 
-The Vitest run passes **241 tests across 13 files**, all pure — no mocked blockchain. Live behaviour is verified manually against Shannon and recorded above; that is stated separately rather than dressed up as integration coverage.
+The Vitest run passes **256 tests across 14 files**, all pure — no mocked blockchain. Live behaviour is verified manually against Shannon and recorded above; that is stated separately rather than dressed up as integration coverage.
 
 | File | Covers |
 |---|---|
