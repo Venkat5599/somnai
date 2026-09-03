@@ -264,15 +264,24 @@ export function ExecutePanel({
                       something you can buy from.
                     </>
                   ) : null}{" "}
-                  Try another window — the cadence selector shows which are live,
-                  and{" "}
-                  <Link
-                    href="/markets"
-                    className="text-accent hover:text-ink transition-colors"
-                  >
-                    the board
-                  </Link>{" "}
-                  ranks every window by real depth.
+                  This is normally TRANSIENT: the maker re-quotes shortly after
+                  a window is struck, and both 5m books were carrying 990
+                  contracts a side minutes either way of a reading like this.
+                  <span className="block mt-2 text-ink-4">
+                    Re-checking the book every 10 seconds — this panel arms
+                    itself the moment an offer appears. No reload needed.
+                  </span>
+                  <span className="block mt-2">
+                    Not waiting? The cadence selector shows which windows are
+                    live, and{" "}
+                    <Link
+                      href="/markets"
+                      className="text-accent hover:text-ink transition-colors"
+                    >
+                      the board
+                    </Link>{" "}
+                    ranks every one of them by real depth.
+                  </span>
                 </>
               )}
             </>

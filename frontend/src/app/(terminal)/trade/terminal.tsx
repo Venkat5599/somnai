@@ -127,18 +127,41 @@ export function TradeTerminal({
   }, [active]);
 
   /**
-   * Recover on its own.
+   * A BOUND WINDOW CAN BE JUST AS DEAD AS AN EMPTY BOARD.
    *
-   * The empty-board state resolves itself the moment the venue strikes the next
-   * window — usually inside a minute. Leaving the reader on a static message
-   * until they think to reload makes a transient gap look permanent, so the
-   * page re-fetches while it has nothing to show and stops as soon as it does.
+   * Neither leg quoting means every control is disabled and no order can be
+   * signed — the same dead end as having no market at all, except it does not
+   * look like one: a strike, a payoff and a live countdown all render, so the
+   * page appears to be working while nothing on it can be used.
+   *
+   * This is a TRANSIENT state, not a broken one. Windows roll every few minutes
+   * and the market maker re-quotes the successor shortly after it is struck, so
+   * the book refills on its own. Probed live while writing this: both 5m
+   * windows carried 990 contracts a side, minutes after a reading of nothing.
+   *
+   * So unbuyable is a recovery state too, and the loop below drives it.
    */
+  const unbuyable = !!market && book.YES.best === null && book.NO.best === null;
+
   useEffect(() => {
-    if (market) return;
+    if (market && !unbuyable) return;
     const id = setInterval(() => router.refresh(), 10_000);
     return () => clearInterval(id);
-  }, [market, router]);
+  }, [market, unbuyable, router]);
+
+  /**
+   * AN EXPIRED WINDOW NEVER COMES BACK, so refreshing it is not recovery.
+   *
+   * `?market=` pins one id. Once that window closes, every re-fetch re-binds
+   * the same dead market and the reader sits on MARKET EXPIRED indefinitely.
+   * Dropping the pin hands selection back to the server, which picks the live
+   * window with the most resting depth.
+   */
+  useEffect(() => {
+    if (!market || phase !== "expired") return;
+    const id = setTimeout(() => router.replace("/trade"), 1_500);
+    return () => clearTimeout(id);
+  }, [market, phase, router]);
 
   if (!market) {
     return (
