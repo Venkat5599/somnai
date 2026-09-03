@@ -69,6 +69,18 @@ export async function prepareOrder(
     /** Probability in (0,1). Omitted crosses the book. */
     price?: number;
     /**
+     * Which side of the trade the user is on.
+     *
+     * "taker" crosses a resting offer and needs one to exist. "post-only" ADDS
+     * the offer — it is refused by the venue if it would cross — so it needs no
+     * counterparty and is the only thing that can be done on an empty book.
+     *
+     * Both build through the SAME arithmetic below. A separate builder for the
+     * making path would be a second place for the tick-grid conversion to be
+     * got wrong, and that conversion is the bug this file exists to prevent.
+     */
+    type?: "taker" | "post-only";
+    /**
      * The wallet that will sign. Required: the SDK's builder tier is gated
      * behind an account, and the approval it encodes is owner-specific.
      */
@@ -84,8 +96,17 @@ export async function prepareOrder(
   if (market.status !== "Trading")
     return { ok: false, reason: "MARKET_NOT_TRADING", detail: `Status is ${market.status}.` };
 
+  const maker = args.type === "post-only";
+
   const left = market.expiry - Math.floor(Date.now() / 1000);
-  const need = headroomSec(market.intervalSec);
+  // A RESTING ORDER NEEDS MORE ROOM THAN A CROSSING ONE. The venue rejects a
+  // post-only order aimed into a close with OrderAlreadyExpired() — a verdict
+  // about the market, not the order, reproduced on chain and written up as
+  // edge 9 in docs/gotchas.md. A taker never meets it, because an IOC order is
+  // gone either way.
+  const need = maker
+    ? Math.max(headroomSec(market.intervalSec), 60)
+    : headroomSec(market.intervalSec);
   if (left <= 0)
     return { ok: false, reason: "MARKET_EXPIRED", detail: "This window has closed." };
   if (left <= need)
@@ -103,9 +124,12 @@ export async function prepareOrder(
 
   const ex = exchange(config);
 
-  // Price against the real book when the caller did not name one.
+  // Price against the real book when the caller did not name one. A maker
+  // NAMES its price by definition — that is the whole point — so it never falls
+  // back to the book, and an absent price is a caller bug rather than an empty
+  // book.
   let price = args.price;
-  if (price === undefined) {
+  if (price === undefined && !maker) {
     try {
       const ob = await ex.fetchOrderBook(`${market.symbol}#${args.outcome}`);
       price = ((ob.asks ?? []) as [number, number][])[0]?.[0];
@@ -114,7 +138,9 @@ export async function prepareOrder(
     }
   }
   if (price === undefined)
-    return { ok: false, reason: "NO_BOOK_LIQUIDITY", detail: "Nothing is resting on this outcome." };
+    return maker
+      ? { ok: false, reason: "PRICE_REQUIRED", detail: "A resting bid has to name its own price." }
+      : { ok: false, reason: "NO_BOOK_LIQUIDITY", detail: "Nothing is resting on this outcome." };
 
   const client = (ex as unknown as { client: Record<string, unknown> }).client;
   const oc = (await (
@@ -146,7 +172,11 @@ export async function prepareOrder(
 
   // The book quotes in YES terms whichever leg is traded.
   const priceYes = args.outcome === "YES" ? priceOwn : one - priceOwn;
-  const expiresAt = Math.min(Math.floor(Date.now() / 1000) + 120, Number(oc.expiry));
+  // A taker's order should not outlive the click. A resting one is MEANT to
+  // sit, so it lives until just before the window closes and the venue cancels
+  // it there — nothing is left locked past the window it belongs to.
+  const nowSec = Math.floor(Date.now() / 1000);
+  const expiresAt = Math.min(nowSec + (maker ? Math.max(30, left - 5) : 120), Number(oc.expiry));
 
   // Read through the read-only client above; BUILD through one bound to the
   // user's address. Neither can sign — see markets-builder.ts.
@@ -166,7 +196,10 @@ export async function prepareOrder(
       outcomeToken: oc.outcomeToken,
       yesId: oc.yesId,
       noId: oc.noId,
-      orderType: ORDER_TYPE.MARKET, // fill now, cancel the rest — never leave escrow locked
+      // MARKET fills now and cancels the rest, so no escrow is left locked.
+      // POST_ONLY is refused by the venue if it would cross, which is what
+      // makes it a maker order rather than a limit order that might take.
+      orderType: maker ? ORDER_TYPE.POST_ONLY : ORDER_TYPE.MARKET,
       expireTimestampNs: BigInt(expiresAt) * 1_000_000_000n,
     });
 

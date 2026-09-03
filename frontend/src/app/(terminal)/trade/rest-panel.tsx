@@ -13,13 +13,25 @@
  * is a maker order: it may never fill, it locks collateral as escrow while it
  * sits, and it dies with the window. All three are said here rather than
  * discovered afterwards.
+ *
+ * THE USER SIGNS. The first version of this called a server action that signed
+ * with the operator's burner key, which would have let any visitor spend the
+ * operator's collateral by clicking a button. Making is not a lesser action
+ * than taking and does not get a lesser custody model — this builds an unsigned
+ * call server-side and hands it to the connected wallet, exactly as the buy
+ * path does.
  */
 
 import { useState, useTransition } from "react";
+import { useSendTransaction } from "wagmi";
 import { Note, cx } from "@/components/ui";
 import { IconInfo } from "@/components/icons";
+import { useSelfCustody } from "@/components/connect";
+// The chain definition, not @sdk/venue/config: that module pulls the whole SDK
+// and has no business in a browser bundle. Same reason wagmi.ts redefines it.
+import { somniaShannon } from "@/lib/wagmi";
 import type { EventMarket, Outcome } from "@sdk/venue/types";
-import { restBid, type RestReport } from "./actions";
+import { prepareRestForWallet } from "./actions";
 
 export function RestPanel({
   market,
@@ -34,11 +46,64 @@ export function RestPanel({
 }) {
   const [price, setPrice] = useState(0.5);
   const [size, setSize] = useState(1);
-  const [report, setReport] = useState<RestReport | null>(null);
+  const [state, setState] = useState<string | null>(null);
+  const [hash, setHash] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
+
+  const { canSign, address } = useSelfCustody();
+  const { sendTransactionAsync } = useSendTransaction();
 
   const priceOk = price > 0 && price < 1;
   const payout = priceOk ? size * (1 - price) : 0;
+  const ready = canSign && !disabled && !pending && priceOk && size > 0;
+
+  const run = () => {
+    setError(null);
+    setHash(null);
+    start(async () => {
+      if (!address) {
+        setError("Connect a wallet first — the order is built for its address.");
+        return;
+      }
+      setState("Preparing");
+      const prep = await prepareRestForWallet({
+        marketId: market.marketId,
+        outcome,
+        price,
+        amount: size,
+        owner: address,
+      });
+      if (!prep.ok) {
+        setError(`${prep.reason}: ${prep.detail}`);
+        setState(null);
+        return;
+      }
+      try {
+        // The SDK returns the approval but never sends it; skipping it reverts
+        // on-chain, so it goes first and is awaited before the order.
+        if (prep.approval) {
+          setState("Approving collateral");
+          await sendTransactionAsync({
+            to: prep.approval.to as `0x${string}`,
+            data: prep.approval.data as `0x${string}`,
+            value: BigInt(prep.approval.value),
+          });
+        }
+        setState("Signing order");
+        const h = await sendTransactionAsync({
+          to: prep.order.to as `0x${string}`,
+          data: prep.order.data as `0x${string}`,
+          value: BigInt(prep.order.value),
+        });
+        setHash(h);
+        setState("Resting");
+      } catch (e) {
+        setError(e instanceof Error ? e.message.slice(0, 180) : String(e));
+        setState(null);
+      }
+    });
+  };
 
   return (
     <div className="border border-line">
@@ -100,61 +165,42 @@ export function RestPanel({
 
         <button
           type="button"
-          disabled={disabled || pending || !priceOk || size <= 0}
-          onClick={() =>
-            start(async () => {
-              setReport(
-                await restBid({
-                  marketId: market.marketId,
-                  outcome,
-                  price,
-                  size,
-                }),
-              );
-            })
-          }
+          disabled={!ready}
+          onClick={run}
           className={cx(
             "w-full h-10 text-[13px] uppercase tracking-[0.05em] transition-colors",
-            disabled || pending || !priceOk || size <= 0
+            !ready
               ? "bg-surface-2 text-ink-4 cursor-not-allowed"
               : "bg-surface-2 text-ink border border-line hover:border-accent hover:text-accent",
           )}
         >
-          {pending ? "Resting…" : `Rest bid on ${outcome}`}
+          {pending
+            ? (state ?? "Working…")
+            : !canSign
+              ? "Connect a wallet"
+              : `Rest bid on ${outcome}`}
         </button>
 
-        {report ? (
+        {hash ? (
           <div className="mt-3">
-            {report.ok ? (
-              <Note tone={report.rested ? "neutral" : "accent"} icon={<IconInfo size={14} />}>
-                <span className="font-medium text-ink">
-                  {report.rested
-                    ? "Resting on the book."
-                    : `Filled immediately — ${report.filled} contracts.`}
-                </span>{" "}
-                {report.rested
-                  ? "Nobody has taken it yet. It fills if someone sells into it, and the venue cancels it at the close."
-                  : "Someone was selling at your price, so the order crossed instead of resting."}
-                {report.explorerUrl ? (
-                  <>
-                    {" "}
-                    <a
-                      href={report.explorerUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="num text-accent hover:text-ink transition-colors"
-                    >
-                      {report.hash?.slice(0, 10)}…
-                    </a>
-                  </>
-                ) : null}
-              </Note>
-            ) : (
-              <Note tone="warn" icon={<IconInfo size={14} />}>
-                <span className="font-medium text-ink">{report.reason}.</span>{" "}
-                {report.detail}
-              </Note>
-            )}
+            <Note tone="accent" icon={<IconInfo size={14} />}>
+              <span className="font-medium text-ink">Signed and sent.</span> Your
+              bid rests until someone sells into it or the window closes.{" "}
+              <a
+                href={`${somniaShannon.blockExplorers.default.url}/tx/${hash}`}
+                target="_blank"
+                rel="noreferrer"
+                className="num text-accent hover:text-ink transition-colors"
+              >
+                {hash.slice(0, 10)}…
+              </a>
+            </Note>
+          </div>
+        ) : error ? (
+          <div className="mt-3">
+            <Note tone="warn" icon={<IconInfo size={14} />}>
+              {error}
+            </Note>
           </div>
         ) : null}
       </div>
