@@ -15,7 +15,7 @@
 
 import { getMarketSnapshot, exchange } from "@sdk/venue/markets";
 import { resolveVenueConfig } from "@sdk/venue/config";
-import type { Outcome } from "@sdk/venue/types";
+import { headroomSec, type Outcome } from "@sdk/venue/types";
 import { callerKey, checkRate, checkSpend } from "@sdk/dreamdex/guard";
 import {
   explorerTx,
@@ -23,9 +23,11 @@ import {
   submitOrder,
   validateOrder,
   verifyExecution,
+  MAX_ORDER_CONTRACTS,
   type OrderSide,
   type VerificationResult,
 } from "@sdk/dreamdex/execution";
+import { placeLimit } from "@sdk/dreamdex/place-limit";
 
 export interface ExecutionReport {
   phase: "VALIDATION_FAILED" | "SUBMITTED" | "NO_SIGNER";
@@ -279,6 +281,174 @@ export async function runSetAction(input: {
         e instanceof Error ? e.message.slice(0, 160) : "unknown error"
       }`,
       evidence: [],
+    };
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Making, for when there is nothing to take                           */
+/* ------------------------------------------------------------------ */
+
+export interface RestReport {
+  ok: boolean;
+  reason?: string;
+  detail?: string;
+  hash?: string | null;
+  orderId?: string | null;
+  explorerUrl?: string | null;
+  price?: number;
+  size?: number;
+  /** False when the order crossed and filled instead of resting. */
+  rested?: boolean;
+  filled?: number;
+  elapsedMs: number;
+}
+
+/**
+ * REST A BID — the answer to an empty book.
+ *
+ * Every other write in PRISM crosses a resting offer, so all of them require
+ * somebody else to be quoting first. When nobody is, the terminal could only
+ * tell the reader to wait: the product had exactly one verb and the venue had
+ * taken it away.
+ *
+ * A post-only order is the other side of that trade. It ADDS liquidity rather
+ * than taking it, so it needs no counterparty to exist yet — the user becomes
+ * the book. It rests until someone lifts it or the window closes, and the venue
+ * cancels it at expiry, so nothing is left locked past the window it belongs
+ * to.
+ *
+ * PROVEN ON CHAIN before this was wired to a control, not after:
+ *   place  0x2bc57a675bdea676be1f57d889e3e3b11d708e424de04ecc136c02879292df8b
+ *          orderId 73786976294838713577, filled 0, rested true
+ *   cancel 0x945a0901c420b8171668040435d2ba249656fffb8c4515d669881303814a69ba
+ *          block 478935387, VERIFIED_CANCELLED, stillResting []
+ *
+ * The first attempt REVERTED with OrderAlreadyExpired(), which is a verdict
+ * about the MARKET rather than the order — see the headroom guard below.
+ */
+export async function restBid(input: {
+  marketId: string;
+  outcome: Outcome;
+  price: number;
+  size: number;
+}): Promise<RestReport> {
+  const started = Date.now();
+  const config = resolveVenueConfig();
+
+  const rate = checkRate(await callerKey());
+  if (!rate.allowed)
+    return {
+      ok: false,
+      reason: "RATE_LIMITED",
+      detail: `Too many attempts. Try again in ${rate.retryAfterSec}s.`,
+      elapsedMs: Date.now() - started,
+    };
+
+  if (!(input.price > 0 && input.price < 1))
+    return {
+      ok: false,
+      reason: "PRICE_OUT_OF_RANGE",
+      detail: "A probability has to sit strictly between 0 and 1.",
+      elapsedMs: Date.now() - started,
+    };
+
+  if (!(input.size > 0) || input.size > MAX_ORDER_CONTRACTS)
+    return {
+      ok: false,
+      reason: "AMOUNT_ABOVE_LIMIT",
+      detail: `The demo signer rests at most ${MAX_ORDER_CONTRACTS} contracts.`,
+      elapsedMs: Date.now() - started,
+    };
+
+  let market;
+  try {
+    const snap = await getMarketSnapshot(config);
+    market = snap.all.find((m) => m.marketId === input.marketId) ?? null;
+  } catch (e) {
+    return {
+      ok: false,
+      reason: "VENUE_UNREADABLE",
+      detail: `The registry could not be read, so nothing was signed: ${
+        e instanceof Error ? e.message.slice(0, 140) : "unknown error"
+      }`,
+      elapsedMs: Date.now() - started,
+    };
+  }
+
+  if (!market)
+    return {
+      ok: false,
+      reason: "MARKET_NOT_FOUND",
+      detail: "That window is no longer in the registry.",
+      elapsedMs: Date.now() - started,
+    };
+
+  // THE HEADROOM IS NOT OPTIONAL HERE. The first on-chain attempt reverted with
+  // OrderAlreadyExpired() on a window that still looked open when the order was
+  // built: the venue rejects a resting order aimed into a close, because it
+  // would be cancelled on arrival. Refusing costs nothing; the revert cost gas.
+  const left = market.expiry - Math.floor(Date.now() / 1000);
+  const need = Math.max(headroomSec(market.intervalSec), 60);
+  if (left < need)
+    return {
+      ok: false,
+      reason: "TOO_CLOSE_TO_EXPIRY",
+      detail: `This window closes in ${left}s. A resting order needs at least ${need}s of life or the venue rejects it as already expired.`,
+      elapsedMs: Date.now() - started,
+    };
+
+  // Collateral leaves the wallet as escrow the moment the order rests, so the
+  // funding check is the same one the taker path runs — a resting order that
+  // cannot be funded reverts exactly like a crossing one.
+  const spend = await checkSpend(input.price * input.size, config);
+  if (!spend.allowed)
+    return {
+      ok: false,
+      reason: "SPEND_REFUSED",
+      detail: spend.reason ?? "The demo signer's spend guard refused this order.",
+      elapsedMs: Date.now() - started,
+    };
+
+  try {
+    const res = await placeLimit(
+      {
+        marketId: input.marketId,
+        outcome: input.outcome,
+        side: "buy",
+        price: input.price,
+        size: input.size,
+        type: "post-only",
+        // Never outlive the window it belongs to; placeLimit caps this at the
+        // market's own expiry anyway.
+        expiresInSec: Math.max(30, left - 5),
+      },
+      config,
+    );
+
+    return {
+      ok: Boolean(res.hash),
+      hash: res.hash,
+      orderId: res.orderId,
+      explorerUrl: res.hash ? explorerTx(res.hash, config) : null,
+      price: res.price,
+      size: res.size,
+      rested: res.rested,
+      filled: res.filled,
+      reason: res.hash ? undefined : "NOT_PLACED",
+      detail: res.hash
+        ? undefined
+        : "The order did not reach the chain — nothing was signed.",
+      elapsedMs: Date.now() - started,
+    };
+  } catch (e) {
+    // A revert here is a real venue answer, not a crash. Surfaced verbatim so a
+    // reader can look it up rather than meeting a generic failure.
+    return {
+      ok: false,
+      reason: "REVERTED",
+      detail: e instanceof Error ? e.message.slice(0, 200) : "unknown error",
+      elapsedMs: Date.now() - started,
     };
   }
 }

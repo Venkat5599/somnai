@@ -77,6 +77,41 @@ opens unpredictably and closes in minutes.
 
 Offered 0.953, paid 0.886. Seeing that delta is corroboration a fill was real.
 
+## 9. A resting order aimed into a close reverts as ALREADY EXPIRED
+
+The taker path never sees this, because an IOC order either crosses now or is
+gone. A POST-ONLY order is meant to sit, so the venue judges whether it has time
+to sit at all — and refuses when it does not.
+
+Reproduced on Shannon. First attempt, on a routable window with little life
+left:
+
+```
+ExecutionRevertedError: execution reverted
+data: 0x3154078e   ->   OrderAlreadyExpired()
+```
+
+`0x3154078e` decodes against the SDK's own error ABIs (412 of them) to
+`OrderAlreadyExpired()`. The name misleads: the ORDER's `expireTimestampNs` was
+correct — now + 300s, verified by decoding the calldata. The verdict is about
+the MARKET. The venue will not accept a resting order into a window that is
+about to close, because it would be cancelled on arrival.
+
+Same order, same price and size, on a window with 228s left:
+
+```
+place   0x2bc57a675bdea676be1f57d889e3e3b11d708e424de04ecc136c02879292df8b
+        orderId 73786976294838713577, filled 0, rested true
+        chain reports 1 resting order
+cancel  0x945a0901c420b8171668040435d2ba249656fffb8c4515d669881303814a69ba
+        block 478935387, VERIFIED_CANCELLED, stillResting []
+```
+
+So PRISM refuses a rest below `max(headroom, 60s)` before signing, in
+`restBid`. Refusing costs nothing; the revert cost gas. This is the taker-side
+headroom rule of edge 8 again, at a threshold the making path needs and the
+taking path does not.
+
 ## 8. Smaller edges
 
 - `strike: 0` means *not struck yet*, not a price.

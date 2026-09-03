@@ -23,6 +23,7 @@ import type { BookSide } from "./page";
 import type { ExpiryPhase } from "./use-countdown";
 import { useSendTransaction } from "wagmi";
 import { useSelfCustody } from "@/components/connect";
+import { RestPanel } from "./rest-panel";
 import { WalletBalance, useWalletFunds } from "@/components/wallet-balance";
 import { prepareForWallet, type ExecutionReport } from "./actions";
 
@@ -290,6 +291,24 @@ export function ExecutePanel({
           )}
         </Note>
       )}
+
+      {/* THE DEAD END GETS A VERB. When neither leg is offered there is nothing
+          to cross, so the taker controls above are correctly disabled — but
+          that used to be the end of the page. Resting a bid needs no
+          counterparty to exist yet, so it is offered exactly here, and only
+          here: with a book to lift, buying is the better action and this would
+          just be a second way to do a worse version of it. */}
+      {price === null && otherSide.best === null && phase !== "expired" ? (
+        <RestPanel
+          market={market}
+          outcome={outcome}
+          // An unstruck window names no outcome to bid on, and a window inside
+          // its last seconds is refused by the venue as already expired — the
+          // revert that the first on-chain probe of this path earned.
+          disabled={market.strike === null || phase === "imminent"}
+          secondsLeft={left}
+        />
+      ) : null}
 
       {funds.connected ? <WalletBalance /> : null}
 
