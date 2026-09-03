@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { exchange, successionChain } from "@sdk/venue/markets";
+import { exchange, getMarketSnapshot, successionChain } from "@sdk/venue/markets";
 import { cachedMarketSnapshot } from "@sdk/venue/cache";
 import { resolveVenueConfig } from "@sdk/venue/config";
 import type { PriceSnapshot } from "@sdk/venue/prices";
@@ -69,11 +69,46 @@ export default async function TradePage({
   const config = resolveVenueConfig();
 
   try {
-    const snap = await cachedMarketSnapshot();
+    /**
+     * THE CACHE CAN HAND BACK A SNAPSHOT OLDER THAN ITS OWN TTL.
+     *
+     * `unstable_cache` is stale-while-revalidate: past `revalidate` it serves
+     * the expired entry and refreshes in the background, so the visitor who
+     * arrives after a quiet spell reads whatever was last stored — which may be
+     * many minutes old, not ten seconds.
+     *
+     * That is survivable for a 24h window and fatal for a 5m one. Every short
+     * window in a stale snapshot has already closed, so `routable` filters to
+     * nothing, the depth scan has no candidates, and selection drops all the
+     * way through to the long-dated fallback — which binds a 4h window the
+     * venue has not struck yet. OBSERVED LIVE on the deployed site: it opened
+     * on BTC 4h `unstruck`, MAX 0, while a probe against the same venue at the
+     * same moment showed both 5m windows struck and carrying 990 contracts a
+     * side.
+     *
+     * So the cache is trusted for load, never for liveness. When the cached
+     * registry yields nothing routable, that verdict is re-taken against a
+     * FRESH pull before it is believed. This costs one extra registry read
+     * only in the state where the cached answer was worthless anyway.
+     */
+    let snap = await cachedMarketSnapshot();
     // Re-derived against the clock, not taken from the cached snapshot: the
     // terminal renders this list as "routable", and a 10s-stale 1m window is
     // already dead. The count in the header has to mean what it says.
     routable = snap.routable.filter((m) => isRoutable(m, Date.now()));
+
+    if (!routable.length) {
+      const fresh = await getMarketSnapshot(config);
+      const freshRoutable = fresh.routable.filter((m) => isRoutable(m, Date.now()));
+      // Only adopt the fresh read if it actually improves on the cached one.
+      // An empty board is a real venue state, and re-reading it does not make
+      // it less empty — in that case the cached snapshot is just as true and
+      // already paid for.
+      if (freshRoutable.length) {
+        snap = fresh;
+        routable = freshRoutable;
+      }
+    }
     active = snap.active;
     selected = wanted
       ? (snap.all.find((m) => m.marketId === wanted) ?? null)
