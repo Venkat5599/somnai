@@ -49,3 +49,7 @@ bot.env
 
 # Agent lease store — a live credential binding, never committed.
 .agent-lease.json
+
+# Auto-written by a stray `npx next` (Next 16); this repo pins 15.5.24
+frontend/AGENTS.md
+frontend/CLAUDE.md
