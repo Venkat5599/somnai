@@ -188,8 +188,20 @@ export async function signerAddress(
 }
 
 /** Collateral + gas balances read straight off chain. */
-export async function readBalances(config: VenueConfig = resolveVenueConfig()) {
-  const address = await signerAddress(config);
+/**
+ * Balances for an account.
+ *
+ * `account` EXISTS BECAUSE THE SIGNER IS NOT ALWAYS THE USER. With a wallet
+ * connected the person signs from their own address, and reporting the demo
+ * burner's balance back to them is not a cosmetic mismatch — it is a different
+ * wallet's money presented as theirs. Defaults to the burner only when nobody
+ * has connected.
+ */
+export async function readBalances(
+  config: VenueConfig = resolveVenueConfig(),
+  account?: string,
+) {
+  const address = account ?? (await signerAddress(config));
   if (!address) return null;
   const client = rpc(config);
 
