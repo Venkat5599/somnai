@@ -106,10 +106,10 @@ export function WalletBalance({ compact = false }: { compact?: boolean }) {
   if (compact) {
     return (
       <span className="inline-flex items-center gap-3 num text-[11px] text-ink-3">
-        <span className={cx((f.collateral ?? 0) > 0 ? "text-ink-2" : "text-down")}>
+        <span className={cx(f.collateral === null ? "text-ink-4" : f.collateral > 0 ? "text-ink-2" : "text-down")}>
           {fmt(f.collateral, 2)} {COLLATERAL_SYMBOL}
         </span>
-        <span className={cx((f.gas ?? 0) > 0 ? "text-ink-4" : "text-down")}>
+        <span className={cx(f.gas === null ? "text-ink-4" : f.gas > 0 ? "text-ink-4" : "text-down")}>
           {fmt(f.gas, 3)} STT
         </span>
       </span>
@@ -120,7 +120,16 @@ export function WalletBalance({ compact = false }: { compact?: boolean }) {
     <div className="border border-line">
       <div className="flex items-center justify-between h-9 px-3 border-b border-line">
         <span className="text-label-xs uppercase text-ink-3">Your wallet</span>
-        {f.canTrade ? (
+        {/* NOT KNOWING A BALANCE IS NOT THE SAME AS THE BALANCE BEING ZERO.
+            `canTrade` is false while the reads are in flight — correctly, since
+            nothing should be signed against an unknown balance — but rendering
+            that as "Needs funding" accuses a funded wallet of being empty for
+            as long as the RPC takes. Caught live on the deployed terminal: the
+            panel read NEEDS FUNDING with both rows showing "—" on a wallet
+            holding 499.96 tUSDC, and settled to READY a moment later. */}
+        {f.loading ? (
+          <span className="text-label-xs uppercase text-ink-3">Checking…</span>
+        ) : f.canTrade ? (
           <span className="text-label-xs uppercase text-up">Ready</span>
         ) : (
           <span className="text-label-xs uppercase text-warn">Needs funding</span>
@@ -128,12 +137,14 @@ export function WalletBalance({ compact = false }: { compact?: boolean }) {
       </div>
 
       <div className="px-3 py-1">
+        {/* `?? 0` treated an unread balance as an empty one, so both rows went
+            red before either had answered. A null is "not known yet". */}
         <Row
           k={`${COLLATERAL_SYMBOL} (collateral)`}
           v={fmt(f.collateral, 6)}
-          bad={(f.collateral ?? 0) <= 0}
+          bad={f.collateral !== null && f.collateral <= 0}
         />
-        <Row k="STT (gas)" v={fmt(f.gas, 6)} bad={(f.gas ?? 0) <= 0} />
+        <Row k="STT (gas)" v={fmt(f.gas, 6)} bad={f.gas !== null && f.gas <= 0} />
       </div>
 
       {f.blocker && f.blocker !== "NOT_CONNECTED" ? (
