@@ -4,7 +4,7 @@ import { Page } from "@/components/shell";
 import { Button, Chip, Note, PageHead, cx } from "@/components/ui";
 import { IconArrowRight, IconInfo, IconLayers, IconRoll } from "@/components/icons";
 import { successionChain } from "@sdk/venue/markets";
-import { cachedMarketSnapshot } from "@sdk/venue/cache";
+import { liveMarketSnapshot } from "@sdk/venue/cache";
 import { isRoutable, type Asset, type EventMarket } from "@sdk/venue/types";
 import { structureMatrix, type Constructibility } from "@sdk/venue/structures";
 import { resolveVenueConfig } from "@sdk/venue/config";
@@ -39,7 +39,7 @@ export default async function StructuresPage() {
   let error: string | null = null;
 
   try {
-    const snap = await cachedMarketSnapshot();
+    const snap = await liveMarketSnapshot();
     // Re-derived against the clock. snap.routable was computed when the
     // snapshot was fetched and that is cached for 10s — on a 60s window that
     // is a sixth of its life, which is how four expired cards came to render

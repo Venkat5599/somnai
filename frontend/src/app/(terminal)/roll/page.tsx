@@ -3,7 +3,7 @@ import { Page } from "@/components/shell";
 import { Note, PageHead } from "@/components/ui";
 import { IconInfo } from "@/components/icons";
 import { successionChain } from "@sdk/venue/markets";
-import { cachedMarketSnapshot } from "@sdk/venue/cache";
+import { liveMarketSnapshot } from "@sdk/venue/cache";
 import { INTERVALS } from "@sdk/venue/config";
 import type { Asset, EventMarket } from "@sdk/venue/types";
 import { RollView } from "./view";
@@ -26,7 +26,7 @@ export default async function RollPage() {
   let error: string | null = null;
 
   try {
-    const snap = await cachedMarketSnapshot();
+    const snap = await liveMarketSnapshot();
     // Every real cadence the venue lists, for both assets. These chains are read
     // from the registry — no queue is invented when the venue has none.
     for (const asset of ["BTC", "ETH"] as Asset[]) {

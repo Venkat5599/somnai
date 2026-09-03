@@ -11,7 +11,7 @@
 
 import { readBalances } from "@sdk/dreamdex/execution";
 import { openHoldings, type OpenHolding } from "@sdk/dreamdex/holdings";
-import { cachedMarketSnapshot } from "@sdk/venue/cache";
+import { liveMarketSnapshot } from "@sdk/venue/cache";
 import { isRoutable } from "@sdk/venue/types";
 
 export interface WalletView {
@@ -40,7 +40,7 @@ export async function walletView(address: string): Promise<WalletView | null> {
   let holdings: OpenHolding[] = [];
   let holdingsError: string | null = null;
   try {
-    const snap = await cachedMarketSnapshot();
+    const snap = await liveMarketSnapshot();
     // Only windows that are still open can hold an OPEN position, and each one
     // costs a chain read — so the walk is bounded to what can actually be held.
     const live = snap.all

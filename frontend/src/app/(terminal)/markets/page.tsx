@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Page } from "@/components/shell";
 import { Note, PageHead } from "@/components/ui";
 import { IconInfo } from "@/components/icons";
-import { cachedMarketSnapshot } from "@sdk/venue/cache";
+import { liveMarketSnapshot } from "@sdk/venue/cache";
 import { MarketsView } from "./view";
 
 export const metadata: Metadata = { title: "Markets — PRISM" };
@@ -15,11 +15,11 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export default async function MarketsPage() {
-  let snapshot: Awaited<ReturnType<typeof cachedMarketSnapshot>> | null = null;
+  let snapshot: Awaited<ReturnType<typeof liveMarketSnapshot>> | null = null;
   let error: string | null = null;
 
   try {
-    snapshot = await cachedMarketSnapshot();
+    snapshot = await liveMarketSnapshot();
   } catch (e) {
     // Surface the failure rather than falling back to fixtures. A page that
     // silently substitutes generated data for an unreachable venue is exactly

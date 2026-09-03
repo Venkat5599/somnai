@@ -14,7 +14,7 @@ import {
   cx,
 } from "@/components/ui";
 import { IconArrowOut, IconInfo } from "@/components/icons";
-import { cachedMarketSnapshot } from "@sdk/venue/cache";
+import { liveMarketSnapshot } from "@sdk/venue/cache";
 import { assetsInSnapshot } from "@sdk/venue/markets";
 import { intervalLabel } from "@sdk/venue/config";
 import { cachedPriceSnapshot } from "@sdk/venue/cache";
@@ -40,7 +40,7 @@ export const revalidate = 0;
  * the indexer or the on-chain oracle.
  */
 export default async function AnalyticsPage() {
-  const snap = await cachedMarketSnapshot().catch(() => null);
+  const snap = await liveMarketSnapshot().catch(() => null);
 
   // Underlyings come from the registry, not from a pair written here. This page
   // used to fetch exactly BTC and ETH and iterate `["BTC", "ETH"]` three times

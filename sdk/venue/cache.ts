@@ -33,6 +33,7 @@ import "server-only";
 
 import { unstable_cache } from "next/cache";
 import { getMarketSnapshot, type MarketSnapshot } from "./markets";
+import { isRoutable } from "./types";
 import { getPriceSnapshot, type PriceSnapshot, type Timeframe } from "./prices";
 import type { Asset } from "./types";
 
@@ -53,6 +54,40 @@ export const cachedMarketSnapshot = unstable_cache(
   ["prism:market-snapshot"],
   { revalidate: REGISTRY_TTL, tags: ["markets"] },
 );
+
+/**
+ * THE CACHE IS TRUSTED FOR LOAD, NEVER FOR LIVENESS.
+ *
+ * `unstable_cache` is stale-while-revalidate: past `revalidate` it serves the
+ * expired entry and refreshes behind the request. A visitor arriving after a
+ * quiet spell therefore reads whatever was last stored, which can be many
+ * minutes old rather than ten seconds.
+ *
+ * That is harmless for a 24h window and fatal for a 5m one. Every short window
+ * in a stale snapshot has already closed, so `routable` filters to nothing and
+ * the page concludes the venue is empty. OBSERVED LIVE on the deployed site,
+ * twice: /trade bound an unstruck 4h window, and /structures rendered
+ * "0 ROUTABLE — no routable market right now" while /trade, in the same
+ * moment, was quoting a 5m window with 995 contracts resting. Two pages
+ * disagreeing about whether the venue has a market is worse than either being
+ * wrong alone.
+ *
+ * So an empty routable set is re-taken against a FRESH pull before it is
+ * believed. The fresh read is adopted only when it actually improves on the
+ * cached one: an empty board is a real venue state, and re-reading it does not
+ * make it less empty.
+ *
+ * Every page that asks "what can be traded right now" must use THIS, not the
+ * raw cached snapshot — the guard was written once inline in /trade and the
+ * eight other callers kept the bug.
+ */
+export async function liveMarketSnapshot(): Promise<MarketSnapshot> {
+  const cached = await cachedMarketSnapshot();
+  if (cached.routable.some((m) => isRoutable(m, Date.now()))) return cached;
+
+  const fresh = await getMarketSnapshot();
+  return fresh.routable.some((m) => isRoutable(m, Date.now())) ? fresh : cached;
+}
 
 /** Oracle price + candles, per asset and timeframe. */
 export const cachedPriceSnapshot = unstable_cache(

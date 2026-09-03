@@ -4,7 +4,7 @@ import { HeroFieldGL } from "@/components/hero-field-gl";
 import { PrismMark, PrismWordmark } from "@/components/logo";
 import { IconArrowOut, IconArrowRight } from "@/components/icons";
 import { NETWORK } from "@sdk/venue/config";
-import { cachedMarketSnapshot } from "@sdk/venue/cache";
+import { liveMarketSnapshot } from "@sdk/venue/cache";
 import { getLivePrice } from "@sdk/venue/prices";
 import { headroomSec } from "@sdk/venue/types";
 import { Reveal } from "@/components/reveal";
@@ -150,7 +150,7 @@ function Cta({
 
 export default async function HomePage() {
   const [snap, btc, eth] = await Promise.all([
-    cachedMarketSnapshot().catch(() => null),
+    liveMarketSnapshot().catch(() => null),
     getLivePrice("BTC").catch(() => null),
     getLivePrice("ETH").catch(() => null),
   ]);
