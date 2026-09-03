@@ -431,8 +431,14 @@ function SizeField({
   min: number;
   disabled: boolean;
 }) {
-  const pct = max > 0 ? Math.min(100, (amount / max) * 100) : 0;
-  const over = amount > max;
+  // An EMPTY book and an OVERSIZED order are different states and must not
+  // render the same. A full red bar reading "no depth" said both at once: the
+  // meter claimed the book was saturated while the label said nothing rests
+  // there at all. Empty draws an empty track; only a real, non-zero book that
+  // the size exceeds fills it.
+  const empty = max <= 0;
+  const pct = empty ? 0 : Math.min(100, (amount / max) * 100);
+  const over = !empty && amount > max;
 
   return (
     <div>
@@ -476,14 +482,18 @@ function SizeField({
         <span className="relative block h-[5px] flex-1 bg-line-soft">
           <span
             className={cx("absolute inset-y-0 left-0", over ? "bg-down" : "bg-accent")}
-            style={{ width: `${over ? 100 : pct}%` }}
+            style={{ width: `${empty ? 0 : over ? 100 : pct}%` }}
           />
         </span>
         <span className={cx("num text-[11px] shrink-0", over ? "text-down" : "text-ink-4")}>
-          {max > 0 ? `${Math.round(pct)}%` : "no depth"}
+          {empty ? "no depth" : `${Math.round(pct)}%`}
         </span>
       </div>
 
+      {/* Only for a real book the size overshoots. When the book is empty the
+          note above already says nothing rests here; repeating it as "Book
+          holds 0 contracts. Larger orders cannot fill here." implied a smaller
+          order would fill, and none will. */}
       {over ? (
         <p className="text-[11px] text-down mt-1.5">
           Book holds {max} contracts. Larger orders cannot fill here.
